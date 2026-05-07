@@ -29,6 +29,12 @@
 - Persistent storage for all services
 - Tables: Users, Teams, Events, Payments, Feedback, GenAI Conversations
 
+### Proxy: Traefik
+
+- All services are hidden behind a Traefik proxy
+- Responsible for authentication
+- Takes care of load balancing
+
 ---
 
 ## 2. UML Diagrams
