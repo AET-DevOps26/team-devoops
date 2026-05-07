@@ -7,7 +7,6 @@
 - **Member Service** (Port 8001): User management, profiles, roles
 - **Event Service** (Port 8002): Training scheduling, enrollment, attendance tracking
 - **Payment Service** (Port 8003): Payment recording, status tracking, billing
-- Shared API Gateway for OAuth2 authentication and request routing
 
 ### Client: React Frontend
 
