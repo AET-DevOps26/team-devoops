@@ -34,16 +34,16 @@
 ## 2. UML Diagrams
 
 ### 2.1 Component Diagram (Top-Level Architecture)
-![[SportsClub_Component_Diagram.png]]
+![Component Diagram](SportsClub_Component_Diagram.png)
 
 ---
 
 ### 2.2 Use Case Diagram
-![[SportsClub_Use_Case_Diagram.png]]
+![Use Case Diagram](SportsClub_Use_Case_Diagram.png)
 
 ---
 
 ### 2.3 Analysis Object Model (Class Diagram)
 
-![[SportsClub_Class_Diagram.png]]
+![Class Diagram](SportsClub_Class_Diagram.png)
 ---
