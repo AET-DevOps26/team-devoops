@@ -2,7 +2,7 @@
 
 ## 1. Initial System Structure
 
-### Server: Spring Boot REST API
+### Server: Spring Boot REST API (Java + Gradle)
 
 - **Member Service** (Port 8001): User management, profiles, roles
 - **Event Service** (Port 8002): Training scheduling, enrollment, attendance tracking
