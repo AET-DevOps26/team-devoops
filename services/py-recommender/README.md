@@ -10,7 +10,7 @@ pip install -r requirements.txt
 To run the service in development mode, execute:
 
 ```sh
-flask --app genai-service run
+flask --app app run
 ```
 
 ## Endpoints
