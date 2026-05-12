@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.messages import SystemMessage, HumanMessage
 
+load_dotenv()
 agent = create_agent("gpt-4.1-mini")
 
 def hello():

@@ -6,4 +6,8 @@ lib64
 bin/
 pyvenv.cfg
 __pycache__/
+*.pyc
+*.pyo
 .env
+instance/
+*.log
