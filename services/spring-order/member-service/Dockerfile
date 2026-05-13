@@ -1,5 +1,5 @@
 # Stage 1: builder
-FROM eclipse-temurin:21.0.3_9-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
 # Copy dependencies
@@ -19,7 +19,7 @@ COPY src src
 RUN --mount=type=cache,target=/root/.gradle ./gradlew bootJar --no-daemon
 
 # Stage 2: run
-FROM eclipse-temurin:21.0.3_9-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy artifact from stage 1
