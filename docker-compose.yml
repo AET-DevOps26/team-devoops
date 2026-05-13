@@ -1,0 +1,62 @@
+services:
+  pyrecommender-service:
+    build: services/py-recommender/
+    container_name: pyrecommender-service
+    ports:
+      - "5000:5000"
+    networks:
+      - backend
+
+  member-service:
+    build: services/spring-order/member-service
+    container_name: member-service
+    ports: 
+      - "8001:8080"
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      # Automatically create tables based on entities
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - backend
+
+  web-client:
+    build: web-client/
+    container_name: web-client
+    ports:
+    - "3000:80"
+    depends_on:
+      - member-service
+      - pyrecommender-service
+    networks:
+      - backend
+  
+  member-database:
+    image: postgres:15.6-alpine
+    container_name: member-db
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: member_user
+      POSTGRES_PASSWORD: member_password
+      POSTGRES_DB: member_db
+    volumes:
+      - member_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U member_user -d member_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+volumes:
+  member_db_data:
+
+networks:
+  backend:
