@@ -1,0 +1,3 @@
+# Dev-only tooling: testing and linting.
+pytest>=8.0
+ruff>=0.6
