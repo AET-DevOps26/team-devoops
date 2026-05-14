@@ -31,7 +31,7 @@ ENV FLASK_DEBUG=0
 EXPOSE 5000
 
 # Healthcheck for orchestration
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:5000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:5000/health || exit 1
 
 # Run app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
