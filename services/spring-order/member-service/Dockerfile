@@ -30,7 +30,7 @@ RUN adduser -D user
 USER user
 
 # Healthcheck for orchestration
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD wget -qO- http://127.0.0.1:8080/actuator/health || exit 1
 
 # Network
 EXPOSE 8080
