@@ -1,0 +1,9 @@
+build/
+.gradle/
+.git/
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+README.md
+gradlew.bat
