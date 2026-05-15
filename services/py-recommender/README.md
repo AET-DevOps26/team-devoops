@@ -25,6 +25,6 @@ flask --app app run
 
 ## Endpoints
 
-| Endpoint | Description | 
+| Endpoint | Description |
 | :------: | :---------- |
 | /hello | Returns a "Hello World" paragraph created by a LLM |

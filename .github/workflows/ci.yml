@@ -1,0 +1,247 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ------------------------------------------------------------------
+  # Java / Spring Boot - member-service
+  # ------------------------------------------------------------------
+  member-service:
+    name: member-service (Java)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/spring-order/member-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Lint (Checkstyle)
+        run: ./gradlew --no-daemon checkstyleMain
+
+      - name: Build & test
+        run: ./gradlew --no-daemon build
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: member-service-reports
+          path: |
+            services/spring-order/member-service/build/reports/**
+            services/spring-order/member-service/build/test-results/**
+          if-no-files-found: ignore
+
+  # ------------------------------------------------------------------
+  # Python - py-recommender
+  # ------------------------------------------------------------------
+  py-recommender:
+    name: py-recommender (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/py-recommender
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/py-recommender/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Run tests (pytest)
+        run: pytest -q
+
+  # ------------------------------------------------------------------
+  # Node / React - web-client
+  # ------------------------------------------------------------------
+  web-client:
+    name: web-client (Node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web-client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Run tests (Vitest)
+        run: npm test
+
+      - name: Build (Vite)
+        run: npm run build
+
+  # ------------------------------------------------------------------
+  # Whole-system Docker build
+  # ------------------------------------------------------------------
+  docker-build:
+    name: docker-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - member-service
+      - py-recommender
+      - web-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare env files
+        run: cp services/py-recommender/.env.example services/py-recommender/.env
+
+      - name: Build all images via docker compose
+        run: docker compose build
+
+      - name: Verify expected image tags exist
+        # Compose tags images as `<project>-<service>:latest`; project name
+        # defaults to the working directory and can differ between hosts.
+        run: |
+          set -e
+          missing=0
+          for img in \
+            team-devoops-member-service:latest \
+            team-devoops-pyrecommender-service:latest \
+            team-devoops-web-client:latest; do
+            if ! docker image inspect "$img" >/dev/null 2>&1; then
+              echo "::error::Expected image '$img' not found after compose build."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Available images:"
+            docker images
+            exit 1
+          fi
+
+  # ------------------------------------------------------------------
+  # CodeQL SAST - vulnerability scan of first-party code.
+  # ------------------------------------------------------------------
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ------------------------------------------------------------------
+  # OpenAPI lint
+  # ------------------------------------------------------------------
+  openapi-lint:
+    name: openapi-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check OpenAPI file is non-empty
+        id: check
+        run: |
+          if [ -s api/openapi.yaml ]; then
+            echo "has_spec=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::api/openapi.yaml is empty - skipping Spectral lint"
+          fi
+
+      - name: Lint OpenAPI with Spectral
+        if: steps.check.outputs.has_spec == 'true'
+        uses: stoplightio/spectral-action@6416fd018ae38e60136775066eb3e98172143141  # v0.8.13
+        with:
+          file_glob: 'api/openapi.yaml'
+
+  # ------------------------------------------------------------------
+  # Aggregate gate - use this single check for branch protection.
+  # ------------------------------------------------------------------
+  ci-success:
+    name: ci-success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - member-service
+      - py-recommender
+      - web-client
+      - docker-build
+      - codeql
+      - openapi-lint
+    steps:
+      - name: Verify all required jobs succeeded
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "Job results: $results"
+          if echo "$results" | grep -E '"result":\s*"(failure|cancelled|skipped)"' > /dev/null; then
+            echo "::error::One or more required jobs did not succeed."
+            exit 1
+          fi
+          echo "All required jobs passed."

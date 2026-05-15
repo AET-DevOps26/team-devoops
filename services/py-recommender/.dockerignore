@@ -12,3 +12,7 @@ venv/
 Dockerfile
 .dockerignore
 README.md
+requirements-dev.txt
+ruff.toml
+.env.example
+tests/

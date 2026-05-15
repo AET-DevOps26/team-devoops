@@ -17,7 +17,7 @@ services:
   member-service:
     build: services/spring-order/member-service
     container_name: member-service
-    expose: 
+    expose:
       - 8080
     depends_on:
       member-database:
@@ -72,7 +72,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy
-  
+
   member-database:
     image: postgres:15.6-alpine
     container_name: member-db

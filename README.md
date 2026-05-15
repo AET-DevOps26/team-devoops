@@ -43,9 +43,41 @@ All services sit behind a **Traefik** reverse proxy that handles routing and aut
 | PostgreSQL | 5432 | — |
 | Traefik | 80/443 | — |
 
+## Developer Setup
+
+This repo uses [`pre-commit`](https://pre-commit.com) to run the same fast lint
+checks locally that CI gates on (ruff, eslint, end-of-file fixer, npm lockfile
+sync, etc.). One-time setup per developer:
+
+```bash
+pip install pre-commit          # or: pipx install pre-commit
+pre-commit install              # installs the pre-commit git hook
+pre-commit install --hook-type pre-push   # installs the pre-push hook
+pre-commit run --all-files      # optional one-time clean-up pass
+```
+
+What runs when:
+
+| Stage | Hooks |
+|---|---|
+| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-recommender), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
+| `pre-push` (only on push) | **Spectral** lint of `api/openapi.yaml` (if changed), **Checkstyle** for `member-service` (if Java sources changed) |
+
+Auto-fixing hooks (ruff, eslint, npm-lock-sync, end-of-file-fixer, etc.) will
+modify files and **abort the commit** so you can re-stage and re-commit.
+
+Bypass (emergencies only -- CI will still gate):
+
+```bash
+git commit --no-verify
+git push   --no-verify
+```
+
+The full hook configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml)
+and the helper scripts under [`scripts/hooks/`](scripts/hooks/).
+
 ## Docs
 
 - [Problem Statement](docs/problem-statement.md)
 - [System Architecture](docs/system-architecture.md)
 - [Backlog](docs/backlog.md)
-

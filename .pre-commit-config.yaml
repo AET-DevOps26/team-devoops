@@ -1,0 +1,97 @@
+# Pre-commit hooks: mirror the fast checks in .github/workflows/ci.yml so
+# common failures (ruff, eslint, lockfile drift, EOF newline, etc.) are caught
+# locally before they hit CI.
+#
+# Setup (one-time, per developer):
+#   pip install pre-commit            # or: pipx install pre-commit
+#   pre-commit install                # installs the pre-commit git hook
+#   pre-commit install --hook-type pre-push
+#   pre-commit run --all-files        # optional one-time clean-up pass
+#
+# Bypass (emergencies only -- CI will still gate):
+#   git commit --no-verify
+#   git push   --no-verify
+
+default_install_hook_types: [pre-commit, pre-push]
+fail_fast: false
+
+repos:
+  # ------------------------------------------------------------------
+  # Generic hygiene: syntax validation and small auto-fixes.
+  # ------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+        # Catches the same class of issue as ruff's W292
+        # ("no newline at end of file"), but for every text file in
+        # the repo -- not only Python.
+      - id: trailing-whitespace
+        # Preserve intentional two-space line breaks in markdown.
+        args: [--markdown-linebreak-ext=md]
+      - id: check-yaml
+        # --allow-multiple-documents is defensive for the planned
+        # Helm charts under infra/; current YAML files are all
+        # single-document and unaffected.
+        args: [--allow-multiple-documents]
+      - id: check-json
+        # package-lock.json is valid JSON but huge; skip to keep the
+        # hook fast on commits that touch it.
+        exclude: ^web-client/package-lock\.json$
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # ------------------------------------------------------------------
+  # Python: ruff lint + format, scoped to services/py-recommender.
+  # Version kept in sync with services/py-recommender/requirements-dev.txt
+  # ("ruff>=0.6").
+  # ------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        name: ruff (lint + autofix)
+        args: [--fix]
+        files: ^services/py-recommender/.*\.py$
+      - id: ruff-format
+        name: ruff-format
+        files: ^services/py-recommender/.*\.py$
+
+  # ------------------------------------------------------------------
+  # Local hooks -- delegate to the project's own toolchain (npm,
+  # gradle, npx) so lint configuration and tool versions stay
+  # identical to CI. Logic lives in scripts/hooks/*.sh, which makes
+  # the hooks shellcheck-able and runnable standalone for debugging.
+  # ------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (web-client, --fix)
+        language: system
+        entry: scripts/hooks/run-eslint.sh
+        files: ^web-client/.*\.(js|jsx|ts|tsx|mjs|cjs)$
+        pass_filenames: true
+
+      - id: npm-lock-sync
+        name: npm-lock-sync (web-client)
+        language: system
+        entry: scripts/hooks/sync-npm-lock.sh
+        files: ^web-client/package\.json$
+        pass_filenames: false
+
+      - id: spectral-openapi
+        name: spectral (api/openapi.yaml)
+        language: system
+        entry: scripts/hooks/run-spectral.sh
+        files: ^api/openapi\.yaml$
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: checkstyle
+        name: checkstyle (member-service)
+        language: system
+        entry: scripts/hooks/run-checkstyle.sh
+        files: ^services/spring-order/member-service/.*\.java$
+        pass_filenames: false
+        stages: [pre-push]
