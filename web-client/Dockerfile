@@ -11,7 +11,10 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 # Copy the application
 COPY src ./src
 COPY public ./public
-COPY vite.config.js .
+COPY tsconfig.json .
+COPY tsconfig.app.json .
+COPY tsconfig.node.json .
+COPY vite.config.ts .
 COPY index.html .
 # Build the application
 RUN npm run build
