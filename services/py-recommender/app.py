@@ -1,4 +1,5 @@
 from flask import Flask
+
 from service import hello
 
 app = Flask("genai-service")
