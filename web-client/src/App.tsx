@@ -1,10 +1,7 @@
-function App() {
+import { AppRouter } from '@/app/router/AppRouter'
 
-  return (
-    <div> 
-      Hello world!
-    </div>
-  )
+function App() {
+  return <AppRouter />
 }
 
 export default App
