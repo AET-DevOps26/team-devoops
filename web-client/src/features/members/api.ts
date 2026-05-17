@@ -9,9 +9,6 @@ function mockMembersHello(): Promise<HelloResponse> {
 
 export async function getMembersHello(): Promise<string> {
   // TODO: Replace mock with real endpoint when backend is available.
-  // Example:
-  // const response = await fetch(`${import.meta.env.VITE_MEMBER_API_URL}/hello`)
-  // const data = (await response.json()) as HelloResponse
   const data = await mockMembersHello()
   return `${data.service}: ${data.message}`
 }

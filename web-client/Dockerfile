@@ -22,6 +22,9 @@ RUN npm run build
 # Stage 2: run
 FROM nginx:1.27-alpine
 
+# Copy nginx config for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy files from stage 1
 COPY --from=builder /app/dist /usr/share/nginx/html
 
