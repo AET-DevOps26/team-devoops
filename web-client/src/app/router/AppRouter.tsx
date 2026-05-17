@@ -56,6 +56,9 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
   )
 }
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `rounded-md px-3 py-2 text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`
+
 export function AppRouter() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -63,38 +66,10 @@ export function AppRouter() {
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-lg font-semibold">Team Devoops Client</p>
           <nav className="flex flex-wrap gap-2">
-            <NavLink
-              to="/members"
-              className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`
-              }
-            >
-              Members
-            </NavLink>
-            <NavLink
-              to="/events"
-              className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`
-              }
-            >
-              Events
-            </NavLink>
-            <NavLink
-              to="/payments"
-              className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`
-              }
-            >
-              Payments
-            </NavLink>
-            <NavLink
-              to="/letters"
-              className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`
-              }
-            >
-              Letters
-            </NavLink>
+            <NavLink to="/members" className={navLinkClass}>Members</NavLink>
+            <NavLink to="/events" className={navLinkClass}>Events</NavLink>
+            <NavLink to="/payments" className={navLinkClass}>Payments</NavLink>
+            <NavLink to="/letters" className={navLinkClass}>Letters</NavLink>
           </nav>
         </div>
       </header>
