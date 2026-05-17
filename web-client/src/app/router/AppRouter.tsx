@@ -31,7 +31,9 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
           setError(err instanceof Error ? err.message : 'Unknown error')
         }
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (isMounted) setLoading(false) 
+      })
 
     return () => {
       isMounted = false
