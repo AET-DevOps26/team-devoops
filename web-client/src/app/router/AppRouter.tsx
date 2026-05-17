@@ -13,6 +13,7 @@ type ServicePlaceholderPageProps = {
 function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPageProps) {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let isMounted = true
@@ -21,13 +22,16 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
       .then((response) => {
         if (isMounted) {
           setMessage(response)
+          setError(null)
         }
       })
       .catch((err: unknown) => {
         if (isMounted) {
+          setMessage(null)
           setError(err instanceof Error ? err.message : 'Unknown error')
         }
       })
+      .finally(() => setLoading(false))
 
     return () => {
       isMounted = false
@@ -42,7 +46,7 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
       </p>
 
       <div className="mt-6 rounded-lg bg-slate-50 p-4">
-        {!message && !error && <p className="text-slate-700">Loading hello endpoint response...</p>}
+        {loading && <p className="text-slate-700">Loading hello endpoint response...</p>}
         {message && <p className="font-mono text-slate-900">{message}</p>}
         {error && <p className="text-red-700">Failed to load response: {error}</p>}
       </div>
