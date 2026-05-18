@@ -1,38 +1,33 @@
+# syntax=docker/dockerfile:1.7
+
 # Stage 1: builder
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy package files from host
-COPY package*.json ./
+# Build-time vars (Vite inlines VITE_* at build, so they must be ARGs, not ENVs at runtime)
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
 
-# Install dependencies
-RUN --mount=type=cache,target=/root/.npm npm ci
+# Install dependencies first for better layer caching
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund
 
-# Copy the application
-COPY src ./src
-COPY public ./public
-COPY tsconfig.json .
-COPY tsconfig.app.json .
-COPY tsconfig.node.json .
-COPY vite.config.ts .
-COPY index.html .
-# Build the application
+# Copy the rest of the source (.dockerignore controls what's excluded)
+COPY . .
+
 RUN npm run build
 
-# Stage 2: run
-FROM nginx:1.27-alpine
+# Stage 2: runtime
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 
-# Copy nginx config for SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Non-root image listens on 8080 by default
+EXPOSE 8080
 
-# Copy files from stage 1
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# Network
-EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:8080/ || exit 1
 
-# Healthcheck for orchestration
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:80/ || exit 1
-
-# Run application
 CMD ["nginx", "-g", "daemon off;"]
