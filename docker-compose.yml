@@ -1,21 +1,43 @@
 services:
-  pyrecommender-service:
-    build: services/py-recommender/
-    container_name: pyrecommender-service
+  py-genai-helper:
+    build: services/py-genai-helper/
+    container_name: py-genai-helper
     env_file:
-      - services/py-recommender/.env
+      - services/py-genai-helper/.env
     expose:
       - 5000
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pyrecommender.entrypoints=pyrecommender"
-      - "traefik.http.routers.pyrecommender.rule=PathPrefix(`/`)"
-      - "traefik.http.services.pyrecommender.loadbalancer.server.port=5000"
+      - "traefik.http.routers.py-genai-helper.entrypoints=py-genai-helper"
+      - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/`)"
+      - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
     networks:
       - proxy
 
+  organization-service:
+    build: services/spring-organization
+    container_name: organization-service
+    expose:
+      - 8080
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.organization-service.entrypoints=organization-service"
+      - "traefik.http.routers.organization-service.rule=PathPrefix(`/`)"
+      - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
+    networks:
+      - proxy
+      - data
+
   member-service:
-    build: services/spring-order/member-service
+    build: services/spring-member
     container_name: member-service
     expose:
       - 8080
@@ -26,7 +48,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
-      # Automatically create tables based on entities
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
@@ -37,14 +58,107 @@ services:
       - proxy
       - data
 
+  event-service:
+    build: services/spring-event
+    container_name: event-service
+    expose:
+      - 8080
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.event-service.entrypoints=event-service"
+      - "traefik.http.routers.event-service.rule=PathPrefix(`/`)"
+      - "traefik.http.services.event-service.loadbalancer.server.port=8080"
+    networks:
+      - proxy
+      - data
+
+  feedback-service:
+    build: services/spring-feedback
+    container_name: feedback-service
+    expose:
+      - 8080
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.feedback-service.entrypoints=feedback-service"
+      - "traefik.http.routers.feedback-service.rule=PathPrefix(`/`)"
+      - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
+    networks:
+      - proxy
+      - data
+
+  finance-service:
+    build: services/spring-finance
+    container_name: finance-service
+    expose:
+      - 8080
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.finance-service.entrypoints=finance-service"
+      - "traefik.http.routers.finance-service.rule=PathPrefix(`/`)"
+      - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
+    networks:
+      - proxy
+      - data
+
+  letter-service:
+    build: services/spring-letter
+    container_name: letter-service
+    expose:
+      - 8080
+    depends_on:
+      member-database:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_USERNAME=member_user
+      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.letter-service.entrypoints=letter-service"
+      - "traefik.http.routers.letter-service.rule=PathPrefix(`/`)"
+      - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
+    networks:
+      - proxy
+      - data
+
   web-client:
     build: web-client/
     container_name: web-client
     expose:
-    - 8080
+      - 8080
     depends_on:
+      - organization-service
       - member-service
-      - pyrecommender-service
+      - event-service
+      - feedback-service
+      - finance-service
+      - letter-service
+      - py-genai-helper
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web-client.entrypoints=web-client"
@@ -60,14 +174,23 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
-      - "--entrypoints.pyrecommender.address=:5000"
-      - "--entrypoints.member-service.address=:8001"
+      - "--entrypoints.py-genai-helper.address=:5000"
+      - "--entrypoints.organization-service.address=:8001"
+      - "--entrypoints.member-service.address=:8002"
+      - "--entrypoints.event-service.address=:8003"
+      - "--entrypoints.feedback-service.address=:8004"
+      - "--entrypoints.finance-service.address=:8005"
+      - "--entrypoints.letter-service.address=:8006"
       - "--entrypoints.web-client.address=:3000"
     ports:
       - "3000:3000"
       - "5000:5000"
-      - "8080:8080"
       - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
+      - "8004:8004"
+      - "8005:8005"
+      - "8006:8006"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
