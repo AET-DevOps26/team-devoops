@@ -32,7 +32,7 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
         }
       })
       .finally(() => {
-        if (isMounted) setLoading(false) 
+        if (isMounted) setLoading(false)
       })
 
     return () => {
