@@ -64,7 +64,7 @@ What runs when:
 
 | Stage | Hooks |
 |---|---|
-| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-recommender), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
+| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-genai-helper), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
 | `pre-push` (only on push) | **Spectral** lint of `api/openapi.yaml` (if changed), **Checkstyle** for `member-service` (if Java sources changed) |
 
 Auto-fixing hooks (ruff, eslint, npm-lock-sync, end-of-file-fixer, etc.) will

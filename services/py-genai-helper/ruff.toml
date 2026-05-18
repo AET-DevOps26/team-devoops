@@ -1,4 +1,4 @@
-# Ruff configuration for py-recommender.
+# Ruff configuration for py-genai-helper.
 line-length = 120
 target-version = "py312"
 
