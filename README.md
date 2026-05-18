@@ -6,9 +6,11 @@ Club organizers get an all-in-one tool for managing members, automating billing,
 
 ## Features
 
-- **Member management** — CRUD for members, roles, and profiles
+- **Organization service** — CRUD for sports, teams and roles (e.g. member, trainer, admin)
+- **Member management** — CRUD for members, member data and profiles
 - **Event service** — training scheduling, attendance tracking, trainer notes
-- **Payment service** — one-time and recurring billing linked to members
+- **Feedback service** — personalized feedback and progress reports
+- **Finance service** — one-time and recurring billing linked to members
 - **Letter service** — PDF/email generation from templates with dynamic member data
 - **GenAI helper** — analyzes member data and trainer notes to generate personalized feedback and progress reports (supports OpenAI and local LLMs)
 
@@ -34,10 +36,12 @@ All services sit behind a **Traefik** reverse proxy that handles routing and aut
 
 | Service | Port | Stack |
 |---|---|---|
-| Member Service | 8001 | Java 21, Spring Boot 3 |
-| Event Service | 8002 | Java 21, Spring Boot 3 |
-| Payment Service | 8003 | Java 21, Spring Boot 3 |
-| Letter Service | 8004 | Java 21, Spring Boot 3 |
+| Organization Service | 8001 | Java 21, Spring Boot 3 |
+| Member Service | 8002 | Java 21, Spring Boot 3 |
+| Event Service | 8003 | Java 21, Spring Boot 3 |
+| Feedback Service | 8004 | Java 21, Spring Boot 3 |
+| Finance Service | 8005 | Java 21, Spring Boot 3 |
+| Letter Service | 8006 | Java 21, Spring Boot 3 |
 | GenAI Service | 5000 | Python 3.12, Flask, LangChain |
 | Web Client | 3000 | React, Vite |
 | PostgreSQL | 5432 | — |

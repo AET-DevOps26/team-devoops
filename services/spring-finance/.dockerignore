@@ -1,0 +1,15 @@
+build/
+.gradle/
+.git/
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+README.md
+gradlew.bat
+bin/
+config/
+src/test/
+.classpath
+.project
+.settings/
