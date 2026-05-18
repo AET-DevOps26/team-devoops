@@ -43,8 +43,8 @@ repos:
         args: [--maxkb=500]
 
   # ------------------------------------------------------------------
-  # Python: ruff lint + format, scoped to services/py-recommender.
-  # Version kept in sync with services/py-recommender/requirements-dev.txt
+  # Python: ruff lint + format, scoped to services/py-genai-helper.
+  # Version kept in sync with services/py-genai-helper/requirements-dev.txt
   # ("ruff>=0.6").
   # ------------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -53,10 +53,10 @@ repos:
       - id: ruff
         name: ruff (lint + autofix)
         args: [--fix]
-        files: ^services/py-recommender/.*\.py$
+        files: ^services/py-genai-helper/.*\.py$
       - id: ruff-format
         name: ruff-format
-        files: ^services/py-recommender/.*\.py$
+        files: ^services/py-genai-helper/.*\.py$
 
   # ------------------------------------------------------------------
   # Local hooks -- delegate to the project's own toolchain (npm,
