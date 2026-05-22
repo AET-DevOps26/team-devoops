@@ -1,6 +1,6 @@
 from flask import Flask, request
 
-from service import hello, generate_rag_response
+from service import generate_rag_response, hello
 
 app = Flask("genai-service")
 
@@ -24,6 +24,6 @@ def rag_response():
 
     if not question:
         return {"error": "Missing required field: 'question'"}, 400
-    
+
     response = generate_rag_response(question)
     return {"response": response}, 200
