@@ -1,9 +1,6 @@
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.messages import HumanMessage, SystemMessage
-
-from rag import get_rag_agent
-
 from rag import get_rag_agent
 
 load_dotenv()
