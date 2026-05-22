@@ -1,6 +1,10 @@
 from flask import Flask, request
 
+<<<<<<< HEAD
 from service import generate_rag_response, hello
+=======
+from service import hello, generate_rag_response
+>>>>>>> c89ebcb (Created a simple RAG based endpoint that searches a demo vector store.)
 
 app = Flask("genai-service")
 
@@ -24,6 +28,10 @@ def rag_response():
 
     if not question:
         return {"error": "Missing required field: 'question'"}, 400
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> c89ebcb (Created a simple RAG based endpoint that searches a demo vector store.)
     response = generate_rag_response(question)
     return {"response": response}, 200
