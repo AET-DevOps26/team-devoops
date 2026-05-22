@@ -6,9 +6,11 @@ Club organizers get an all-in-one tool for managing members, automating billing,
 
 ## Features
 
-- **Member management** — CRUD for members, roles, and profiles
+- **Organization service** — CRUD for sports, teams and roles (e.g. member, trainer, admin)
+- **Member management** — CRUD for members, member data and profiles
 - **Event service** — training scheduling, attendance tracking, trainer notes
-- **Payment service** — one-time and recurring billing linked to members
+- **Feedback service** — personalized feedback and progress reports
+- **Finance service** — one-time and recurring billing linked to members
 - **Letter service** — PDF/email generation from templates with dynamic member data
 - **GenAI helper** — analyzes member data and trainer notes to generate personalized feedback and progress reports (supports OpenAI and local LLMs)
 
@@ -34,10 +36,12 @@ All services sit behind a **Traefik** reverse proxy that handles routing and aut
 
 | Service | Port | Stack |
 |---|---|---|
-| Member Service | 8001 | Java 21, Spring Boot 3 |
-| Event Service | 8002 | Java 21, Spring Boot 3 |
-| Payment Service | 8003 | Java 21, Spring Boot 3 |
-| Letter Service | 8004 | Java 21, Spring Boot 3 |
+| Organization Service | 8001 | Java 21, Spring Boot 3 |
+| Member Service | 8002 | Java 21, Spring Boot 3 |
+| Event Service | 8003 | Java 21, Spring Boot 3 |
+| Feedback Service | 8004 | Java 21, Spring Boot 3 |
+| Finance Service | 8005 | Java 21, Spring Boot 3 |
+| Letter Service | 8006 | Java 21, Spring Boot 3 |
 | GenAI Service | 5000 | Python 3.12, Flask, LangChain |
 | Web Client | 3000 | React, Vite |
 | PostgreSQL | 5432 | — |
@@ -60,8 +64,8 @@ What runs when:
 
 | Stage | Hooks |
 |---|---|
-| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-recommender), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
-| `pre-push` (only on push) | **Spectral** lint of `api/openapi.yaml` (if changed), **Checkstyle** for `member-service` (if Java sources changed) |
+| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-genai-helper), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
+| `pre-push` (only on push) | **Spectral** lint of `api/openapi.yaml` (if changed), **Checkstyle** for all Spring services (if Java sources changed) |
 
 Auto-fixing hooks (ruff, eslint, npm-lock-sync, end-of-file-fixer, etc.) will
 modify files and **abort the commit** so you can re-stage and re-commit.
