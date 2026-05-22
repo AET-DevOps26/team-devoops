@@ -1,16 +1,9 @@
 from dotenv import load_dotenv
-<<<<<<< HEAD
-from langchain.agents import create_agent
-from langchain_community.vectorstores import FAISS
-from langchain_core.tools import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings
-=======
 
 from langchain.agents import create_agent
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import create_retriever_tool
->>>>>>> c89ebcb (Created a simple RAG based endpoint that searches a demo vector store.)
+from langchain_openai import OpenAIEmbeddings
 
 load_dotenv()
 
