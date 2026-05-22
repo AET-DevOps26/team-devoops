@@ -1,22 +1,36 @@
 # syntax=docker/dockerfile:1.7
 
 # Stage 1: builder
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
-# Build-time vars (Vite inlines VITE_* at build, so they must be ARGs, not ENVs at runtime)
-ARG VITE_API_URL=""
-ENV VITE_API_URL=$VITE_API_URL
+# Corepack ships with Node and pins pnpm to the version in package.json's
+# "packageManager" field, so every build uses an identical pnpm regardless of host.
+RUN corepack enable
 
-# Install dependencies first for better layer caching
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund
+# Build-time vars (Vite inlines VITE_* at build, so they must be ARGs, not ENVs at runtime).
+# These will change once the server team implements path-based proxy routing
+ARG VITE_MEMBERS_URL=""
+ARG VITE_EVENTS_URL=""
+ARG VITE_FINANCE_URL=""
+ARG VITE_LETTERS_URL=""
+ENV VITE_MEMBERS_URL=$VITE_MEMBERS_URL
+ENV VITE_EVENTS_URL=$VITE_EVENTS_URL
+ENV VITE_FINANCE_URL=$VITE_FINANCE_URL
+ENV VITE_LETTERS_URL=$VITE_LETTERS_URL
+
+# Install dependencies first for better layer caching.
+# pnpm-lock.yaml records every platform's optional native deps (lightningcss,
+# rolldown, etc.), so --frozen-lockfile resolves the correct linux-musl binaries
+# no matter which OS generated the lockfile.
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # Copy the rest of the source (.dockerignore controls what's excluded)
 COPY . .
 
-RUN npm run build
+RUN pnpm build
 
 # Stage 2: runtime
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime

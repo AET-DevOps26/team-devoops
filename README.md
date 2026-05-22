@@ -50,7 +50,7 @@ All services sit behind a **Traefik** reverse proxy that handles routing and aut
 ## Developer Setup
 
 This repo uses [`pre-commit`](https://pre-commit.com) to run the same fast lint
-checks locally that CI gates on (ruff, eslint, end-of-file fixer, npm lockfile
+checks locally that CI gates on (ruff, eslint, end-of-file fixer, pnpm lockfile
 sync, etc.). One-time setup per developer:
 
 ```bash
@@ -64,7 +64,7 @@ What runs when:
 
 | Stage | Hooks |
 |---|---|
-| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-genai-helper), **eslint --fix** (web-client), **npm-lock-sync** (regenerates `web-client/package-lock.json` when `package.json` changes) |
+| `pre-commit` (every commit) | end-of-file-fixer, trailing-whitespace, check-yaml/json, merge-conflict guard, large-file guard, **ruff** (lint + format, py-genai-helper), **eslint --fix** (web-client), **pnpm-lock-sync** (regenerates `web-client/pnpm-lock.yaml` when `package.json` changes) |
 | `pre-push` (only on push) | **Spectral** lint of `api/openapi.yaml` (if changed), **Checkstyle** for all Spring services (if Java sources changed) |
 
 Auto-fixing hooks (ruff, eslint, npm-lock-sync, end-of-file-fixer, etc.) will

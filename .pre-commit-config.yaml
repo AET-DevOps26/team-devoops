@@ -35,11 +35,9 @@ repos:
         # single-document and unaffected.
         args: [--allow-multiple-documents]
       - id: check-json
-        # package-lock.json is valid JSON but huge; skip to keep the
-        # hook fast on commits that touch it.
         # tsconfig*.json files use JSONC (comments allowed), which is
         # valid for TypeScript but rejected by strict JSON parsers.
-        exclude: ^web-client/package-lock\.json$|^web-client/tsconfig.*\.json$
+        exclude: ^web-client/tsconfig.*\.json$
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
@@ -61,8 +59,8 @@ repos:
         files: ^services/py-genai-helper/.*\.py$
 
   # ------------------------------------------------------------------
-  # Local hooks -- delegate to the project's own toolchain (npm,
-  # gradle, npx) so lint configuration and tool versions stay
+  # Local hooks -- delegate to the project's own toolchain (pnpm,
+  # gradle) so lint configuration and tool versions stay
   # identical to CI. Logic lives in scripts/hooks/*.sh, which makes
   # the hooks shellcheck-able and runnable standalone for debugging.
   # ------------------------------------------------------------------
@@ -75,10 +73,10 @@ repos:
         files: ^web-client/.*\.(js|jsx|ts|tsx|mjs|cjs)$
         pass_filenames: true
 
-      - id: npm-lock-sync
-        name: npm-lock-sync (web-client)
+      - id: pnpm-lock-sync
+        name: pnpm-lock-sync (web-client)
         language: system
-        entry: scripts/hooks/sync-npm-lock.sh
+        entry: scripts/hooks/sync-pnpm-lock.sh
         files: ^web-client/package\.json$
         pass_filenames: false
 
