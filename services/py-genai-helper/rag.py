@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-
 from langchain.agents import create_agent
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import create_retriever_tool
