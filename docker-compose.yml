@@ -8,8 +8,10 @@ services:
       - 5000
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.py-genai-helper.entrypoints=py-genai-helper"
-      - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.py-genai-helper.entrypoints=web"
+      - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/api/v1/helper`)"
+      - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
+      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix"
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
     networks:
       - proxy
@@ -29,8 +31,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.organization-service.entrypoints=organization-service"
-      - "traefik.http.routers.organization-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.organization-service.entrypoints=web"
+      - "traefik.http.routers.organization-service.rule=PathPrefix(`/api/v1/organization`)"
+      - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
+      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix"
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -51,8 +55,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.member-service.entrypoints=member-service"
-      - "traefik.http.routers.member-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.member-service.entrypoints=web"
+      - "traefik.http.routers.member-service.rule=PathPrefix(`/api/v1/members`)"
+      - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
+      - "traefik.http.routers.member-service.middlewares=member-stripprefix"
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -73,8 +79,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.event-service.entrypoints=event-service"
-      - "traefik.http.routers.event-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.event-service.entrypoints=web"
+      - "traefik.http.routers.event-service.rule=PathPrefix(`/api/v1/events`)"
+      - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
+      - "traefik.http.routers.event-service.middlewares=event-stripprefix"
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -95,8 +103,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.feedback-service.entrypoints=feedback-service"
-      - "traefik.http.routers.feedback-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.feedback-service.entrypoints=web"
+      - "traefik.http.routers.feedback-service.rule=PathPrefix(`/api/v1/feedback`)"
+      - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
+      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix"
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -117,8 +127,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.finance-service.entrypoints=finance-service"
-      - "traefik.http.routers.finance-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.finance-service.entrypoints=web"
+      - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finances`)"
+      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finances"
+      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -139,8 +151,10 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.letter-service.entrypoints=letter-service"
-      - "traefik.http.routers.letter-service.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.letter-service.entrypoints=web"
+      - "traefik.http.routers.letter-service.rule=PathPrefix(`/api/v1/letters`)"
+      - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
+      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix"
       - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -161,7 +175,7 @@ services:
       - py-genai-helper
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.web-client.entrypoints=web-client"
+      - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
     networks:
@@ -175,23 +189,9 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.network=proxy"
-      - "--entrypoints.py-genai-helper.address=:5000"
-      - "--entrypoints.organization-service.address=:8001"
-      - "--entrypoints.member-service.address=:8002"
-      - "--entrypoints.event-service.address=:8003"
-      - "--entrypoints.feedback-service.address=:8004"
-      - "--entrypoints.finance-service.address=:8005"
-      - "--entrypoints.letter-service.address=:8006"
-      - "--entrypoints.web-client.address=:3000"
+      - "--entrypoints.web.address=:80"
     ports:
-      - "3000:3000"
-      - "5000:5000"
-      - "8001:8001"
-      - "8002:8002"
-      - "8003:8003"
-      - "8004:8004"
-      - "8005:8005"
-      - "8006:8006"
+      - "80:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
