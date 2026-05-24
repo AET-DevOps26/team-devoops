@@ -1,0 +1,2301 @@
+openapi: 3.1.0
+info:
+  title: Club Management System API
+  description: This is the API definition of the Club Management System.
+  version: 0.0.0
+servers:
+  - url: http://example.com/api/v1
+    description: ""
+paths:
+  /organization/sports:
+    get:
+      operationId: getAllSports
+      tags:
+        - organization
+      summary: Get all sports
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sport"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      parameters: []
+    post:
+      operationId: createSport
+      tags:
+        - organization
+      summary: Create sport
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SportCreate"
+  /organization/sports/{sport_name}:
+    patch:
+      operationId: updateSport
+      tags:
+        - organization
+      summary: Update sport
+      parameters:
+        - $ref: "#/components/parameters/sport_name"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SportPartialUpdate"
+      security:
+        - BearerJwt: []
+    delete:
+      operationId: deleteSport
+      tags:
+        - organization
+      summary: Delete sport
+      parameters:
+        - $ref: "#/components/parameters/sport_name"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          description: The server cannot find the requested resource. The endpoint may be
+            invalid or the resource may no longer exist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    get:
+      operationId: getSport
+      tags:
+        - organization
+      summary: Get sport
+      parameters:
+        - $ref: "#/components/parameters/sport_name"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sport"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /organization/teams:
+    get:
+      operationId: getAllTeams
+      tags:
+        - organization
+      summary: Get all teams
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    post:
+      operationId: createTeam
+      tags:
+        - organization
+      summary: Create team
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamCreate"
+  /organization/teams/{team_id}:
+    get:
+      operationId: getTeam
+      tags:
+        - organization
+      summary: Get team
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    patch:
+      operationId: updateTeam
+      tags:
+        - organization
+      summary: Update team
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamPartialUpdate"
+    delete:
+      operationId: deleteTeam
+      tags:
+        - organization
+      summary: Delete team
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /members:
+    get:
+      operationId: getAllMembers
+      tags:
+        - members
+      summary: Get all members
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberSummary"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    post:
+      operationId: createMember
+      tags:
+        - members
+      summary: Create member
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberCreate"
+  /members/{member_id}:
+    get:
+      operationId: getMemberDetails
+      tags:
+        - members
+      summary: Get member details
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    patch:
+      operationId: updateMemberDetails
+      tags:
+        - members
+      summary: Update member details
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberPartialUpdate"
+    delete:
+      operationId: deleteMember
+      tags:
+        - members
+      summary: Delete member
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /events:
+    get:
+      operationId: getAllEvents
+      tags:
+        - events
+      summary: Get all events
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventSummary"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    post:
+      operationId: createEvent
+      tags:
+        - events
+      summary: Create event
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventCreate"
+  /events/{event_id}:
+    get:
+      operationId: getEventDetails
+      tags:
+        - events
+      summary: Get event details
+      parameters:
+        - $ref: "#/components/parameters/event_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    patch:
+      operationId: updateEventDetails
+      tags:
+        - events
+      summary: Update event details
+      parameters:
+        - $ref: "#/components/parameters/event_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventPartialUpdate"
+    delete:
+      operationId: deleteEvent
+      tags:
+        - events
+      summary: Delete event
+      parameters:
+        - $ref: "#/components/parameters/event_id"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /feedback:
+    get:
+      operationId: getAllFeedback
+      tags:
+        - feedback
+      summary: Get all feedback
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeedbackSummary"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    post:
+      operationId: createFeedback
+      tags:
+        - feedback
+      summary: Create feedback
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackCreate"
+  /feedback/{feedback_id}:
+    get:
+      operationId: getFeedbackDetails
+      tags:
+        - feedback
+      summary: Get feedback details
+      parameters:
+        - $ref: "#/components/parameters/feedback_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    delete:
+      operationId: deleteFeedback
+      tags:
+        - feedback
+      summary: Delete feedback
+      parameters:
+        - $ref: "#/components/parameters/feedback_id"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    patch:
+      operationId: updateFeedbackDetails
+      tags:
+        - feedback
+      summary: Update feedback details
+      parameters:
+        - $ref: "#/components/parameters/feedback_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackPartialUpdate"
+  /finance/balances:
+    get:
+      operationId: getAllBalances
+      tags:
+        - finance
+      summary: Get all balances
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Balance"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /finance/balances/{member_id}:
+    get:
+      operationId: getMemberBalance
+      tags:
+        - finance
+      summary: Get member balance
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Balance"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /finance/transactions:
+    get:
+      operationId: getAllTransactions
+      tags:
+        - finance
+      summary: Get all transactions
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    post:
+      operationId: createTransaction
+      tags:
+        - finance
+      summary: Create transaction
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCreate"
+  /finance/transactions/{transaction_id}:
+    get:
+      operationId: getTransaction
+      tags:
+        - finance
+      summary: Get transaction
+      parameters:
+        - $ref: "#/components/parameters/transaction_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+    patch:
+      operationId: updateTransaction
+      tags:
+        - finance
+      summary: Update transaction
+      parameters:
+        - $ref: "#/components/parameters/transaction_id"
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionPartialUpdate"
+    delete:
+      operationId: deleteTransaction
+      tags:
+        - finance
+      summary: Delete transaction
+      parameters:
+        - $ref: "#/components/parameters/transaction_id"
+      responses:
+        "204":
+          description: The request was successful, but there is no content to return in
+            the response.
+          content:
+            application/json:
+              schema:
+                type: "null"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+  /letters/mail:
+    post:
+      operationId: sendMail
+      tags:
+        - letters
+      summary: Send mail
+      responses:
+        "204":
+          $ref: "#/components/responses/No Content"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          text/html:
+            schema:
+              type: object
+      parameters: []
+  /letters/pdf:
+    post:
+      operationId: getPdf
+      tags:
+        - letters
+      summary: Get pdf
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/pdf:
+              schema:
+                type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      security:
+        - BearerJwt: []
+      parameters: []
+      requestBody:
+        required: true
+        description: ""
+        content:
+          text/html:
+            schema:
+              type: object
+  /helper/report/{member_id}:
+    get:
+      operationId: generateReport
+      tags:
+        - helper
+      summary: Generate report
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            text/plain:
+              schema:
+                type: object
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      security:
+        - BearerJwt: []
+components:
+  responses:
+    InternalServerErrror:
+      description: The server encountered an unexpected condition that prevented it
+        from fulfilling the request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message
+    NotFound:
+      description: The server cannot find the requested resource. The endpoint may be
+        invalid or the resource may no longer exist.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message
+    BadRequest:
+      description: The server could not understand the request due to invalid syntax.
+        The client should modify the request and try again.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                  required:
+                    - message
+            required:
+              - message
+    Conflict:
+      description: The request could not be completed due to a conflict with the
+        current state of the resource. Resolve the conflict and try again.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message
+    No Content:
+      description: The request was successful, but there is no content to return in
+        the response.
+      content:
+        application/json:
+          schema:
+            type: "null"
+  securitySchemes:
+    BearerJwt:
+      type: http
+      scheme: Bearer
+      bearerFormat: Json Web Token (JWT)
+      description: "Jwt Auth: Authenticated requests contain a valid Json Web Token
+        (JWT) as part of the `Authorization: Bearer <JWT>` header."
+  parameters:
+    sport_name:
+      name: sport_name
+      in: path
+      required: true
+      schema:
+        type: string
+    team_id:
+      name: team_id
+      in: path
+      required: true
+      schema:
+        type: string
+    member_id:
+      name: member_id
+      in: path
+      required: true
+      schema:
+        type: string
+    event_id:
+      name: event_id
+      in: path
+      required: true
+      schema:
+        type: string
+    feedback_id:
+      name: feedback_id
+      in: path
+      required: true
+      schema:
+        type: string
+    transaction_id:
+      name: transaction_id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    Sport:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+        directors:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - description
+        - created_at
+        - directors
+    SportCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        directors:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+      description: Data transfer object for creating a new Sport.
+      x-fiddle-dto-info:
+        baseSchemaName: Sport
+    SportPartialUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        directors:
+          type: array
+          items:
+            type: string
+      required: []
+      description: Data transfer object for partially updating an existing Sport
+        (PATCH operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Sport
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+        address:
+          type: string
+        sport:
+          type: string
+        trainers:
+          type: array
+          items:
+            type: string
+        trainees:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - description
+        - created_at
+        - address
+        - sport
+        - trainers
+        - trainees
+      description: ""
+    TeamCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        sport:
+          type: string
+        trainers:
+          type: array
+          items:
+            type: string
+        trainees:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - sport
+      description: Data transfer object for creating a new Team.
+      x-fiddle-dto-info:
+        baseSchemaName: Team
+    TeamPartialUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        sport:
+          type: string
+        trainers:
+          type: array
+          items:
+            type: string
+        trainees:
+          type: array
+          items:
+            type: string
+      required: []
+      description: Data transfer object for partially updating an existing Team (PATCH
+        operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Team
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        birthday:
+          type: string
+        phone_number:
+          type: string
+        address:
+          type: string
+        joining_date:
+          type: string
+        information:
+          type: string
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - birthday
+        - phone_number
+        - address
+        - joining_date
+        - information
+      description: ""
+    MemberSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+      description: A simplified representation of a Member, typically used in list views.
+      x-fiddle-dto-info:
+        baseSchemaName: Member
+    MemberPartialUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        birthday:
+          type: string
+        phone_number:
+          type: string
+        address:
+          type: string
+        information:
+          type: string
+      required: []
+      description: Data transfer object for partially updating an existing Member
+        (PATCH operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Member
+    MemberCreate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        birthday:
+          type: string
+        phone_number:
+          type: string
+        address:
+          type: string
+        information:
+          type: string
+      required:
+        - first_name
+        - last_name
+      description: Data transfer object for creating a new Member.
+      x-fiddle-dto-info:
+        baseSchemaName: Member
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        attendees:
+          type: array
+          items:
+            type: string
+        sports_linked:
+          type: array
+          items:
+            type: string
+          description: Names of the sports associated with this event.
+        teams_linked:
+          type: array
+          items:
+            type: string
+          description: IDs of the teams associated with this event.
+        creator:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - start_time
+        - end_time
+        - creator
+      description: ""
+    EventSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+      required:
+        - id
+        - name
+        - start_time
+        - end_time
+      description: A simplified representation of a Event, typically used in list views.
+      x-fiddle-dto-info:
+        baseSchemaName: Event
+    EventPartialUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        attendees:
+          type: array
+          items:
+            type: string
+        sports_linked:
+          type: array
+          items:
+            type: string
+        teams_linked:
+          type: array
+          items:
+            type: string
+      required: []
+      description: Data transfer object for partially updating an existing Event
+        (PATCH operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Event
+    EventCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        attendees:
+          type: array
+          items:
+            type: string
+        sports_linked:
+          type: array
+          items:
+            type: string
+        teams_linked:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - start_time
+        - end_time
+      description: Data transfer object for creating a new Event.
+      x-fiddle-dto-info:
+        baseSchemaName: Event
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+        event:
+          type: string
+        member:
+          type: string
+        creator:
+          type: string
+        created_at:
+          type: string
+        feedback:
+          type: string
+      required:
+        - id
+        - event
+        - member
+        - creator
+        - created_at
+        - feedback
+      description: ""
+    FeedbackSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        event:
+          type: string
+        member:
+          type: string
+        creator:
+          type: string
+        created_at:
+          type: string
+      required:
+        - id
+        - event
+        - member
+        - creator
+        - created_at
+      description: A simplified representation of a Feedback, typically used in list views.
+      x-fiddle-dto-info:
+        baseSchemaName: Feedback
+    FeedbackPartialUpdate:
+      type: object
+      properties:
+        event:
+          type: string
+        member:
+          type: string
+        feedback:
+          type: string
+      required: []
+      description: Data transfer object for partially updating an existing Feedback
+        (PATCH operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Feedback
+    FeedbackCreate:
+      type: object
+      properties:
+        event:
+          type: string
+        member:
+          type: string
+        feedback:
+          type: string
+      required:
+        - event
+        - member
+        - feedback
+      description: Data transfer object for creating a new Feedback.
+      x-fiddle-dto-info:
+        baseSchemaName: Feedback
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        member:
+          type: string
+        creator:
+          type: string
+        amount_cents:
+          type: integer
+        created_at:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - member
+        - creator
+        - amount_cents
+        - created_at
+        - title
+        - description
+      description: A simplified representation of a Transaction, typically used in
+        list views.
+    TransactionPartialUpdate:
+      type: object
+      properties:
+        member:
+          type: string
+        amount_cents:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+      required: []
+      description: Data transfer object for partially updating an existing Transaction
+        (PATCH operation).
+      x-fiddle-dto-info:
+        baseSchemaName: Transaction
+    TransactionCreate:
+      type: object
+      properties:
+        member:
+          type: string
+        amount_cents:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+      required:
+        - member
+        - amount_cents
+        - title
+      description: Data transfer object for creating a new Transaction.
+      x-fiddle-dto-info:
+        baseSchemaName: Transaction
+    Balance:
+      type: object
+      properties:
+        member:
+          type: string
+        balance_cents:
+          type: integer
+      required:
+        - member
+        - balance_cents
+      description: ""
+tags:
+  - name: organization
+  - name: members
+  - name: events
+  - name: feedback
+  - name: finance
+  - name: letters
+  - name: helper
