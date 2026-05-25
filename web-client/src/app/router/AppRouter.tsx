@@ -1,8 +1,10 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { getEventsHello } from '@/features/events/api'
+import { getFeedbackHello } from '@/features/feedback/api'
 import { getLettersHello } from '@/features/letters/api'
 import { getMembersHello } from '@/features/members/api'
+import { getOrganizationHello } from '@/features/organization/api'
 import { getPaymentsHello } from '@/features/payments/api'
 
 type ServicePlaceholderPageProps = {
@@ -70,6 +72,8 @@ export function AppRouter() {
             <NavLink to="/events" className={navLinkClass}>Events</NavLink>
             <NavLink to="/payments" className={navLinkClass}>Payments</NavLink>
             <NavLink to="/letters" className={navLinkClass}>Letters</NavLink>
+            <NavLink to="/organization" className={navLinkClass}>Organization</NavLink>
+            <NavLink to="/feedback" className={navLinkClass}>Feedback</NavLink>
           </nav>
         </div>
       </header>
@@ -92,6 +96,14 @@ export function AppRouter() {
           <Route
             path="/letters"
             element={<ServicePlaceholderPage title="Letter Service" loadMessage={getLettersHello} />}
+          />
+          <Route
+            path="/organization"
+            element={<ServicePlaceholderPage title="Organization Service" loadMessage={getOrganizationHello} />}
+          />
+          <Route
+            path="/feedback"
+            element={<ServicePlaceholderPage title="Feedback Service" loadMessage={getFeedbackHello} />}
           />
         </Routes>
       </main>
