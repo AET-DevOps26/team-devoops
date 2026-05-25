@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.messages import HumanMessage, SystemMessage
 
+from rag import get_rag_agent
+
 load_dotenv()
 agent = create_agent("gpt-4.1-mini")
 
@@ -17,4 +19,12 @@ def hello():
             ]
         }
     )
+    return response["messages"][-1].content
+
+
+def generate_rag_response(question):
+    rag_agent = get_rag_agent()
+    response = rag_agent.invoke({
+        "messages": [{"role": "user", "content": question}]
+    })
     return response["messages"][-1].content
