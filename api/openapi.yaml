@@ -3,6 +3,8 @@ info:
   title: Club Management System API
   description: This is the API definition of the Club Management System.
   version: 0.0.0
+  contact:
+    name: team-devoops
 servers:
   - url: /api/v1
     description: ""
@@ -1113,7 +1115,6 @@ components:
           type: array
           items:
             type: string
-      required: []
       description: Data transfer object for partially updating an existing Sport
         (PATCH operation).
       x-fiddle-dto-info:
@@ -1195,7 +1196,6 @@ components:
           type: array
           items:
             type: string
-      required: []
       description: Data transfer object for partially updating an existing Team (PATCH
         operation).
       x-fiddle-dto-info:
@@ -1268,7 +1268,6 @@ components:
           type: string
         information:
           type: string
-      required: []
       description: Data transfer object for partially updating an existing Member
         (PATCH operation).
       x-fiddle-dto-info:
@@ -1375,7 +1374,6 @@ components:
           type: array
           items:
             type: string
-      required: []
       description: Data transfer object for partially updating an existing Event
         (PATCH operation).
       x-fiddle-dto-info:
@@ -1464,7 +1462,6 @@ components:
           type: string
         feedback:
           type: string
-      required: []
       description: Data transfer object for partially updating an existing Feedback
         (PATCH operation).
       x-fiddle-dto-info:
@@ -1523,7 +1520,6 @@ components:
           type: string
         description:
           type: string
-      required: []
       description: Data transfer object for partially updating an existing Transaction
         (PATCH operation).
       x-fiddle-dto-info:
