@@ -4,7 +4,7 @@ info:
   description: This is the API definition of the Club Management System.
   version: 0.0.0
 servers:
-  - url: http://example.com/api/v1
+  - url: /api/v1
     description: ""
 paths:
   /organization/sports:
