@@ -1,0 +1,3 @@
+tum/devoops/letterservice/api/LettersApi.java
+tum/devoops/letterservice/model/BadRequestResponse.java
+tum/devoops/letterservice/model/ErrorResponse.java

@@ -1,0 +1,291 @@
+package tum.devoops.organizationservice.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.lang.Nullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * 
+ */
+
+@Schema(name = "Team", description = "")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
+public class Team {
+
+  private String id;
+
+  private String name;
+
+  private String description;
+
+  private String createdAt;
+
+  private String address;
+
+  private String sport;
+
+  @Valid
+  private List<String> trainers = new ArrayList<>();
+
+  @Valid
+  private List<String> trainees = new ArrayList<>();
+
+  public Team() {
+    super();
+  }
+
+  /**
+   * Constructor with only required parameters
+   */
+  public Team(String id, String name, String description, String createdAt, String address, String sport, List<String> trainers, List<String> trainees) {
+    this.id = id;
+    this.name = name;
+    this.description = description;
+    this.createdAt = createdAt;
+    this.address = address;
+    this.sport = sport;
+    this.trainers = trainers;
+    this.trainees = trainees;
+  }
+
+  public Team id(String id) {
+    this.id = id;
+    return this;
+  }
+
+  /**
+   * Get id
+   * @return id
+   */
+  @NotNull 
+  @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("id")
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  public Team name(String name) {
+    this.name = name;
+    return this;
+  }
+
+  /**
+   * Get name
+   * @return name
+   */
+  @NotNull 
+  @Schema(name = "name", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("name")
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public Team description(String description) {
+    this.description = description;
+    return this;
+  }
+
+  /**
+   * Get description
+   * @return description
+   */
+  @NotNull 
+  @Schema(name = "description", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("description")
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public Team createdAt(String createdAt) {
+    this.createdAt = createdAt;
+    return this;
+  }
+
+  /**
+   * Get createdAt
+   * @return createdAt
+   */
+  @NotNull 
+  @Schema(name = "created_at", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("created_at")
+  public String getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(String createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public Team address(String address) {
+    this.address = address;
+    return this;
+  }
+
+  /**
+   * Get address
+   * @return address
+   */
+  @NotNull 
+  @Schema(name = "address", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("address")
+  public String getAddress() {
+    return address;
+  }
+
+  public void setAddress(String address) {
+    this.address = address;
+  }
+
+  public Team sport(String sport) {
+    this.sport = sport;
+    return this;
+  }
+
+  /**
+   * Get sport
+   * @return sport
+   */
+  @NotNull 
+  @Schema(name = "sport", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("sport")
+  public String getSport() {
+    return sport;
+  }
+
+  public void setSport(String sport) {
+    this.sport = sport;
+  }
+
+  public Team trainers(List<String> trainers) {
+    this.trainers = trainers;
+    return this;
+  }
+
+  public Team addTrainersItem(String trainersItem) {
+    if (this.trainers == null) {
+      this.trainers = new ArrayList<>();
+    }
+    this.trainers.add(trainersItem);
+    return this;
+  }
+
+  /**
+   * Get trainers
+   * @return trainers
+   */
+  @NotNull 
+  @Schema(name = "trainers", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("trainers")
+  public List<String> getTrainers() {
+    return trainers;
+  }
+
+  public void setTrainers(List<String> trainers) {
+    this.trainers = trainers;
+  }
+
+  public Team trainees(List<String> trainees) {
+    this.trainees = trainees;
+    return this;
+  }
+
+  public Team addTraineesItem(String traineesItem) {
+    if (this.trainees == null) {
+      this.trainees = new ArrayList<>();
+    }
+    this.trainees.add(traineesItem);
+    return this;
+  }
+
+  /**
+   * Get trainees
+   * @return trainees
+   */
+  @NotNull 
+  @Schema(name = "trainees", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("trainees")
+  public List<String> getTrainees() {
+    return trainees;
+  }
+
+  public void setTrainees(List<String> trainees) {
+    this.trainees = trainees;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Team team = (Team) o;
+    return Objects.equals(this.id, team.id) &&
+        Objects.equals(this.name, team.name) &&
+        Objects.equals(this.description, team.description) &&
+        Objects.equals(this.createdAt, team.createdAt) &&
+        Objects.equals(this.address, team.address) &&
+        Objects.equals(this.sport, team.sport) &&
+        Objects.equals(this.trainers, team.trainers) &&
+        Objects.equals(this.trainees, team.trainees);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, name, description, createdAt, address, sport, trainers, trainees);
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("class Team {\n");
+    sb.append("    id: ").append(toIndentedString(id)).append("\n");
+    sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    description: ").append(toIndentedString(description)).append("\n");
+    sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
+    sb.append("    address: ").append(toIndentedString(address)).append("\n");
+    sb.append("    sport: ").append(toIndentedString(sport)).append("\n");
+    sb.append("    trainers: ").append(toIndentedString(trainers)).append("\n");
+    sb.append("    trainees: ").append(toIndentedString(trainees)).append("\n");
+    sb.append("}");
+    return sb.toString();
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+    if (o == null) {
+      return "null";
+    }
+    return o.toString().replace("\n", "\n    ");
+  }
+}
+

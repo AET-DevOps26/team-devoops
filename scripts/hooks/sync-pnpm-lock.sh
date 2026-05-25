@@ -4,23 +4,27 @@
 # CI by keeping the lockfile in the SAME commit as the manifest.
 #
 # Behavior:
-#   1. Regenerate pnpm-lock.yaml from package.json (no install, no scripts).
-#   2. Stage the (possibly updated) lockfile.
-#   3. If the lockfile actually changed, abort the commit so the developer
-#      can review and re-commit. If it didn't change, allow the commit.
+#   1. Capture the currently-staged lockfile content.
+#   2. Regenerate pnpm-lock.yaml from package.json (no install, no scripts).
+#   3. If the lockfile changed from what was staged, stage the new version
+#      and abort so the developer can review and re-commit.
+#      If it didn't change, the lockfile is already correct -- allow the commit.
 set -euo pipefail
 
-cd web-client
+LOCK_FILE="web-client/pnpm-lock.yaml"
+
+# Snapshot the staged (or committed) lockfile before we touch anything.
+before="$(git show ":$LOCK_FILE" 2>/dev/null || cat "$LOCK_FILE" 2>/dev/null || true)"
+
 echo "package.json changed -- regenerating pnpm-lock.yaml..."
+cd web-client
 pnpm install --lockfile-only --ignore-scripts
 cd ..
 
-git add web-client/pnpm-lock.yaml
+after="$(cat "$LOCK_FILE")"
 
-if ! git diff --cached --quiet -- web-client/pnpm-lock.yaml; then
-  # The lockfile was either newly staged or its staged contents changed
-  # as a result of this regeneration. Force the developer to re-commit
-  # so they see the diff that's about to land.
+if [ "$before" != "$after" ]; then
+  git add "$LOCK_FILE"
   cat <<'EOF'
 
 pnpm-lock.yaml was regenerated and staged.

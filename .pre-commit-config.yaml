@@ -26,9 +26,11 @@ repos:
         # Catches the same class of issue as ruff's W292
         # ("no newline at end of file"), but for every text file in
         # the repo -- not only Python.
+        exclude: ^services/(py-genai-helper/generated|spring-.*/src/generated)/
       - id: trailing-whitespace
         # Preserve intentional two-space line breaks in markdown.
         args: [--markdown-linebreak-ext=md]
+        exclude: ^services/(py-genai-helper/generated|spring-.*/src/generated)/
       - id: check-yaml
         # --allow-multiple-documents is defensive for the planned
         # Helm charts under infra/; current YAML files are all
@@ -54,9 +56,11 @@ repos:
         name: ruff (lint + autofix)
         args: [--fix]
         files: ^services/py-genai-helper/.*\.py$
+        exclude: ^services/py-genai-helper/generated/
       - id: ruff-format
         name: ruff-format
         files: ^services/py-genai-helper/.*\.py$
+        exclude: ^services/py-genai-helper/generated/
 
   # ------------------------------------------------------------------
   # Local hooks -- delegate to the project's own toolchain (pnpm,
@@ -95,3 +99,11 @@ repos:
         files: ^services/spring-.*/.*\.java$
         pass_filenames: false
         stages: [pre-push]
+
+      - id: openapi-codegen
+        name: openapi codegen (all services)
+        language: system
+        entry: scripts/hooks/run-codegen.sh
+        files: ^api/openapi\.yaml$
+        pass_filenames: false
+        stages: [pre-commit]

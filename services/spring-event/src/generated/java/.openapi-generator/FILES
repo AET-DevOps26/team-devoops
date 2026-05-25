@@ -1,0 +1,7 @@
+tum/devoops/eventservice/api/EventsApi.java
+tum/devoops/eventservice/model/BadRequestResponse.java
+tum/devoops/eventservice/model/ErrorResponse.java
+tum/devoops/eventservice/model/Event.java
+tum/devoops/eventservice/model/EventCreate.java
+tum/devoops/eventservice/model/EventPartialUpdate.java
+tum/devoops/eventservice/model/EventSummary.java

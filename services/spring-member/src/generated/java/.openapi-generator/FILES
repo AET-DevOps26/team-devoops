@@ -1,0 +1,7 @@
+tum/devoops/memberservice/api/MembersApi.java
+tum/devoops/memberservice/model/BadRequestResponse.java
+tum/devoops/memberservice/model/ErrorResponse.java
+tum/devoops/memberservice/model/Member.java
+tum/devoops/memberservice/model/MemberCreate.java
+tum/devoops/memberservice/model/MemberPartialUpdate.java
+tum/devoops/memberservice/model/MemberSummary.java

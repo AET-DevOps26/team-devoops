@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Club Management System API
   description: This is the API definition of the Club Management System.
@@ -24,29 +24,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/Sport"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -67,29 +47,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -122,29 +82,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -169,46 +109,12 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
-          description: The server cannot find the requested resource. The endpoint may be
-            invalid or the resource may no longer exist.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -229,29 +135,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Sport"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -275,29 +161,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/Team"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -317,29 +183,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -370,29 +216,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Team"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -417,29 +243,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -464,34 +270,10 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -515,29 +297,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/MemberSummary"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -557,29 +319,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -610,29 +352,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Member"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -657,29 +379,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -704,34 +406,10 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -755,29 +433,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/EventSummary"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -797,29 +455,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -850,29 +488,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Event"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -897,29 +515,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -944,34 +542,10 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -995,29 +569,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/FeedbackSummary"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -1037,29 +591,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -1090,29 +624,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Feedback"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1130,34 +644,10 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1182,29 +672,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1235,29 +705,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/Balance"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -1279,29 +729,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Balance"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1325,29 +755,9 @@ paths:
                 items:
                   $ref: "#/components/schemas/Transaction"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -1367,29 +777,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -1420,29 +810,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Transaction"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1467,29 +837,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1514,34 +864,10 @@ paths:
         "204":
           description: The request was successful, but there is no content to return in
             the response.
-          content:
-            application/json:
-              schema:
-                type: "null"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1560,29 +886,9 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -1608,33 +914,14 @@ paths:
           content:
             application/pdf:
               schema:
-                type: object
+                type: string
+                format: binary
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       security:
@@ -1660,31 +947,11 @@ paths:
           content:
             text/plain:
               schema:
-                type: object
+                type: string
         "401":
-          description: Authentication is required to access the requested resource. The
-            client must include the appropriate credentials.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Unauthorized"
         "403":
-          description: The server understood the request, but refuses to authorize it.
-            Ensure the client has appropriate permissions.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                required:
-                  - message
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerErrror"
       parameters:
@@ -1699,64 +966,45 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
-            required:
-              - message
+            $ref: "#/components/schemas/ErrorResponse"
     NotFound:
       description: The server cannot find the requested resource. The endpoint may be
         invalid or the resource may no longer exist.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
-            required:
-              - message
+            $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: The server could not understand the request due to invalid syntax.
         The client should modify the request and try again.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
-              errors:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    message:
-                      type: string
-                  required:
-                    - message
-            required:
-              - message
+            $ref: "#/components/schemas/BadRequestResponse"
     Conflict:
       description: The request could not be completed due to a conflict with the
         current state of the resource. Resolve the conflict and try again.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
-            required:
-              - message
+            $ref: "#/components/schemas/ErrorResponse"
     NoContent:
       description: The request was successful, but there is no content to return in
         the response.
+    Unauthorized:
+      description: Authentication is required to access the requested resource. The
+        client must include the appropriate credentials.
       content:
         application/json:
           schema:
-            type: "null"
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The server understood the request, but refuses to authorize it.
+        Ensure the client has appropriate permissions.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   securitySchemes:
     BearerJwt:
       type: http
@@ -1802,6 +1050,24 @@ components:
       schema:
         type: string
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    BadRequestResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorResponse"
+      required:
+        - message
     Sport:
       type: object
       properties:

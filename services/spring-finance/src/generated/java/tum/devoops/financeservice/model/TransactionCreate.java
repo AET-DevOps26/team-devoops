@@ -1,0 +1,169 @@
+package tum.devoops.financeservice.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.springframework.lang.Nullable;
+import java.time.OffsetDateTime;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import jakarta.annotation.Generated;
+
+/**
+ * Data transfer object for creating a new Transaction.
+ */
+
+@Schema(name = "TransactionCreate", description = "Data transfer object for creating a new Transaction.")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
+public class TransactionCreate {
+
+  private String member;
+
+  private Integer amountCents;
+
+  private String title;
+
+  private @Nullable String description;
+
+  public TransactionCreate() {
+    super();
+  }
+
+  /**
+   * Constructor with only required parameters
+   */
+  public TransactionCreate(String member, Integer amountCents, String title) {
+    this.member = member;
+    this.amountCents = amountCents;
+    this.title = title;
+  }
+
+  public TransactionCreate member(String member) {
+    this.member = member;
+    return this;
+  }
+
+  /**
+   * Get member
+   * @return member
+   */
+  @NotNull 
+  @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("member")
+  public String getMember() {
+    return member;
+  }
+
+  public void setMember(String member) {
+    this.member = member;
+  }
+
+  public TransactionCreate amountCents(Integer amountCents) {
+    this.amountCents = amountCents;
+    return this;
+  }
+
+  /**
+   * Get amountCents
+   * @return amountCents
+   */
+  @NotNull 
+  @Schema(name = "amount_cents", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("amount_cents")
+  public Integer getAmountCents() {
+    return amountCents;
+  }
+
+  public void setAmountCents(Integer amountCents) {
+    this.amountCents = amountCents;
+  }
+
+  public TransactionCreate title(String title) {
+    this.title = title;
+    return this;
+  }
+
+  /**
+   * Get title
+   * @return title
+   */
+  @NotNull 
+  @Schema(name = "title", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("title")
+  public String getTitle() {
+    return title;
+  }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+
+  public TransactionCreate description(@Nullable String description) {
+    this.description = description;
+    return this;
+  }
+
+  /**
+   * Get description
+   * @return description
+   */
+  
+  @Schema(name = "description", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("description")
+  public @Nullable String getDescription() {
+    return description;
+  }
+
+  public void setDescription(@Nullable String description) {
+    this.description = description;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TransactionCreate transactionCreate = (TransactionCreate) o;
+    return Objects.equals(this.member, transactionCreate.member) &&
+        Objects.equals(this.amountCents, transactionCreate.amountCents) &&
+        Objects.equals(this.title, transactionCreate.title) &&
+        Objects.equals(this.description, transactionCreate.description);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(member, amountCents, title, description);
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("class TransactionCreate {\n");
+    sb.append("    member: ").append(toIndentedString(member)).append("\n");
+    sb.append("    amountCents: ").append(toIndentedString(amountCents)).append("\n");
+    sb.append("    title: ").append(toIndentedString(title)).append("\n");
+    sb.append("    description: ").append(toIndentedString(description)).append("\n");
+    sb.append("}");
+    return sb.toString();
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+    if (o == null) {
+      return "null";
+    }
+    return o.toString().replace("\n", "\n    ");
+  }
+}
+
