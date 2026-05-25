@@ -1,3 +1,4 @@
+tum/devoops/financeservice/api/ApiUtil.java
 tum/devoops/financeservice/api/FinanceApi.java
 tum/devoops/financeservice/model/BadRequestResponse.java
 tum/devoops/financeservice/model/Balance.java

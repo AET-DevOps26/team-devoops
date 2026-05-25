@@ -28,5 +28,5 @@ docker run --rm \
   -g spring \
   -o /local/services/"$SERVICE"/src/generated/java \
   --skip-validate-spec \
-  --global-property "apis=$TAG_CAP,models=$MODELS,supportingFiles=false" \
+  --global-property "apis=$TAG_CAP,models=$MODELS,supportingFiles=ApiUtil.java" \
   --additional-properties "useSpringBoot3=true,interfaceOnly=true,openApiNullable=false,useTags=true,sourceFolder=,apiPackage=tum.devoops.$PKG.api,modelPackage=tum.devoops.$PKG.model,hideGenerationTimestamp=true"

@@ -1,3 +1,4 @@
+tum/devoops/memberservice/api/ApiUtil.java
 tum/devoops/memberservice/api/MembersApi.java
 tum/devoops/memberservice/model/BadRequestResponse.java
 tum/devoops/memberservice/model/ErrorResponse.java

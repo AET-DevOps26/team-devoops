@@ -1,3 +1,4 @@
+tum/devoops/eventservice/api/ApiUtil.java
 tum/devoops/eventservice/api/EventsApi.java
 tum/devoops/eventservice/model/BadRequestResponse.java
 tum/devoops/eventservice/model/ErrorResponse.java
