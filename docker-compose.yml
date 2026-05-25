@@ -128,8 +128,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.finance-service.entrypoints=web"
-      - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finances`)"
-      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finances"
+      - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finance`)"
+      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
       - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
     networks:
