@@ -37,7 +37,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "letters", description = "the letters API")
+@Tag(name = "letters", description = "Endpoints related to generating and sending letters from templates, such as emails and PDFs.")
 public interface LettersApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -47,7 +47,7 @@ public interface LettersApi {
     /**
      * POST /letters/pdf : Get pdf
      *
-     * @param body  (required)
+     * @param body The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -92,7 +92,7 @@ public interface LettersApi {
     )
     
     default ResponseEntity<org.springframework.core.io.Resource> getPdf(
-        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody String body
+        @Parameter(name = "body", description = "The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content.", required = true) @Valid @RequestBody String body
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -126,7 +126,7 @@ public interface LettersApi {
     /**
      * POST /letters/mail : Send mail
      *
-     * @param body  (required)
+     * @param body The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -164,7 +164,7 @@ public interface LettersApi {
     )
     
     default ResponseEntity<Void> sendMail(
-        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody String body
+        @Parameter(name = "body", description = "The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content.", required = true) @Valid @RequestBody String body
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

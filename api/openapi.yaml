@@ -7,7 +7,7 @@ info:
     name: team-devoops
 servers:
   - url: /api/v1
-    description: ""
+    description: Base URL for all API endpoints
 paths:
   /organization/sports:
     get:
@@ -15,10 +15,10 @@ paths:
       tags:
         - organization
       summary: Get all sports
+      description: Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.
       responses:
         "200":
-          description: The request was successful, and the server has returned the
-            requested resource in the response body.
+          description: The request was successful, and the server has returned the requested resource in the response body.
           content:
             application/json:
               schema:
@@ -39,6 +39,7 @@ paths:
       tags:
         - organization
       summary: Create sport
+      description: Creates a new sport in the organization. Only admins are allowed to create new sports.
       responses:
         "201":
           description: The request was successful, and a new resource was created.
@@ -60,7 +61,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating a new sport.
         content:
           application/json:
             schema:
@@ -93,7 +94,7 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating a sport.
         content:
           application/json:
             schema:
@@ -196,7 +197,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating a new team.
         content:
           application/json:
             schema:
@@ -256,7 +257,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating a team.
         content:
           application/json:
             schema:
@@ -332,7 +333,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating a new member.
         content:
           application/json:
             schema:
@@ -392,7 +393,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating a member.
         content:
           application/json:
             schema:
@@ -468,7 +469,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating a new event.
         content:
           application/json:
             schema:
@@ -528,7 +529,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating an event.
         content:
           application/json:
             schema:
@@ -604,7 +605,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating new feedback.
         content:
           application/json:
             schema:
@@ -685,7 +686,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating a specific feedback.
         content:
           application/json:
             schema:
@@ -790,7 +791,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for creating a new transaction.
         content:
           application/json:
             schema:
@@ -850,7 +851,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for partially updating a transaction.
         content:
           application/json:
             schema:
@@ -897,7 +898,7 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content.
         content:
           text/html:
             schema:
@@ -931,7 +932,7 @@ paths:
       parameters: []
       requestBody:
         required: true
-        description: ""
+        description: The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content.
         content:
           text/html:
             schema:
@@ -1010,7 +1011,7 @@ components:
   securitySchemes:
     BearerJwt:
       type: http
-      scheme: Bearer
+      scheme: bearer
       bearerFormat: Json Web Token (JWT)
       description: "Jwt Auth: Authenticated requests contain a valid Json Web Token
         (JWT) as part of the `Authorization: Bearer <JWT>` header."
@@ -1094,6 +1095,7 @@ components:
         - description
         - created_at
         - directors
+      description: The object representation of a Sport within the organization.
     SportCreate:
       type: object
       properties:
@@ -1155,7 +1157,7 @@ components:
         - sport
         - trainers
         - trainees
-      description: ""
+      description: The object representation of a Team that belongs to a specific Sport.
     TeamCreate:
       type: object
       properties:
@@ -1234,7 +1236,7 @@ components:
         - address
         - joining_date
         - information
-      description: ""
+      description: The object representation of a Member. All users are represented as a member.
     MemberSummary:
       type: object
       properties:
@@ -1334,7 +1336,7 @@ components:
         - start_time
         - end_time
         - creator
-      description: ""
+      description: The object representation of an Event (e.g., a training session or a match).
     EventSummary:
       type: object
       properties:
@@ -1436,7 +1438,7 @@ components:
         - creator
         - created_at
         - feedback
-      description: ""
+      description: The object representation of Feedback, which is associated with a specific Event and Member.
     FeedbackSummary:
       type: object
       properties:
@@ -1511,8 +1513,7 @@ components:
         - created_at
         - title
         - description
-      description: A simplified representation of a Transaction, typically used in
-        list views.
+      description: The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps.
     TransactionPartialUpdate:
       type: object
       properties:
@@ -1552,12 +1553,19 @@ components:
       required:
         - member
         - balance_cents
-      description: ""
+      description: The object representation of a Member's Balance, which includes the total balance in cents.
 tags:
   - name: organization
+    description: Endpoints related to managing the overall organization, including sports and teams.
   - name: members
+    description: Endpoints related to managing members of the organization (which represent all users).
   - name: events
+    description: Endpoints related to managing events such as training sessions and matches.
   - name: feedback
+    description: Endpoints related to managing feedback provided by trainers to members for events.
   - name: finance
+    description: Endpoints related to managing financial transactions and balances for members.
   - name: letters
+    description: Endpoints related to generating and sending letters from templates, such as emails and PDFs.
   - name: helper
+    description: Endpoints related to the genai helper functions, such as generating reports based on member data.

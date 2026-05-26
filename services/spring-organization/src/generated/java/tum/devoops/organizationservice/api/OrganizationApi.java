@@ -44,7 +44,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "organization", description = "the organization API")
+@Tag(name = "organization", description = "Endpoints related to managing the overall organization, including sports and teams.")
 public interface OrganizationApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -53,8 +53,9 @@ public interface OrganizationApi {
 
     /**
      * POST /organization/sports : Create sport
+     * Creates a new sport in the organization. Only admins are allowed to create new sports.
      *
-     * @param sportCreate  (required)
+     * @param sportCreate The request body for creating a new sport. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -65,6 +66,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "createSport",
         summary = "Create sport",
+        description = "Creates a new sport in the organization. Only admins are allowed to create new sports.",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -98,7 +100,7 @@ public interface OrganizationApi {
     )
     
     default ResponseEntity<Sport> createSport(
-        @Parameter(name = "SportCreate", description = "", required = true) @Valid @RequestBody SportCreate sportCreate
+        @Parameter(name = "SportCreate", description = "The request body for creating a new sport.", required = true) @Valid @RequestBody SportCreate sportCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -142,7 +144,7 @@ public interface OrganizationApi {
     /**
      * POST /organization/teams : Create team
      *
-     * @param teamCreate  (required)
+     * @param teamCreate The request body for creating a new team. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -186,7 +188,7 @@ public interface OrganizationApi {
     )
     
     default ResponseEntity<Team> createTeam(
-        @Parameter(name = "TeamCreate", description = "", required = true) @Valid @RequestBody TeamCreate teamCreate
+        @Parameter(name = "TeamCreate", description = "The request body for creating a new team.", required = true) @Valid @RequestBody TeamCreate teamCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -371,6 +373,7 @@ public interface OrganizationApi {
 
     /**
      * GET /organization/sports : Get all sports
+     * Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -380,6 +383,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "getAllSports",
         summary = "Get all sports",
+        description = "Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -665,7 +669,7 @@ public interface OrganizationApi {
      * PATCH /organization/sports/{sport_name} : Update sport
      *
      * @param sportName  (required)
-     * @param sportPartialUpdate  (required)
+     * @param sportPartialUpdate The request body for partially updating a sport. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -710,7 +714,7 @@ public interface OrganizationApi {
     
     default ResponseEntity<Sport> updateSport(
         @Parameter(name = "sport_name", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_name") String sportName,
-        @Parameter(name = "SportPartialUpdate", description = "", required = true) @Valid @RequestBody SportPartialUpdate sportPartialUpdate
+        @Parameter(name = "SportPartialUpdate", description = "The request body for partially updating a sport.", required = true) @Valid @RequestBody SportPartialUpdate sportPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -755,7 +759,7 @@ public interface OrganizationApi {
      * PATCH /organization/teams/{team_id} : Update team
      *
      * @param teamId  (required)
-     * @param teamPartialUpdate  (required)
+     * @param teamPartialUpdate The request body for partially updating a team. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -800,7 +804,7 @@ public interface OrganizationApi {
     
     default ResponseEntity<Team> updateTeam(
         @Parameter(name = "team_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("team_id") UUID teamId,
-        @Parameter(name = "TeamPartialUpdate", description = "", required = true) @Valid @RequestBody TeamPartialUpdate teamPartialUpdate
+        @Parameter(name = "TeamPartialUpdate", description = "The request body for partially updating a team.", required = true) @Valid @RequestBody TeamPartialUpdate teamPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

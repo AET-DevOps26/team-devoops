@@ -18,10 +18,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * A simplified representation of a Transaction, typically used in list views.
+ * The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps.
  */
 
-@Schema(name = "Transaction", description = "A simplified representation of a Transaction, typically used in list views.")
+@Schema(name = "Transaction", description = "The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Transaction {
 

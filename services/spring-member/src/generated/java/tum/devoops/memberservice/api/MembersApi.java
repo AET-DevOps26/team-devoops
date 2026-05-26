@@ -42,7 +42,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "members", description = "the members API")
+@Tag(name = "members", description = "Endpoints related to managing members of the organization (which represent all users).")
 public interface MembersApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -52,7 +52,7 @@ public interface MembersApi {
     /**
      * POST /members : Create member
      *
-     * @param memberCreate  (required)
+     * @param memberCreate The request body for creating a new member. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -96,7 +96,7 @@ public interface MembersApi {
     )
     
     default ResponseEntity<Member> createMember(
-        @Parameter(name = "MemberCreate", description = "", required = true) @Valid @RequestBody MemberCreate memberCreate
+        @Parameter(name = "MemberCreate", description = "The request body for creating a new member.", required = true) @Valid @RequestBody MemberCreate memberCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -358,7 +358,7 @@ public interface MembersApi {
      * PATCH /members/{member_id} : Update member details
      *
      * @param memberId  (required)
-     * @param memberPartialUpdate  (required)
+     * @param memberPartialUpdate The request body for partially updating a member. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -403,7 +403,7 @@ public interface MembersApi {
     
     default ResponseEntity<Member> updateMemberDetails(
         @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") UUID memberId,
-        @Parameter(name = "MemberPartialUpdate", description = "", required = true) @Valid @RequestBody MemberPartialUpdate memberPartialUpdate
+        @Parameter(name = "MemberPartialUpdate", description = "The request body for partially updating a member.", required = true) @Valid @RequestBody MemberPartialUpdate memberPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

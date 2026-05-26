@@ -18,10 +18,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * 
+ * The object representation of Feedback, which is associated with a specific Event and Member.
  */
 
-@Schema(name = "Feedback", description = "")
+@Schema(name = "Feedback", description = "The object representation of Feedback, which is associated with a specific Event and Member.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Feedback {
 

@@ -42,7 +42,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "feedback", description = "the feedback API")
+@Tag(name = "feedback", description = "Endpoints related to managing feedback provided by trainers to members for events.")
 public interface FeedbackApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -52,7 +52,7 @@ public interface FeedbackApi {
     /**
      * POST /feedback : Create feedback
      *
-     * @param feedbackCreate  (required)
+     * @param feedbackCreate The request body for creating new feedback. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -96,7 +96,7 @@ public interface FeedbackApi {
     )
     
     default ResponseEntity<Feedback> createFeedback(
-        @Parameter(name = "FeedbackCreate", description = "", required = true) @Valid @RequestBody FeedbackCreate feedbackCreate
+        @Parameter(name = "FeedbackCreate", description = "The request body for creating new feedback.", required = true) @Valid @RequestBody FeedbackCreate feedbackCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -358,7 +358,7 @@ public interface FeedbackApi {
      * PATCH /feedback/{feedback_id} : Update feedback details
      *
      * @param feedbackId  (required)
-     * @param feedbackPartialUpdate  (required)
+     * @param feedbackPartialUpdate The request body for partially updating a specific feedback. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -403,7 +403,7 @@ public interface FeedbackApi {
     
     default ResponseEntity<Feedback> updateFeedbackDetails(
         @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") UUID feedbackId,
-        @Parameter(name = "FeedbackPartialUpdate", description = "", required = true) @Valid @RequestBody FeedbackPartialUpdate feedbackPartialUpdate
+        @Parameter(name = "FeedbackPartialUpdate", description = "The request body for partially updating a specific feedback.", required = true) @Valid @RequestBody FeedbackPartialUpdate feedbackPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

@@ -21,10 +21,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * 
+ * The object representation of an Event (e.g., a training session or a match).
  */
 
-@Schema(name = "Event", description = "")
+@Schema(name = "Event", description = "The object representation of an Event (e.g., a training session or a match).")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Event {
 

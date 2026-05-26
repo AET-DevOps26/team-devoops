@@ -42,7 +42,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "events", description = "the events API")
+@Tag(name = "events", description = "Endpoints related to managing events such as training sessions and matches.")
 public interface EventsApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -52,7 +52,7 @@ public interface EventsApi {
     /**
      * POST /events : Create event
      *
-     * @param eventCreate  (required)
+     * @param eventCreate The request body for creating a new event. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -96,7 +96,7 @@ public interface EventsApi {
     )
     
     default ResponseEntity<Event> createEvent(
-        @Parameter(name = "EventCreate", description = "", required = true) @Valid @RequestBody EventCreate eventCreate
+        @Parameter(name = "EventCreate", description = "The request body for creating a new event.", required = true) @Valid @RequestBody EventCreate eventCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -358,7 +358,7 @@ public interface EventsApi {
      * PATCH /events/{event_id} : Update event details
      *
      * @param eventId  (required)
-     * @param eventPartialUpdate  (required)
+     * @param eventPartialUpdate The request body for partially updating an event. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -403,7 +403,7 @@ public interface EventsApi {
     
     default ResponseEntity<Event> updateEventDetails(
         @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") UUID eventId,
-        @Parameter(name = "EventPartialUpdate", description = "", required = true) @Valid @RequestBody EventPartialUpdate eventPartialUpdate
+        @Parameter(name = "EventPartialUpdate", description = "The request body for partially updating an event.", required = true) @Valid @RequestBody EventPartialUpdate eventPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

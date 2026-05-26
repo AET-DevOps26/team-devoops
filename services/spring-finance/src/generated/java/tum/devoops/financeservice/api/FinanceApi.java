@@ -42,7 +42,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "finance", description = "the finance API")
+@Tag(name = "finance", description = "Endpoints related to managing financial transactions and balances for members.")
 public interface FinanceApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -52,7 +52,7 @@ public interface FinanceApi {
     /**
      * POST /finance/transactions : Create transaction
      *
-     * @param transactionCreate  (required)
+     * @param transactionCreate The request body for creating a new transaction. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -96,7 +96,7 @@ public interface FinanceApi {
     )
     
     default ResponseEntity<Transaction> createTransaction(
-        @Parameter(name = "TransactionCreate", description = "", required = true) @Valid @RequestBody TransactionCreate transactionCreate
+        @Parameter(name = "TransactionCreate", description = "The request body for creating a new transaction.", required = true) @Valid @RequestBody TransactionCreate transactionCreate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -504,7 +504,7 @@ public interface FinanceApi {
      * PATCH /finance/transactions/{transaction_id} : Update transaction
      *
      * @param transactionId  (required)
-     * @param transactionPartialUpdate  (required)
+     * @param transactionPartialUpdate The request body for partially updating a transaction. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -549,7 +549,7 @@ public interface FinanceApi {
     
     default ResponseEntity<Transaction> updateTransaction(
         @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") UUID transactionId,
-        @Parameter(name = "TransactionPartialUpdate", description = "", required = true) @Valid @RequestBody TransactionPartialUpdate transactionPartialUpdate
+        @Parameter(name = "TransactionPartialUpdate", description = "The request body for partially updating a transaction.", required = true) @Valid @RequestBody TransactionPartialUpdate transactionPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

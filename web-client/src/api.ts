@@ -11,10 +11,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all sports */
+        /**
+         * Get all sports
+         * @description Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.
+         */
         get: operations["getAllSports"];
         put?: never;
-        /** Create sport */
+        /**
+         * Create sport
+         * @description Creates a new sport in the organization. Only admins are allowed to create new sports.
+         */
         post: operations["createSport"];
         delete?: never;
         options?: never;
@@ -322,6 +328,7 @@ export interface components {
             message: string;
             errors?: components["schemas"]["ErrorResponse"][];
         };
+        /** @description The object representation of a Sport within the organization. */
         Sport: {
             name: string;
             description: string;
@@ -341,6 +348,7 @@ export interface components {
             description?: string;
             directors?: string[];
         };
+        /** @description The object representation of a Team that belongs to a specific Sport. */
         Team: {
             /** Format: uuid */
             id: string;
@@ -371,6 +379,7 @@ export interface components {
             trainers?: string[];
             trainees?: string[];
         };
+        /** @description The object representation of a Member. All users are represented as a member. */
         Member: {
             /** Format: uuid */
             id: string;
@@ -415,6 +424,7 @@ export interface components {
             address?: string;
             information?: string;
         };
+        /** @description The object representation of an Event (e.g., a training session or a match). */
         Event: {
             /** Format: uuid */
             id: string;
@@ -465,6 +475,7 @@ export interface components {
             sports_linked?: string[];
             teams_linked?: string[];
         };
+        /** @description The object representation of Feedback, which is associated with a specific Event and Member. */
         Feedback: {
             /** Format: uuid */
             id: string;
@@ -497,7 +508,7 @@ export interface components {
             member: string;
             feedback: string;
         };
-        /** @description A simplified representation of a Transaction, typically used in list views. */
+        /** @description The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps. */
         Transaction: {
             /** Format: uuid */
             id: string;
@@ -523,6 +534,7 @@ export interface components {
             title: string;
             description?: string;
         };
+        /** @description The object representation of a Member's Balance, which includes the total balance in cents. */
         Balance: {
             member: string;
             balance_cents: number;
@@ -635,6 +647,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating a new sport. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SportCreate"];
@@ -716,6 +729,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating a sport. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SportPartialUpdate"];
@@ -768,6 +782,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating a new team. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TeamCreate"];
@@ -849,6 +864,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating a team. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TeamPartialUpdate"];
@@ -901,6 +917,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating a new member. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MemberCreate"];
@@ -982,6 +999,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating a member. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MemberPartialUpdate"];
@@ -1034,6 +1052,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating a new event. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["EventCreate"];
@@ -1115,6 +1134,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating an event. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["EventPartialUpdate"];
@@ -1167,6 +1187,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating new feedback. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["FeedbackCreate"];
@@ -1248,6 +1269,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating a specific feedback. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["FeedbackPartialUpdate"];
@@ -1349,6 +1371,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for creating a new transaction. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TransactionCreate"];
@@ -1430,6 +1453,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The request body for partially updating a transaction. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TransactionPartialUpdate"];
@@ -1459,6 +1483,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. */
         requestBody: {
             content: {
                 "text/html": string;
@@ -1479,6 +1504,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. */
         requestBody: {
             content: {
                 "text/html": string;

@@ -15,10 +15,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * 
+ * The object representation of a Member&#39;s Balance, which includes the total balance in cents.
  */
 
-@Schema(name = "Balance", description = "")
+@Schema(name = "Balance", description = "The object representation of a Member's Balance, which includes the total balance in cents.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Balance {
 

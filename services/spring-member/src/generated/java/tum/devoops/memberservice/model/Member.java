@@ -18,10 +18,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * 
+ * The object representation of a Member. All users are represented as a member.
  */
 
-@Schema(name = "Member", description = "")
+@Schema(name = "Member", description = "The object representation of a Member. All users are represented as a member.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Member {
 

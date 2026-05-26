@@ -20,9 +20,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * Sport
+ * The object representation of a Sport within the organization.
  */
 
+@Schema(name = "Sport", description = "The object representation of a Sport within the organization.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Sport {
 
