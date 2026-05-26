@@ -342,7 +342,7 @@ jobs:
         run: cp services/py-genai-helper/.env.example services/py-genai-helper/.env
 
       - name: Build all images via docker compose
-        run: docker compose build
+        run: docker compose -f infra/docker-compose.yml build
 
       - name: Verify expected image tags exist
         # Compose tags images as `<project>-<service>:latest`; project name

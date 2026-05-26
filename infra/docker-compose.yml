@@ -1,9 +1,11 @@
+name: team-devoops
+
 services:
   py-genai-helper:
-    build: services/py-genai-helper/
+    build: ../services/py-genai-helper/
     container_name: py-genai-helper
     env_file:
-      - services/py-genai-helper/.env
+      - ../services/py-genai-helper/.env
     expose:
       - 5000
     labels:
@@ -17,7 +19,7 @@ services:
       - proxy
 
   organization-service:
-    build: services/spring-organization
+    build: ../services/spring-organization
     container_name: organization-service
     expose:
       - 8080
@@ -41,7 +43,7 @@ services:
       - data
 
   member-service:
-    build: services/spring-member
+    build: ../services/spring-member
     container_name: member-service
     expose:
       - 8080
@@ -65,7 +67,7 @@ services:
       - data
 
   event-service:
-    build: services/spring-event
+    build: ../services/spring-event
     container_name: event-service
     expose:
       - 8080
@@ -89,7 +91,7 @@ services:
       - data
 
   feedback-service:
-    build: services/spring-feedback
+    build: ../services/spring-feedback
     container_name: feedback-service
     expose:
       - 8080
@@ -113,7 +115,7 @@ services:
       - data
 
   finance-service:
-    build: services/spring-finance
+    build: ../services/spring-finance
     container_name: finance-service
     expose:
       - 8080
@@ -137,7 +139,7 @@ services:
       - data
 
   letter-service:
-    build: services/spring-letter
+    build: ../services/spring-letter
     container_name: letter-service
     expose:
       - 8080
@@ -179,7 +181,7 @@ services:
       - proxy
 
   web-client:
-    build: web-client/
+    build: ../web-client/
     container_name: web-client
     expose:
       - 8080
