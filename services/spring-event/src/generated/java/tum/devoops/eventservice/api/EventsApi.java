@@ -11,6 +11,7 @@ import tum.devoops.eventservice.model.Event;
 import tum.devoops.eventservice.model.EventCreate;
 import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
+import java.util.UUID;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,7 +101,7 @@ public interface EventsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"start_time\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"end_time\", \"description\" : \"description\", \"id\" : \"id\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -176,7 +177,7 @@ public interface EventsApi {
     )
     
     default ResponseEntity<Void> deleteEvent(
-        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") String eventId
+        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") UUID eventId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -249,7 +250,7 @@ public interface EventsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"start_time\" : \"start_time\", \"name\" : \"name\", \"end_time\" : \"end_time\", \"id\" : \"id\" }, { \"start_time\" : \"start_time\", \"name\" : \"name\", \"end_time\" : \"end_time\", \"id\" : \"id\" } ]";
+                    String exampleString = "[ { \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -317,12 +318,12 @@ public interface EventsApi {
     )
     
     default ResponseEntity<Event> getEventDetails(
-        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") String eventId
+        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") UUID eventId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"start_time\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"end_time\", \"description\" : \"description\", \"id\" : \"id\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -401,13 +402,13 @@ public interface EventsApi {
     )
     
     default ResponseEntity<Event> updateEventDetails(
-        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") String eventId,
+        @Parameter(name = "event_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("event_id") UUID eventId,
         @Parameter(name = "EventPartialUpdate", description = "", required = true) @Valid @RequestBody EventPartialUpdate eventPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"start_time\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"end_time\", \"description\" : \"description\", \"id\" : \"id\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

@@ -92,7 +92,7 @@ public interface LettersApi {
     )
     
     default ResponseEntity<org.springframework.core.io.Resource> getPdf(
-        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody Object body
+        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody String body
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -164,7 +164,7 @@ public interface LettersApi {
     )
     
     default ResponseEntity<Void> sendMail(
-        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody Object body
+        @Parameter(name = "body", description = "", required = true) @Valid @RequestBody String body
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

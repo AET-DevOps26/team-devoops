@@ -4,9 +4,11 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -29,9 +31,11 @@ public class EventPartialUpdate {
 
   private @Nullable String description;
 
-  private @Nullable String startTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private @Nullable OffsetDateTime startTime;
 
-  private @Nullable String endTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private @Nullable OffsetDateTime endTime;
 
   @Valid
   private List<String> attendees = new ArrayList<>();
@@ -82,7 +86,7 @@ public class EventPartialUpdate {
     this.description = description;
   }
 
-  public EventPartialUpdate startTime(@Nullable String startTime) {
+  public EventPartialUpdate startTime(@Nullable OffsetDateTime startTime) {
     this.startTime = startTime;
     return this;
   }
@@ -91,18 +95,18 @@ public class EventPartialUpdate {
    * Get startTime
    * @return startTime
    */
-  
+  @Valid 
   @Schema(name = "start_time", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("start_time")
-  public @Nullable String getStartTime() {
+  public @Nullable OffsetDateTime getStartTime() {
     return startTime;
   }
 
-  public void setStartTime(@Nullable String startTime) {
+  public void setStartTime(@Nullable OffsetDateTime startTime) {
     this.startTime = startTime;
   }
 
-  public EventPartialUpdate endTime(@Nullable String endTime) {
+  public EventPartialUpdate endTime(@Nullable OffsetDateTime endTime) {
     this.endTime = endTime;
     return this;
   }
@@ -111,14 +115,14 @@ public class EventPartialUpdate {
    * Get endTime
    * @return endTime
    */
-  
+  @Valid 
   @Schema(name = "end_time", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("end_time")
-  public @Nullable String getEndTime() {
+  public @Nullable OffsetDateTime getEndTime() {
     return endTime;
   }
 
-  public void setEndTime(@Nullable String endTime) {
+  public void setEndTime(@Nullable OffsetDateTime endTime) {
     this.endTime = endTime;
   }
 

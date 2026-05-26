@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.LocalDate;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,7 +25,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Member {
 
-  private String id;
+  private UUID id;
 
   private String firstName;
 
@@ -30,13 +33,15 @@ public class Member {
 
   private String email;
 
-  private String birthday;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  private LocalDate birthday;
 
   private String phoneNumber;
 
   private String address;
 
-  private String joiningDate;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  private LocalDate joiningDate;
 
   private String information;
 
@@ -47,7 +52,7 @@ public class Member {
   /**
    * Constructor with only required parameters
    */
-  public Member(String id, String firstName, String lastName, String email, String birthday, String phoneNumber, String address, String joiningDate, String information) {
+  public Member(UUID id, String firstName, String lastName, String email, LocalDate birthday, String phoneNumber, String address, LocalDate joiningDate, String information) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
@@ -59,7 +64,7 @@ public class Member {
     this.information = information;
   }
 
-  public Member id(String id) {
+  public Member id(UUID id) {
     this.id = id;
     return this;
   }
@@ -68,14 +73,14 @@ public class Member {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -139,7 +144,7 @@ public class Member {
     this.email = email;
   }
 
-  public Member birthday(String birthday) {
+  public Member birthday(LocalDate birthday) {
     this.birthday = birthday;
     return this;
   }
@@ -148,14 +153,14 @@ public class Member {
    * Get birthday
    * @return birthday
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "birthday", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("birthday")
-  public String getBirthday() {
+  public LocalDate getBirthday() {
     return birthday;
   }
 
-  public void setBirthday(String birthday) {
+  public void setBirthday(LocalDate birthday) {
     this.birthday = birthday;
   }
 
@@ -199,7 +204,7 @@ public class Member {
     this.address = address;
   }
 
-  public Member joiningDate(String joiningDate) {
+  public Member joiningDate(LocalDate joiningDate) {
     this.joiningDate = joiningDate;
     return this;
   }
@@ -208,14 +213,14 @@ public class Member {
    * Get joiningDate
    * @return joiningDate
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "joining_date", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("joining_date")
-  public String getJoiningDate() {
+  public LocalDate getJoiningDate() {
     return joiningDate;
   }
 
-  public void setJoiningDate(String joiningDate) {
+  public void setJoiningDate(LocalDate joiningDate) {
     this.joiningDate = joiningDate;
   }
 

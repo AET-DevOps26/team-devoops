@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,7 +25,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Feedback {
 
-  private String id;
+  private UUID id;
 
   private String event;
 
@@ -30,7 +33,8 @@ public class Feedback {
 
   private String creator;
 
-  private String createdAt;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime createdAt;
 
   private String feedback;
 
@@ -41,7 +45,7 @@ public class Feedback {
   /**
    * Constructor with only required parameters
    */
-  public Feedback(String id, String event, String member, String creator, String createdAt, String feedback) {
+  public Feedback(UUID id, String event, String member, String creator, OffsetDateTime createdAt, String feedback) {
     this.id = id;
     this.event = event;
     this.member = member;
@@ -50,7 +54,7 @@ public class Feedback {
     this.feedback = feedback;
   }
 
-  public Feedback id(String id) {
+  public Feedback id(UUID id) {
     this.id = id;
     return this;
   }
@@ -59,14 +63,14 @@ public class Feedback {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -130,7 +134,7 @@ public class Feedback {
     this.creator = creator;
   }
 
-  public Feedback createdAt(String createdAt) {
+  public Feedback createdAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
     return this;
   }
@@ -139,14 +143,14 @@ public class Feedback {
    * Get createdAt
    * @return createdAt
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "created_at", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("created_at")
-  public String getCreatedAt() {
+  public OffsetDateTime getCreatedAt() {
     return createdAt;
   }
 
-  public void setCreatedAt(String createdAt) {
+  public void setCreatedAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
   }
 

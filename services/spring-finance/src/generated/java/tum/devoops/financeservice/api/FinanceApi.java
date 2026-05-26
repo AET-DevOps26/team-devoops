@@ -11,6 +11,7 @@ import tum.devoops.financeservice.model.ErrorResponse;
 import tum.devoops.financeservice.model.Transaction;
 import tum.devoops.financeservice.model.TransactionCreate;
 import tum.devoops.financeservice.model.TransactionPartialUpdate;
+import java.util.UUID;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,7 +101,7 @@ public interface FinanceApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"created_at\", \"description\" : \"description\", \"id\" : \"id\", \"title\" : \"title\" }";
+                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"title\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -176,7 +177,7 @@ public interface FinanceApi {
     )
     
     default ResponseEntity<Void> deleteTransaction(
-        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") String transactionId
+        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") UUID transactionId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -317,7 +318,7 @@ public interface FinanceApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"created_at\", \"description\" : \"description\", \"id\" : \"id\", \"title\" : \"title\" }, { \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"created_at\", \"description\" : \"description\", \"id\" : \"id\", \"title\" : \"title\" } ]";
+                    String exampleString = "[ { \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"title\" }, { \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"title\" } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -385,7 +386,7 @@ public interface FinanceApi {
     )
     
     default ResponseEntity<Balance> getMemberBalance(
-        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") String memberId
+        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") UUID memberId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -463,12 +464,12 @@ public interface FinanceApi {
     )
     
     default ResponseEntity<Transaction> getTransaction(
-        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") String transactionId
+        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") UUID transactionId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"created_at\", \"description\" : \"description\", \"id\" : \"id\", \"title\" : \"title\" }";
+                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"title\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -547,13 +548,13 @@ public interface FinanceApi {
     )
     
     default ResponseEntity<Transaction> updateTransaction(
-        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") String transactionId,
+        @Parameter(name = "transaction_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("transaction_id") UUID transactionId,
         @Parameter(name = "TransactionPartialUpdate", description = "", required = true) @Valid @RequestBody TransactionPartialUpdate transactionPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"created_at\", \"description\" : \"description\", \"id\" : \"id\", \"title\" : \"title\" }";
+                    String exampleString = "{ \"creator\" : \"creator\", \"amount_cents\" : 0, \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"title\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.UUID;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class MemberSummary {
 
-  private String id;
+  private UUID id;
 
   private String firstName;
 
@@ -37,14 +38,14 @@ public class MemberSummary {
   /**
    * Constructor with only required parameters
    */
-  public MemberSummary(String id, String firstName, String lastName, String email) {
+  public MemberSummary(UUID id, String firstName, String lastName, String email) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
   }
 
-  public MemberSummary id(String id) {
+  public MemberSummary id(UUID id) {
     this.id = id;
     return this;
   }
@@ -53,14 +54,14 @@ public class MemberSummary {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 

@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,7 +25,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Transaction {
 
-  private String id;
+  private UUID id;
 
   private String member;
 
@@ -30,7 +33,8 @@ public class Transaction {
 
   private Integer amountCents;
 
-  private String createdAt;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime createdAt;
 
   private String title;
 
@@ -43,7 +47,7 @@ public class Transaction {
   /**
    * Constructor with only required parameters
    */
-  public Transaction(String id, String member, String creator, Integer amountCents, String createdAt, String title, String description) {
+  public Transaction(UUID id, String member, String creator, Integer amountCents, OffsetDateTime createdAt, String title, String description) {
     this.id = id;
     this.member = member;
     this.creator = creator;
@@ -53,7 +57,7 @@ public class Transaction {
     this.description = description;
   }
 
-  public Transaction id(String id) {
+  public Transaction id(UUID id) {
     this.id = id;
     return this;
   }
@@ -62,14 +66,14 @@ public class Transaction {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -133,7 +137,7 @@ public class Transaction {
     this.amountCents = amountCents;
   }
 
-  public Transaction createdAt(String createdAt) {
+  public Transaction createdAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
     return this;
   }
@@ -142,14 +146,14 @@ public class Transaction {
    * Get createdAt
    * @return createdAt
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "created_at", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("created_at")
-  public String getCreatedAt() {
+  public OffsetDateTime getCreatedAt() {
     return createdAt;
   }
 
-  public void setCreatedAt(String createdAt) {
+  public void setCreatedAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
   }
 

@@ -4,9 +4,11 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -28,7 +30,8 @@ public class Sport {
 
   private String description;
 
-  private String createdAt;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  private LocalDate createdAt;
 
   @Valid
   private List<String> directors = new ArrayList<>();
@@ -40,7 +43,7 @@ public class Sport {
   /**
    * Constructor with only required parameters
    */
-  public Sport(String name, String description, String createdAt, List<String> directors) {
+  public Sport(String name, String description, LocalDate createdAt, List<String> directors) {
     this.name = name;
     this.description = description;
     this.createdAt = createdAt;
@@ -87,7 +90,7 @@ public class Sport {
     this.description = description;
   }
 
-  public Sport createdAt(String createdAt) {
+  public Sport createdAt(LocalDate createdAt) {
     this.createdAt = createdAt;
     return this;
   }
@@ -96,14 +99,14 @@ public class Sport {
    * Get createdAt
    * @return createdAt
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "created_at", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("created_at")
-  public String getCreatedAt() {
+  public LocalDate getCreatedAt() {
     return createdAt;
   }
 
-  public void setCreatedAt(String createdAt) {
+  public void setCreatedAt(LocalDate createdAt) {
     this.createdAt = createdAt;
   }
 

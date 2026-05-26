@@ -4,6 +4,9 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,13 +25,15 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class EventSummary {
 
-  private String id;
+  private UUID id;
 
   private String name;
 
-  private String startTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime startTime;
 
-  private String endTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime endTime;
 
   public EventSummary() {
     super();
@@ -37,14 +42,14 @@ public class EventSummary {
   /**
    * Constructor with only required parameters
    */
-  public EventSummary(String id, String name, String startTime, String endTime) {
+  public EventSummary(UUID id, String name, OffsetDateTime startTime, OffsetDateTime endTime) {
     this.id = id;
     this.name = name;
     this.startTime = startTime;
     this.endTime = endTime;
   }
 
-  public EventSummary id(String id) {
+  public EventSummary id(UUID id) {
     this.id = id;
     return this;
   }
@@ -53,14 +58,14 @@ public class EventSummary {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -84,7 +89,7 @@ public class EventSummary {
     this.name = name;
   }
 
-  public EventSummary startTime(String startTime) {
+  public EventSummary startTime(OffsetDateTime startTime) {
     this.startTime = startTime;
     return this;
   }
@@ -93,18 +98,18 @@ public class EventSummary {
    * Get startTime
    * @return startTime
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "start_time", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("start_time")
-  public String getStartTime() {
+  public OffsetDateTime getStartTime() {
     return startTime;
   }
 
-  public void setStartTime(String startTime) {
+  public void setStartTime(OffsetDateTime startTime) {
     this.startTime = startTime;
   }
 
-  public EventSummary endTime(String endTime) {
+  public EventSummary endTime(OffsetDateTime endTime) {
     this.endTime = endTime;
     return this;
   }
@@ -113,14 +118,14 @@ public class EventSummary {
    * Get endTime
    * @return endTime
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "end_time", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("end_time")
-  public String getEndTime() {
+  public OffsetDateTime getEndTime() {
     return endTime;
   }
 
-  public void setEndTime(String endTime) {
+  public void setEndTime(OffsetDateTime endTime) {
     this.endTime = endTime;
   }
 

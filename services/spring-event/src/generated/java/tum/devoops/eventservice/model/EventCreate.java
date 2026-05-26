@@ -4,9 +4,11 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -29,9 +31,11 @@ public class EventCreate {
 
   private @Nullable String description;
 
-  private String startTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime startTime;
 
-  private String endTime;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime endTime;
 
   @Valid
   private List<String> attendees = new ArrayList<>();
@@ -49,7 +53,7 @@ public class EventCreate {
   /**
    * Constructor with only required parameters
    */
-  public EventCreate(String name, String startTime, String endTime) {
+  public EventCreate(String name, OffsetDateTime startTime, OffsetDateTime endTime) {
     this.name = name;
     this.startTime = startTime;
     this.endTime = endTime;
@@ -95,7 +99,7 @@ public class EventCreate {
     this.description = description;
   }
 
-  public EventCreate startTime(String startTime) {
+  public EventCreate startTime(OffsetDateTime startTime) {
     this.startTime = startTime;
     return this;
   }
@@ -104,18 +108,18 @@ public class EventCreate {
    * Get startTime
    * @return startTime
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "start_time", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("start_time")
-  public String getStartTime() {
+  public OffsetDateTime getStartTime() {
     return startTime;
   }
 
-  public void setStartTime(String startTime) {
+  public void setStartTime(OffsetDateTime startTime) {
     this.startTime = startTime;
   }
 
-  public EventCreate endTime(String endTime) {
+  public EventCreate endTime(OffsetDateTime endTime) {
     this.endTime = endTime;
     return this;
   }
@@ -124,14 +128,14 @@ public class EventCreate {
    * Get endTime
    * @return endTime
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "end_time", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("end_time")
-  public String getEndTime() {
+  public OffsetDateTime getEndTime() {
     return endTime;
   }
 
-  public void setEndTime(String endTime) {
+  public void setEndTime(OffsetDateTime endTime) {
     this.endTime = endTime;
   }
 

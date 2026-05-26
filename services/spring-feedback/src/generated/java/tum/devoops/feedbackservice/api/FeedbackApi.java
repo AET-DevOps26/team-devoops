@@ -11,6 +11,7 @@ import tum.devoops.feedbackservice.model.Feedback;
 import tum.devoops.feedbackservice.model.FeedbackCreate;
 import tum.devoops.feedbackservice.model.FeedbackPartialUpdate;
 import tum.devoops.feedbackservice.model.FeedbackSummary;
+import java.util.UUID;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,7 +101,7 @@ public interface FeedbackApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"created_at\", \"id\" : \"id\", \"event\" : \"event\" }";
+                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"event\" : \"event\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -176,7 +177,7 @@ public interface FeedbackApi {
     )
     
     default ResponseEntity<Void> deleteFeedback(
-        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") String feedbackId
+        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") UUID feedbackId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -249,7 +250,7 @@ public interface FeedbackApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"created_at\", \"id\" : \"id\", \"event\" : \"event\" }, { \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"created_at\", \"id\" : \"id\", \"event\" : \"event\" } ]";
+                    String exampleString = "[ { \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"event\" : \"event\" }, { \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"event\" : \"event\" } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -317,12 +318,12 @@ public interface FeedbackApi {
     )
     
     default ResponseEntity<Feedback> getFeedbackDetails(
-        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") String feedbackId
+        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") UUID feedbackId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"created_at\", \"id\" : \"id\", \"event\" : \"event\" }";
+                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"event\" : \"event\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -401,13 +402,13 @@ public interface FeedbackApi {
     )
     
     default ResponseEntity<Feedback> updateFeedbackDetails(
-        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") String feedbackId,
+        @Parameter(name = "feedback_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("feedback_id") UUID feedbackId,
         @Parameter(name = "FeedbackPartialUpdate", description = "", required = true) @Valid @RequestBody FeedbackPartialUpdate feedbackPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"created_at\", \"id\" : \"id\", \"event\" : \"event\" }";
+                    String exampleString = "{ \"feedback\" : \"feedback\", \"creator\" : \"creator\", \"member\" : \"member\", \"created_at\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"event\" : \"event\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

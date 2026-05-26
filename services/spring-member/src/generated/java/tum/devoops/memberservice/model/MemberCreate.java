@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -28,7 +30,8 @@ public class MemberCreate {
 
   private @Nullable String email;
 
-  private @Nullable String birthday;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  private @Nullable LocalDate birthday;
 
   private @Nullable String phoneNumber;
 
@@ -108,7 +111,7 @@ public class MemberCreate {
     this.email = email;
   }
 
-  public MemberCreate birthday(@Nullable String birthday) {
+  public MemberCreate birthday(@Nullable LocalDate birthday) {
     this.birthday = birthday;
     return this;
   }
@@ -117,14 +120,14 @@ public class MemberCreate {
    * Get birthday
    * @return birthday
    */
-  
+  @Valid 
   @Schema(name = "birthday", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("birthday")
-  public @Nullable String getBirthday() {
+  public @Nullable LocalDate getBirthday() {
     return birthday;
   }
 
-  public void setBirthday(@Nullable String birthday) {
+  public void setBirthday(@Nullable LocalDate birthday) {
     this.birthday = birthday;
   }
 

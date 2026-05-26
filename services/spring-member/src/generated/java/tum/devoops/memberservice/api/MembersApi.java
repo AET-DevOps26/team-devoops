@@ -11,6 +11,7 @@ import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberPartialUpdate;
 import tum.devoops.memberservice.model.MemberSummary;
+import java.util.UUID;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,7 +101,7 @@ public interface MembersApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"birthday\" : \"birthday\", \"joining_date\" : \"joining_date\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"id\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
+                    String exampleString = "{ \"birthday\" : \"2000-01-23\", \"joining_date\" : \"2000-01-23\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -176,7 +177,7 @@ public interface MembersApi {
     )
     
     default ResponseEntity<Void> deleteMember(
-        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") String memberId
+        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") UUID memberId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -249,7 +250,7 @@ public interface MembersApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"last_name\" : \"last_name\", \"id\" : \"id\", \"first_name\" : \"first_name\", \"email\" : \"email\" }, { \"last_name\" : \"last_name\", \"id\" : \"id\", \"first_name\" : \"first_name\", \"email\" : \"email\" } ]";
+                    String exampleString = "[ { \"last_name\" : \"last_name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" }, { \"last_name\" : \"last_name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -317,12 +318,12 @@ public interface MembersApi {
     )
     
     default ResponseEntity<Member> getMemberDetails(
-        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") String memberId
+        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") UUID memberId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"birthday\" : \"birthday\", \"joining_date\" : \"joining_date\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"id\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
+                    String exampleString = "{ \"birthday\" : \"2000-01-23\", \"joining_date\" : \"2000-01-23\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -401,13 +402,13 @@ public interface MembersApi {
     )
     
     default ResponseEntity<Member> updateMemberDetails(
-        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") String memberId,
+        @Parameter(name = "member_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("member_id") UUID memberId,
         @Parameter(name = "MemberPartialUpdate", description = "", required = true) @Valid @RequestBody MemberPartialUpdate memberPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"birthday\" : \"birthday\", \"joining_date\" : \"joining_date\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"id\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
+                    String exampleString = "{ \"birthday\" : \"2000-01-23\", \"joining_date\" : \"2000-01-23\", \"address\" : \"address\", \"last_name\" : \"last_name\", \"phone_number\" : \"phone_number\", \"information\" : \"information\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

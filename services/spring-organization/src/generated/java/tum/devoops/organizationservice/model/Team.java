@@ -4,9 +4,12 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -25,13 +28,14 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Team {
 
-  private String id;
+  private UUID id;
 
   private String name;
 
   private String description;
 
-  private String createdAt;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+  private LocalDate createdAt;
 
   private String address;
 
@@ -50,7 +54,7 @@ public class Team {
   /**
    * Constructor with only required parameters
    */
-  public Team(String id, String name, String description, String createdAt, String address, String sport, List<String> trainers, List<String> trainees) {
+  public Team(UUID id, String name, String description, LocalDate createdAt, String address, String sport, List<String> trainers, List<String> trainees) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -61,7 +65,7 @@ public class Team {
     this.trainees = trainees;
   }
 
-  public Team id(String id) {
+  public Team id(UUID id) {
     this.id = id;
     return this;
   }
@@ -70,14 +74,14 @@ public class Team {
    * Get id
    * @return id
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 
@@ -121,7 +125,7 @@ public class Team {
     this.description = description;
   }
 
-  public Team createdAt(String createdAt) {
+  public Team createdAt(LocalDate createdAt) {
     this.createdAt = createdAt;
     return this;
   }
@@ -130,14 +134,14 @@ public class Team {
    * Get createdAt
    * @return createdAt
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "created_at", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("created_at")
-  public String getCreatedAt() {
+  public LocalDate getCreatedAt() {
     return createdAt;
   }
 
-  public void setCreatedAt(String createdAt) {
+  public void setCreatedAt(LocalDate createdAt) {
     this.createdAt = createdAt;
   }
 

@@ -325,6 +325,7 @@ export interface components {
         Sport: {
             name: string;
             description: string;
+            /** Format: date */
             created_at: string;
             directors: string[];
         };
@@ -341,9 +342,11 @@ export interface components {
             directors?: string[];
         };
         Team: {
+            /** Format: uuid */
             id: string;
             name: string;
             description: string;
+            /** Format: date */
             created_at: string;
             address: string;
             sport: string;
@@ -369,18 +372,22 @@ export interface components {
             trainees?: string[];
         };
         Member: {
+            /** Format: uuid */
             id: string;
             first_name: string;
             last_name: string;
             email: string;
+            /** Format: date */
             birthday: string;
             phone_number: string;
             address: string;
+            /** Format: date */
             joining_date: string;
             information: string;
         };
         /** @description A simplified representation of a Member, typically used in list views. */
         MemberSummary: {
+            /** Format: uuid */
             id: string;
             first_name: string;
             last_name: string;
@@ -391,6 +398,7 @@ export interface components {
             first_name?: string;
             last_name?: string;
             email?: string;
+            /** Format: date */
             birthday?: string;
             phone_number?: string;
             address?: string;
@@ -401,16 +409,20 @@ export interface components {
             first_name: string;
             last_name: string;
             email?: string;
+            /** Format: date */
             birthday?: string;
             phone_number?: string;
             address?: string;
             information?: string;
         };
         Event: {
+            /** Format: uuid */
             id: string;
             name: string;
             description: string;
+            /** Format: date-time */
             start_time: string;
+            /** Format: date-time */
             end_time: string;
             attendees?: string[];
             /** @description Names of the sports associated with this event. */
@@ -421,16 +433,21 @@ export interface components {
         };
         /** @description A simplified representation of a Event, typically used in list views. */
         EventSummary: {
+            /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
             start_time: string;
+            /** Format: date-time */
             end_time: string;
         };
         /** @description Data transfer object for partially updating an existing Event (PATCH operation). */
         EventPartialUpdate: {
             name?: string;
             description?: string;
+            /** Format: date-time */
             start_time?: string;
+            /** Format: date-time */
             end_time?: string;
             attendees?: string[];
             sports_linked?: string[];
@@ -440,26 +457,32 @@ export interface components {
         EventCreate: {
             name: string;
             description?: string;
+            /** Format: date-time */
             start_time: string;
+            /** Format: date-time */
             end_time: string;
             attendees?: string[];
             sports_linked?: string[];
             teams_linked?: string[];
         };
         Feedback: {
+            /** Format: uuid */
             id: string;
             event: string;
             member: string;
             creator: string;
+            /** Format: date-time */
             created_at: string;
             feedback: string;
         };
         /** @description A simplified representation of a Feedback, typically used in list views. */
         FeedbackSummary: {
+            /** Format: uuid */
             id: string;
             event: string;
             member: string;
             creator: string;
+            /** Format: date-time */
             created_at: string;
         };
         /** @description Data transfer object for partially updating an existing Feedback (PATCH operation). */
@@ -476,10 +499,12 @@ export interface components {
         };
         /** @description A simplified representation of a Transaction, typically used in list views. */
         Transaction: {
+            /** Format: uuid */
             id: string;
             member: string;
             creator: string;
             amount_cents: number;
+            /** Format: date-time */
             created_at: string;
             title: string;
             description: string;
@@ -505,7 +530,7 @@ export interface components {
     };
     responses: {
         /** @description The server encountered an unexpected condition that prevented it from fulfilling the request. */
-        InternalServerErrror: {
+        InternalServerError: {
             headers: {
                 [name: string]: unknown;
             };
@@ -600,7 +625,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createSport: {
@@ -629,7 +654,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getSport: {
@@ -655,7 +680,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteSport: {
@@ -679,7 +704,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateSport: {
@@ -710,7 +735,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllTeams: {
@@ -733,7 +758,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createTeam: {
@@ -762,7 +787,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getTeam: {
@@ -788,7 +813,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteTeam: {
@@ -812,7 +837,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateTeam: {
@@ -843,7 +868,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllMembers: {
@@ -866,7 +891,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createMember: {
@@ -895,7 +920,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getMemberDetails: {
@@ -921,7 +946,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteMember: {
@@ -945,7 +970,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateMemberDetails: {
@@ -976,7 +1001,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllEvents: {
@@ -999,7 +1024,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createEvent: {
@@ -1028,7 +1053,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getEventDetails: {
@@ -1054,7 +1079,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteEvent: {
@@ -1078,7 +1103,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateEventDetails: {
@@ -1109,7 +1134,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllFeedback: {
@@ -1132,7 +1157,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createFeedback: {
@@ -1161,7 +1186,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getFeedbackDetails: {
@@ -1187,7 +1212,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteFeedback: {
@@ -1211,7 +1236,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateFeedbackDetails: {
@@ -1242,7 +1267,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllBalances: {
@@ -1265,7 +1290,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getMemberBalance: {
@@ -1291,7 +1316,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getAllTransactions: {
@@ -1314,7 +1339,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     createTransaction: {
@@ -1343,7 +1368,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getTransaction: {
@@ -1369,7 +1394,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     deleteTransaction: {
@@ -1393,7 +1418,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     updateTransaction: {
@@ -1424,7 +1449,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     sendMail: {
@@ -1436,7 +1461,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "text/html": Record<string, never>;
+                "text/html": string;
             };
         };
         responses: {
@@ -1444,7 +1469,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     getPdf: {
@@ -1456,7 +1481,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "text/html": Record<string, never>;
+                "text/html": string;
             };
         };
         responses: {
@@ -1472,7 +1497,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
     generateReport: {
@@ -1497,7 +1522,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerErrror"];
+            500: components["responses"]["InternalServerError"];
         };
     };
 }
