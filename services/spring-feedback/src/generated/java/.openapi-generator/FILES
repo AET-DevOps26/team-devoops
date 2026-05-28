@@ -1,0 +1,8 @@
+tum/devoops/feedbackservice/api/ApiUtil.java
+tum/devoops/feedbackservice/api/FeedbackApi.java
+tum/devoops/feedbackservice/model/BadRequestResponse.java
+tum/devoops/feedbackservice/model/ErrorResponse.java
+tum/devoops/feedbackservice/model/Feedback.java
+tum/devoops/feedbackservice/model/FeedbackCreate.java
+tum/devoops/feedbackservice/model/FeedbackPartialUpdate.java
+tum/devoops/feedbackservice/model/FeedbackSummary.java

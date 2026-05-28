@@ -8,4 +8,4 @@ if [ ! -s api/openapi.yaml ]; then
   exit 0
 fi
 
-exec npx --yes @stoplight/spectral-cli lint api/openapi.yaml
+exec npx --yes @stoplight/spectral-cli lint api/openapi.yaml --fail-severity error

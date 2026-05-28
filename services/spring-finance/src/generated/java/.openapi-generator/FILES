@@ -1,0 +1,8 @@
+tum/devoops/financeservice/api/ApiUtil.java
+tum/devoops/financeservice/api/FinanceApi.java
+tum/devoops/financeservice/model/BadRequestResponse.java
+tum/devoops/financeservice/model/Balance.java
+tum/devoops/financeservice/model/ErrorResponse.java
+tum/devoops/financeservice/model/Transaction.java
+tum/devoops/financeservice/model/TransactionCreate.java
+tum/devoops/financeservice/model/TransactionPartialUpdate.java
