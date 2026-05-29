@@ -270,6 +270,9 @@ services:
       - ./infra/keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
     ports:
       - "8081:8080"
+    networks:
+      - proxy
+      - keycloak
 
   keycloak-database:
     image: postgres:15.6-alpine
@@ -280,6 +283,8 @@ services:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak_user
       POSTGRES_PASSWORD: keycloak_password
+    networks:
+      - keycloak
 
   member-database:
     image: postgres:15.6-alpine
@@ -310,3 +315,5 @@ networks:
     name: proxy
   data:
     name: data
+  keycloak:
+    name: keycloak
