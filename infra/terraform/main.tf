@@ -8,18 +8,16 @@ terraform {
     }
   }
 
-  # Local state is used by default (fine for course / solo use).
-  # For shared team use, uncomment and provision the storage account once:
-  #   az group create -n rg-tfstate -l germanywestcentral
-  #   az storage account create -n stteamdevoopstf -g rg-tfstate --sku Standard_LRS
-  #   az storage container create -n tfstate --account-name stteamdevoopstf
-  #
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-tfstate"
-  #   storage_account_name = "stteamdevoopstf"
-  #   container_name       = "tfstate"
-  #   key                  = "team-devoops.tfstate"
-  # }
+  # Remote state in Azure Blob Storage. Auth uses the same OIDC identity as the provider.
+  # Bootstrap (run once, manually) — see infra/README or commit history for details.
+  backend "azurerm" {
+    resource_group_name  = "rg-team-devoops-tfstate"
+    storage_account_name = "stteamdevoopstfstate"
+    container_name       = "tfstate"
+    key                  = "team-devoops.tfstate"
+    use_oidc             = true
+    use_azuread_auth     = true
+  }
 }
 
 provider "azurerm" {
@@ -118,6 +116,7 @@ resource "azurerm_public_ip" "main" {
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
   sku                 = "Standard"
+  domain_name_label   = local.prefix
   tags                = local.tags
 }
 
