@@ -216,6 +216,34 @@ services:
     networks:
       - proxy
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+    - keycloak-database
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-database
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
+    ports:
+      - "8081:8080"
+
+  keycloak-database:
+    image: postgres:15.6-alpine
+    container_name: keycloak-db
+    volumes:
+    - keycloak_db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+
   member-database:
     image: postgres:15.6-alpine
     container_name: member-db
@@ -238,6 +266,7 @@ services:
 
 volumes:
   member_db_data:
+  keycloak_db_data:
 
 networks:
   proxy:
