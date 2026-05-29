@@ -1,1 +1,167 @@
+@import '@fontsource/bebas-neue/400.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
 @import 'tailwindcss';
+@plugin "daisyui";
+
+@theme {
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bebas Neue', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Display scale — Bebas Neue, use with font-display uppercase */
+  --text-display-xs: 1.5rem;
+  --text-display-xs--line-height: 1.5rem;
+  --text-display-xs--font-weight: 400;
+
+  --text-display-sm: 2rem;
+  --text-display-sm--line-height: 2rem;
+  --text-display-sm--font-weight: 400;
+
+  --text-display-md: 2.5rem;
+  --text-display-md--line-height: 2.5rem;
+  --text-display-md--font-weight: 400;
+
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 3rem;
+  --text-display-lg--font-weight: 400;
+
+  --text-display-xl: 4rem;
+  --text-display-xl--line-height: 4rem;
+  --text-display-xl--font-weight: 400;
+
+  --text-display-2xl: 5rem;
+  --text-display-2xl--line-height: 5rem;
+  --text-display-2xl--font-weight: 400;
+
+  /* Prose scale — Poppins */
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 2.75rem;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 1.875rem;
+  --text-h2--line-height: 2.375rem;
+  --text-h2--font-weight: 700;
+
+  --text-h3: 1.5rem;
+  --text-h3--line-height: 2rem;
+  --text-h3--font-weight: 600;
+
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.75rem;
+  --text-h4--font-weight: 600;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-body--font-weight: 400;
+
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-body-sm--font-weight: 400;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--font-weight: 400;
+
+  --text-mono: 0.875rem;
+  --text-mono--line-height: 1.5rem;
+  --text-mono--font-weight: 400;
+}
+
+/* Custom light theme — default */
+:root,
+:root:has(input.theme-controller[value="lumio"]:checked),
+[data-theme="lumio"] {
+  color-scheme: light;
+  --color-base-100: oklch(98% 0 0);
+  --color-base-200: oklch(97% 0 0);
+  --color-base-300: oklch(92% 0 0);
+  --color-base-content: oklch(20% 0 0);
+  --color-primary: oklch(89% 0.196 126.665);
+  --color-primary-content: oklch(27% 0.072 132.109);
+  --color-secondary: oklch(87% 0 0);
+  --color-secondary-content: oklch(14% 0 0);
+  --color-accent: oklch(86% 0.005 56.366);
+  --color-accent-content: oklch(14% 0.004 49.25);
+  --color-neutral: oklch(20% 0 0);
+  --color-neutral-content: oklch(98% 0 0);
+  --color-info: oklch(60% 0.126 221.723);
+  --color-info-content: oklch(98% 0.019 200.873);
+  --color-success: oklch(62% 0.194 149.214);
+  --color-success-content: oklch(98% 0.018 155.826);
+  --color-warning: oklch(64% 0.222 41.116);
+  --color-warning-content: oklch(98% 0.016 73.684);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Custom dark theme */
+[data-theme="lumio-dark"],
+:root:has(input.theme-controller[value="lumio-dark"]:checked) {
+  color-scheme: dark;
+  --color-base-100: oklch(16% 0.01 260);
+  --color-base-200: oklch(20% 0.012 260);
+  --color-base-300: oklch(24% 0.014 260);
+  --color-base-content: oklch(94% 0 0);
+  --color-primary: oklch(78% 0.21 128);
+  --color-primary-content: oklch(18% 0.05 130);
+  --color-secondary: oklch(28% 0.01 260);
+  --color-secondary-content: oklch(92% 0 0);
+  --color-accent: oklch(32% 0.02 60);
+  --color-accent-content: oklch(95% 0 0);
+  --color-neutral: oklch(12% 0.01 260);
+  --color-neutral-content: oklch(96% 0 0);
+  --color-info: oklch(70% 0.12 220);
+  --color-info-content: oklch(15% 0.02 220);
+  --color-success: oklch(72% 0.18 150);
+  --color-success-content: oklch(15% 0.03 150);
+  --color-warning: oklch(76% 0.18 70);
+  --color-warning-content: oklch(18% 0.03 70);
+  --color-error: oklch(70% 0.22 20);
+  --color-error-content: oklch(15% 0.03 20);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Respect OS dark mode preference when no theme is explicitly set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --color-base-100: oklch(16% 0.01 260);
+    --color-base-200: oklch(20% 0.012 260);
+    --color-base-300: oklch(24% 0.014 260);
+    --color-base-content: oklch(94% 0 0);
+    --color-primary: oklch(78% 0.21 128);
+    --color-primary-content: oklch(18% 0.05 130);
+    --color-secondary: oklch(28% 0.01 260);
+    --color-secondary-content: oklch(92% 0 0);
+    --color-accent: oklch(32% 0.02 60);
+    --color-accent-content: oklch(95% 0 0);
+    --color-neutral: oklch(12% 0.01 260);
+    --color-neutral-content: oklch(96% 0 0);
+    --color-info: oklch(70% 0.12 220);
+    --color-info-content: oklch(15% 0.02 220);
+    --color-success: oklch(72% 0.18 150);
+    --color-success-content: oklch(15% 0.03 150);
+    --color-warning: oklch(76% 0.18 70);
+    --color-warning-content: oklch(18% 0.03 70);
+    --color-error: oklch(70% 0.22 20);
+    --color-error-content: oklch(15% 0.03 20);
+  }
+}
