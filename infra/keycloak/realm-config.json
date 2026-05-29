@@ -45,6 +45,16 @@
       "publicClient": true,
       "redirectUris": ["*"],
       "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "traefik-forward-auth",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "traefik-forward-auth-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost/_oauth"],
+      "webOrigins": ["http://localhost"]
     }
   ]
 }

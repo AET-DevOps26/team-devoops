@@ -11,7 +11,7 @@ services:
       - "traefik.http.routers.py-genai-helper.entrypoints=web"
       - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/api/v1/helper`)"
       - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
-      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix"
+      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix,forward-auth@file"
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
     networks:
       - proxy
@@ -34,7 +34,7 @@ services:
       - "traefik.http.routers.organization-service.entrypoints=web"
       - "traefik.http.routers.organization-service.rule=PathPrefix(`/api/v1/organization`)"
       - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
-      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix"
+      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix,forward-auth@file"
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -58,7 +58,7 @@ services:
       - "traefik.http.routers.member-service.entrypoints=web"
       - "traefik.http.routers.member-service.rule=PathPrefix(`/api/v1/members`)"
       - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
-      - "traefik.http.routers.member-service.middlewares=member-stripprefix"
+      - "traefik.http.routers.member-service.middlewares=member-stripprefix,forward-auth@file"
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -82,7 +82,7 @@ services:
       - "traefik.http.routers.event-service.entrypoints=web"
       - "traefik.http.routers.event-service.rule=PathPrefix(`/api/v1/events`)"
       - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
-      - "traefik.http.routers.event-service.middlewares=event-stripprefix"
+      - "traefik.http.routers.event-service.middlewares=event-stripprefix,forward-auth@file"
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -106,7 +106,7 @@ services:
       - "traefik.http.routers.feedback-service.entrypoints=web"
       - "traefik.http.routers.feedback-service.rule=PathPrefix(`/api/v1/feedback`)"
       - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
-      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix"
+      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix,forward-auth@file"
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -130,7 +130,7 @@ services:
       - "traefik.http.routers.finance-service.entrypoints=web"
       - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finance`)"
       - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
-      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
+      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix,forward-auth@file"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -154,7 +154,7 @@ services:
       - "traefik.http.routers.letter-service.entrypoints=web"
       - "traefik.http.routers.letter-service.rule=PathPrefix(`/api/v1/letters`)"
       - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
-      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix"
+      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix,forward-auth@file"
       - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -195,6 +195,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.web-client.middlewares=forward-auth@file"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -207,12 +208,39 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.network=proxy"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
+    networks:
+      - proxy
+
+  traefik-forward-auth:
+    image: thomseddon/traefik-forward-auth:2
+    container_name: traefik-forward-auth
+    environment:
+      - DEFAULT_PROVIDER=oidc
+      - PROVIDERS_OIDC_ISSUER_URL=http://localhost:8081/realms/devops
+      - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
+      - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
+      - SECRET=a-random-32-char-secret-changeme!
+      - INSECURE_COOKIE=true
+    extra_hosts:
+      - "localhost:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-forward-auth.rule=Path(`/_oauth`)"
+      - "traefik.http.routers.traefik-forward-auth.entrypoints=web"
+      - "traefik.http.routers.traefik-forward-auth.middlewares=forward-auth@file"
+      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
+    depends_on:
+      keycloak:
+        condition: service_healthy
     networks:
       - proxy
 
@@ -229,6 +257,15 @@ services:
       KC_DB_PASSWORD: keycloak_password
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "exec 3<>/dev/tcp/localhost/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200 OK'"
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     volumes:
       - ./infra/keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
     ports:
