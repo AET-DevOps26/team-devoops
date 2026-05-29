@@ -1,0 +1,108 @@
+# Local development override.
+#
+# Compose auto-merges this file ONLY when running `docker compose` with no `-f`
+# flags. The production Ansible playbook always passes `-f infra/docker-compose.yml`
+# explicitly, so this override is never used on the VM.
+#
+# Usage:
+#     cd infra && docker compose up -d --build
+#
+# What this override does:
+#   * Removes TLS (no Let's Encrypt, no HTTPS, no 443) -- local has no public DNS
+#   * Strips the Host(...) requirement from every router so localhost works
+#   * Disables the HTTP -> HTTPS redirect so plain http://localhost works
+#
+# Access locally:
+#     http://localhost/                       web client
+#     http://localhost/docs                   Swagger UI
+#     http://localhost/api/v1/<service>/...   APIs
+#     http://localhost:8080                   Traefik dashboard
+
+services:
+  traefik:
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=proxy"
+      - "--entrypoints.web.address=:80"
+    ports: !override
+      - "80:80"
+      - "8080:8080"
+
+  py-genai-helper:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.py-genai-helper.entrypoints=web"
+      - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/api/v1/helper`)"
+      - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
+      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix"
+      - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
+
+  organization-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.organization-service.entrypoints=web"
+      - "traefik.http.routers.organization-service.rule=PathPrefix(`/api/v1/organization`)"
+      - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
+      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix"
+      - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
+
+  member-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.member-service.entrypoints=web"
+      - "traefik.http.routers.member-service.rule=PathPrefix(`/api/v1/members`)"
+      - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
+      - "traefik.http.routers.member-service.middlewares=member-stripprefix"
+      - "traefik.http.services.member-service.loadbalancer.server.port=8080"
+
+  event-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.event-service.entrypoints=web"
+      - "traefik.http.routers.event-service.rule=PathPrefix(`/api/v1/events`)"
+      - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
+      - "traefik.http.routers.event-service.middlewares=event-stripprefix"
+      - "traefik.http.services.event-service.loadbalancer.server.port=8080"
+
+  feedback-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.feedback-service.entrypoints=web"
+      - "traefik.http.routers.feedback-service.rule=PathPrefix(`/api/v1/feedback`)"
+      - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
+      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix"
+      - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
+
+  finance-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.finance-service.entrypoints=web"
+      - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finance`)"
+      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
+      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
+      - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
+
+  letter-service:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.letter-service.entrypoints=web"
+      - "traefik.http.routers.letter-service.rule=PathPrefix(`/api/v1/letters`)"
+      - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
+      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix"
+      - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
+
+  api-docs:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-docs.entrypoints=web"
+      - "traefik.http.routers.api-docs.rule=PathPrefix(`/docs`)"
+      - "traefik.http.services.api-docs.loadbalancer.server.port=8080"
+
+  web-client:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.web-client.entrypoints=web"
+      - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
+      - "traefik.http.services.web-client.loadbalancer.server.port=8080"

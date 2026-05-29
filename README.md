@@ -114,6 +114,37 @@ git push   --no-verify
 The full hook configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml)
 and the helper scripts under [`scripts/hooks/`](scripts/hooks/).
 
+## Running Locally
+
+Spin up the full stack on your machine with Docker Compose:
+
+```bash
+cd infra
+docker compose up -d --build
+```
+
+This auto-merges [`infra/docker-compose.override.yml`](infra/docker-compose.override.yml),
+which strips TLS / Let's Encrypt / Host-based routing from the base file so
+everything is reachable on plain HTTP:
+
+| URL | Service |
+|---|---|
+| <http://localhost/> | Web client |
+| <http://localhost/docs> | Swagger UI |
+| <http://localhost/api/v1/&lt;service&gt;/…> | APIs (organization, members, events, feedback, finance, letters, helper) |
+| <http://localhost:8080> | Traefik dashboard |
+
+> **Do not run** `docker compose -f infra/docker-compose.yml up` locally — that
+> skips the override, causing Traefik to request a real Let's Encrypt cert for
+> the production hostname from your laptop. Failed challenges count toward the
+> production rate limit.
+
+Tear down:
+```bash
+cd infra && docker compose down            # keeps the postgres volume
+cd infra && docker compose down -v         # wipes the postgres volume too
+```
+
 ## Production Deployment
 
 The stack runs on a single Azure VM in **UAE North**, fronted by Traefik with a
