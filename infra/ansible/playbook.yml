@@ -1,0 +1,91 @@
+---
+- name: Deploy team-devoops to Azure VM
+  hosts: all
+  become: true
+  vars:
+    app_dir: /opt/team-devoops
+    repo_url: https://github.com/your-org/team-devoops.git  # override via -e
+    branch: main
+
+  tasks:
+    # --------------------------------------------------------------------------
+    # Docker installation (idempotent)
+    # --------------------------------------------------------------------------
+    - name: Install prerequisite packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - git
+        state: present
+        update_cache: true
+
+    - name: Create /etc/apt/keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+        force: false
+
+    - name: Add Docker apt repository
+      apt_repository:
+        repo: >-
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_distribution_release }} stable
+        state: present
+        filename: docker
+
+    - name: Install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Add admin user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # --------------------------------------------------------------------------
+    # Application deployment
+    # --------------------------------------------------------------------------
+    - name: Clone or update repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ branch }}"
+        force: true
+        update: true
+
+    - name: Write py-genai-helper .env file
+      copy:
+        src: "{{ genai_env_file }}"
+        dest: "{{ app_dir }}/services/py-genai-helper/.env"
+        mode: "0600"
+
+    - name: Deploy with docker compose
+      shell: >
+        docker compose -f infra/docker-compose.yml up -d --build --remove-orphans
+      args:
+        chdir: "{{ app_dir }}"
+      environment:
+        COMPOSE_HTTP_TIMEOUT: "120"

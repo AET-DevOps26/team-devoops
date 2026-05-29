@@ -1,0 +1,54 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy (Ansible)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Write SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Write genai .env file
+        env:
+          GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
+        run: printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
+
+      - name: Create inventory
+        run: |
+          cat > /tmp/inventory.yml << INVENTORY
+          all:
+            hosts:
+              team_devoops_vm:
+                ansible_host: ${{ secrets.VM_HOST }}
+                ansible_user: azureuser
+                ansible_ssh_private_key_file: ~/.ssh/deploy_key
+                ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+          INVENTORY
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook \
+            -i /tmp/inventory.yml \
+            infra/ansible/playbook.yml \
+            -e "repo_url=https://github.com/${{ github.repository }}.git" \
+            -e "genai_env_file=/tmp/genai.env"
