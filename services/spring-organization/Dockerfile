@@ -10,13 +10,13 @@ COPY settings.gradle .
 
 # Install dependencies
 RUN chmod +x ./gradlew
-RUN --mount=type=cache,target=/root/.gradle ./gradlew dependencies --no-daemon
+RUN --mount=type=cache,target=/root/.gradle,sharing=locked ./gradlew dependencies --no-daemon
 
 # Copy application
 COPY src src
 
 # Build application
-RUN --mount=type=cache,target=/root/.gradle ./gradlew bootJar --no-daemon
+RUN --mount=type=cache,target=/root/.gradle,sharing=locked ./gradlew bootJar --no-daemon
 
 # Stage 2: run
 FROM eclipse-temurin:21-jre-alpine
