@@ -13,10 +13,10 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["admin"]
+      "realmRoles": ["admin", "member"]
     },
     {
-      "username": "normalUser",
+      "username": "user",
       "enabled": true,
       "emailVerified": true,
       "credentials": [
@@ -26,7 +26,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["user"]
+      "realmRoles": ["member"]
     }
   ],
   "roles": {
@@ -41,7 +41,7 @@
   },
   "clients": [
     {
-      "clientId": "myclient",
+      "clientId": "devops-client",
       "publicClient": true,
       "redirectUris": ["*"],
       "directAccessGrantsEnabled": true
