@@ -44,14 +44,14 @@ function ServicePlaceholderPage({ title, loadMessage }: ServicePlaceholderPagePr
   }, [loadMessage])
 
   return (
-    <section className="card bg-base-100 shadow-md">
+    <section className="card bg-base-200 shadow-md">
       <div className="card-body">
         <h1 className="font-display text-display-md uppercase tracking-wide text-base-content">{title}</h1>
         <p className="text-body-sm text-base-content/70">
           Placeholder page for initial client navigation.
         </p>
 
-        <div className="mt-4 rounded-lg bg-base-200 p-4">
+        <div className="mt-4 rounded-lg bg-base-300 p-4">
           {loading && <p className="text-body text-base-content">Loading hello endpoint response...</p>}
           {message && <p className="font-mono text-base-content">{message}</p>}
           {error && <p className="text-error">Failed to load response: {error}</p>}
