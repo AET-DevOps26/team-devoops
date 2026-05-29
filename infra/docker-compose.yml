@@ -213,11 +213,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.web-client.middlewares=forward-auth@file"
       - "traefik.http.routers.web-client.entrypoints=websecure"
       - "traefik.http.routers.web-client.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`)"
       - "traefik.http.routers.web-client.tls=true"
       - "traefik.http.routers.web-client.tls.certresolver=le"
+      - "traefik.http.routers.web-client.middlewares=forward-auth@file"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -251,8 +251,8 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
       - letsencrypt:/letsencrypt
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
     networks:
       - proxy
 
