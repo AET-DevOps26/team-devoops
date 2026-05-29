@@ -1,0 +1,74 @@
+name: Infra (Terraform)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Terraform action to run
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+# OIDC: allows the job to exchange a GitHub token for an Azure access token.
+# No client secret is required.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: terraform (${{ inputs.action }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      ARM_CLIENT_ID:       ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID:       ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC:        "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Write tfvars
+        env:
+          SSH_PUBLIC_KEY: ${{ secrets.VM_SSH_PUBLIC_KEY }}
+        run: printf 'admin_ssh_public_key = "%s"\n' "$SSH_PUBLIC_KEY" > terraform.tfvars
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform plan
+        if: inputs.action == 'plan' || inputs.action == 'apply'
+        run: terraform plan -out=tfplan
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Show VM public IP
+        if: inputs.action == 'apply'
+        run: |
+          ip=$(terraform output -raw vm_public_ip)
+          echo "::notice::VM public IP: $ip"
+          echo "Add this as the VM_HOST secret in the GitHub 'production' environment."
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        run: terraform destroy -auto-approve

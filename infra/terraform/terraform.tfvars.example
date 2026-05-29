@@ -1,0 +1,11 @@
+# Copy this file to terraform.tfvars (already gitignored) and fill in values.
+# Do NOT commit terraform.tfvars — it contains the SSH public key.
+
+resource_group_name  = "rg-team-devoops"
+location             = "germanywestcentral"
+vm_size              = "Standard_D2s_v3"
+admin_username       = "azureuser"
+project_name         = "team-devoops"
+
+# Paste the full content of your SSH public key (e.g. ~/.ssh/id_ed25519.pub):
+admin_ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"

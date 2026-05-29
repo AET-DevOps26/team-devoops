@@ -1,0 +1,9 @@
+# Copy this file to inventory.yml (gitignored) and fill in the VM's public IP.
+# Get the IP after terraform apply:
+#   terraform -chdir=infra/terraform output -raw vm_public_ip
+all:
+  hosts:
+    team_devoops_vm:
+      ansible_host: <VM_PUBLIC_IP>
+      ansible_user: azureuser
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519
