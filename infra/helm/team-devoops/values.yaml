@@ -14,7 +14,7 @@ global:
   storageClassName: ""
   # Names of pre-created docker-registry Secrets used to pull private ghcr images.
   imagePullSecrets:
-    - ghcr-pull
+    - name: ghcr-pull
 
 # Shared in-cluster Postgres database (mirrors the single compose member_db).
 database:

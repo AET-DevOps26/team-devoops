@@ -433,6 +433,38 @@ jobs:
           file_glob: 'api/openapi.yaml'
 
   # ------------------------------------------------------------------
+  # Helm chart lint + render + schema validation.
+  # ------------------------------------------------------------------
+  helm-validate:
+    name: helm-validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint infra/helm/team-devoops
+
+      - name: Render templates
+        run: |
+          helm template team-devoops infra/helm/team-devoops \
+            --set global.image.tag=ci-validate > /tmp/rendered.yaml
+          test -s /tmp/rendered.yaml
+
+      - name: Install kubeconform
+        run: |
+          curl -sSLo kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate rendered manifests
+        run: kubeconform -strict -summary /tmp/rendered.yaml
+
+  # ------------------------------------------------------------------
   # Aggregate gate - use this single check for branch protection.
   # ------------------------------------------------------------------
   ci-success:
@@ -451,6 +483,7 @@ jobs:
       - docker-build
       - codeql
       - openapi-lint
+      - helm-validate
     steps:
       - name: Verify all required jobs succeeded
         run: |
