@@ -38,7 +38,13 @@ repos:
         args: [--allow-multiple-documents]
         # docker-compose.override.yml uses Compose's custom `!override`
         # tag, which strict YAML parsers (PyYAML) cannot resolve.
-        exclude: ^infra/docker-compose\.override\.yml$
+        # infra/helm/**/templates/* are Helm (Go-template) files, not plain
+        # YAML, so PyYAML cannot parse their `{{ ... }}` directives.
+        exclude: |
+          (?x)^(
+            infra/docker-compose\.override\.yml|
+            infra/helm/.*/templates/.*
+          )$
       - id: check-json
         # tsconfig*.json files use JSONC (comments allowed), which is
         # valid for TypeScript but rejected by strict JSON parsers.

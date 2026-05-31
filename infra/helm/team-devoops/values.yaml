@@ -1,0 +1,125 @@
+# Default values for the team-devoops umbrella chart.
+# Each microservice is rendered from the generic templates below by ranging over
+# `.Values.services`. Adding a service is just a new entry in that map.
+
+global:
+  image:
+    registry: ghcr.io
+    # GitHub owner/repo (lowercased). Per-service image is <registry>/<repository>/<service>.
+    repository: aet-devops26/team-devoops
+    # Overridden per deploy with `--set global.image.tag=<git-sha>`.
+    tag: latest
+  imagePullPolicy: IfNotPresent
+  # Empty => use the cluster's default StorageClass (csi-rbd-sc on the TUM RKE2 cluster).
+  storageClassName: ""
+  # Names of pre-created docker-registry Secrets used to pull private ghcr images.
+  imagePullSecrets:
+    - name: ghcr-pull
+
+# Shared in-cluster Postgres database (mirrors the single compose member_db).
+database:
+  enabled: true
+  name: member_db
+  user: member_user
+  # Rendered into a Secret (db-credentials). Override in CI/prod via --set.
+  password: member_password
+  host: member-database
+  port: 5432
+  image: postgres:15.6-alpine
+  storageSize: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+# py-genai-helper reads its configuration from a Secret created out-of-band by the
+# pipeline (kubectl create secret --from-env-file). Helm only references it by name.
+genai:
+  secretName: genai-env
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ge83mom-devops26.stud.k8s.aet.cit.tum.de
+  tls:
+    enabled: false
+    secretName: ""
+
+# Default compute resources applied to every app container (overridable per service).
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# Service catalogue. Keys are the Kubernetes object names.
+#   path        -> ingress path prefix
+#   port        -> container/Service port
+#   db          -> inject SPRING_DATASOURCE_* env (ConfigMap + Secret)
+#   health      -> HTTP readiness/liveness path (omit => TCP probe)
+#   stripPrefix -> strip the path prefix before forwarding (Traefik parity)
+#   image/tag   -> optional: override the default ghcr image/tag for this service
+#   env         -> extra literal environment variables
+#   envFromSecret -> inject all keys of an existing Secret as env
+# ---------------------------------------------------------------------------
+services:
+  organization-service:
+    path: /api/v1/organization
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  member-service:
+    path: /api/v1/members
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  event-service:
+    path: /api/v1/events
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  feedback-service:
+    path: /api/v1/feedback
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  finance-service:
+    path: /api/v1/finance
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  letter-service:
+    path: /api/v1/letters
+    port: 8080
+    db: true
+    health: /actuator/health
+    stripPrefix: true
+  py-genai-helper:
+    path: /api/v1/helper
+    port: 5000
+    db: false
+    health: /health
+    stripPrefix: true
+    envFromSecret: genai-env
+  web-client:
+    path: /
+    port: 8080
+    db: false
+    health: /
+    stripPrefix: false
+  api-docs:
+    path: /docs
+    port: 8080
+    db: false
+    stripPrefix: false

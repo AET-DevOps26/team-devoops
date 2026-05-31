@@ -1,0 +1,73 @@
+{{- range $name, $svc := .Values.services }}
+{{- $root := $ }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "team-devoops.labels" (dict "name" $name "root" $root) | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 8 }}
+    spec:
+      {{- with $root.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "team-devoops.image" (dict "name" $name "svc" $svc "root" $root) }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          {{- $env := $svc.env | default dict }}
+          {{- if $env }}
+          env:
+            {{- range $k, $v := $env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if or $svc.db $svc.envFromSecret }}
+          envFrom:
+            {{- if $svc.db }}
+            - configMapRef:
+                name: db-config
+            - secretRef:
+                name: db-credentials
+            {{- end }}
+            {{- if $svc.envFromSecret }}
+            - secretRef:
+                name: {{ $svc.envFromSecret }}
+            {{- end }}
+          {{- end }}
+          {{- if $svc.health }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.health }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.health }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          {{- else }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          {{- end }}
+          resources:
+            {{- toYaml ($svc.resources | default $root.Values.resources) | nindent 12 }}
+---
+{{- end }}

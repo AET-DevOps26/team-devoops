@@ -1,0 +1,78 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := .Values.ingress.host }}
+{{- $tls := .Values.ingress.tls }}
+# ---------------------------------------------------------------------------
+# Stripped ingress: services whose path prefix must be removed before the
+# request reaches the backend (Traefik stripPrefix parity). Uses a regex
+# capture group so `/api/v1/members/foo` -> `/foo`.
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: team-devoops-stripped
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "ingress-stripped" "root" $) | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if $tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      {{- if $tls.secretName }}
+      secretName: {{ $tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          {{- range $name, $svc := .Values.services }}
+          {{- if $svc.stripPrefix }}
+          - path: {{ printf "%s(/|$)(.*)" $svc.path }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: {{ $svc.port }}
+          {{- end }}
+          {{- end }}
+---
+# ---------------------------------------------------------------------------
+# Plain ingress: services served at their path as-is (web-client, api-docs).
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: team-devoops-plain
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "ingress-plain" "root" $) | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if $tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      {{- if $tls.secretName }}
+      secretName: {{ $tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          {{- range $name, $svc := .Values.services }}
+          {{- if not $svc.stripPrefix }}
+          - path: {{ $svc.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: {{ $svc.port }}
+          {{- end }}
+          {{- end }}
+{{- end }}
