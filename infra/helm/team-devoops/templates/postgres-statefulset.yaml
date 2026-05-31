@@ -27,6 +27,11 @@ spec:
               value: {{ .Values.database.user | quote }}
             - name: POSTGRES_DB
               value: {{ .Values.database.name | quote }}
+            # Ceph RBD volumes are ext4-formatted and contain a lost+found
+            # directory, so initdb cannot use the mount root. Point PGDATA at
+            # an empty subdirectory instead.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
