@@ -29,7 +29,7 @@ repo/
 │       └── generated/          # ⚠ Generated — do not edit by hand
 ├── web-client/                 # React SPA (Vite, TypeScript)
 │   └── src/api.ts              # ⚠ Generated — do not edit by hand
-├── infra/                      # docker-compose, Traefik config, Helm/Terraform
+├── infra/                      # docker-compose, Traefik config, Terraform, Ansible
 └── .github/workflows/          # CI/CD pipelines
 ```
 
@@ -52,7 +52,7 @@ The Spring Boot services and the GenAI service share a **PostgreSQL** database.
 | GenAI Service | `/api/v1/helper/…` | 5000 | Python 3.12, Flask, LangChain |
 | Web Client | `/` | 8080 | React, Vite |
 | Swagger UI | `/docs` | 8080 | swaggerapi/swagger-ui |
-| Traefik dashboard | `http://localhost:8080` | — | Traefik v3 |
+| Traefik dashboard | `http://localhost:8080` (local only) | — | Traefik v3 |
 | PostgreSQL | internal only | 5432 | postgres:15 |
 
 ## Code Generation
@@ -113,6 +113,98 @@ git push   --no-verify
 
 The full hook configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml)
 and the helper scripts under [`scripts/hooks/`](scripts/hooks/).
+
+## Running Locally
+
+Spin up the full stack on your machine with Docker Compose:
+
+```bash
+cd infra
+docker compose up -d --build
+```
+
+This auto-merges [`infra/docker-compose.override.yml`](infra/docker-compose.override.yml),
+which strips TLS / Let's Encrypt / Host-based routing from the base file so
+everything is reachable on plain HTTP:
+
+| URL | Service |
+|---|---|
+| <http://localhost/> | Web client |
+| <http://localhost/docs> | Swagger UI |
+| <http://localhost/api/v1/&lt;service&gt;/…> | APIs (organization, members, events, feedback, finance, letters, helper) |
+| <http://localhost:8080> | Traefik dashboard |
+
+> **Do not run** `docker compose -f infra/docker-compose.yml up` locally — that
+> skips the override, causing Traefik to request a real Let's Encrypt cert for
+> the production hostname from your laptop. Failed challenges count toward the
+> production rate limit.
+
+Tear down:
+```bash
+cd infra && docker compose down            # keeps the postgres volume
+cd infra && docker compose down -v         # wipes the postgres volume too
+```
+
+## Production Deployment
+
+The stack runs on a single Azure VM in **UAE North**, fronted by Traefik with a
+real TLS certificate from Let's Encrypt (production CA). Everything is
+automated; no manual VM access is required for normal deploys.
+
+**Live URL:** <https://team-devoops.uaenorth.cloudapp.azure.com>
+
+### Infrastructure stack
+
+| Layer | Tool | What it does |
+|---|---|---|
+| Provisioning | **Terraform** (AzureRM ~> 4.0) | Resource group, VNet, NSG (22/80/443), static public IP + free Azure FQDN, Ubuntu 24.04 VM |
+| Configuration | **Ansible** | Installs Docker, clones repo, writes `.env`, runs `docker compose up` |
+| CI/CD | **GitHub Actions** (OIDC, no client secrets) | `infra.yml` (manual: plan/apply/destroy) and `cd.yml` (auto on push to `main`) |
+| Remote state | **Azure Blob Storage** (`stteamdevoopstfstate/tfstate`) | Shared, locked Terraform state — survives between CI runs |
+| TLS | **Let's Encrypt** (HTTP-01 via Traefik) | Cert persisted in a Docker volume; auto-renewed |
+
+### GitHub Actions workflows
+
+- **`infra` workflow** — manual (`workflow_dispatch`). Choose `plan`, `apply`, or `destroy`.
+- **`cd` workflow** — runs automatically on every push to `main` (and is also `workflow_dispatch`-able). Deploys the current `main` to the VM via Ansible.
+
+### Required GitHub secrets / variables
+
+| Kind | Name | Purpose |
+|---|---|---|
+| Variable | `AZURE_CLIENT_ID` | OIDC app registration (Service Principal) |
+| Variable | `AZURE_TENANT_ID` | Azure AD tenant |
+| Variable | `AZURE_SUBSCRIPTION_ID` | Target subscription |
+| Secret | `VM_SSH_PUBLIC_KEY` | Public key planted on the VM by Terraform |
+| Secret | `SSH_PRIVATE_KEY` | Matching private key for Ansible to SSH in |
+| Secret | `VM_HOST` | Host Ansible connects to — use the FQDN above |
+| Secret | `GENAI_ENV_CONTENT` | Contents of `services/py-genai-helper/.env` |
+
+The OIDC service principal needs `Contributor` on the subscription (to manage
+resources in `rg-team-devoops`) and `Storage Blob Data Contributor` on the
+state account `stteamdevoopstfstate` (to read/write tfstate).
+
+### Typical workflow
+
+1. **Change infra** → push to `main` (or any branch), trigger `infra` workflow with `apply`.
+2. **Change app code** → merge to `main`; `cd` runs automatically and redeploys.
+3. **Tear down** → trigger `infra` workflow with `destroy`.
+
+### Running Terraform locally
+
+```bash
+az login
+az account set --subscription <AZURE_SUBSCRIPTION_ID>
+export ARM_SUBSCRIPTION_ID=<AZURE_SUBSCRIPTION_ID>
+export ARM_USE_AZUREAD=true
+cd infra/terraform
+echo "admin_ssh_public_key = \"$(cat ~/.ssh/team-devoops-azure.pub)\"" > terraform.tfvars
+terraform init
+terraform plan
+```
+
+Local and CI share the same remote state, so do not run `apply` in both at the
+same time (the backend's blob lease will block one, but coordinate anyway).
 
 ## Docs
 
