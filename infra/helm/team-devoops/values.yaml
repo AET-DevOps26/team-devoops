@@ -64,7 +64,7 @@ resources:
 #   db          -> inject SPRING_DATASOURCE_* env (ConfigMap + Secret)
 #   health      -> HTTP readiness/liveness path (omit => TCP probe)
 #   stripPrefix -> strip the path prefix before forwarding (Traefik parity)
-#   image/tag   -> override the default ghcr image (used for external images)
+#   image/tag   -> optional: override the default ghcr image/tag for this service
 #   env         -> extra literal environment variables
 #   envFromSecret -> inject all keys of an existing Secret as env
 # ---------------------------------------------------------------------------

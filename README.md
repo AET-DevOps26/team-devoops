@@ -29,7 +29,7 @@ repo/
 │       └── generated/          # ⚠ Generated — do not edit by hand
 ├── web-client/                 # React SPA (Vite, TypeScript)
 │   └── src/api.ts              # ⚠ Generated — do not edit by hand
-├── infra/                      # docker-compose, Traefik config, Terraform, Ansible
+├── infra/                      # docker-compose, Traefik config, Terraform, Ansible, Helm
 └── .github/workflows/          # CI/CD pipelines
 ```
 
@@ -166,7 +166,7 @@ automated; no manual VM access is required for normal deploys.
 ### GitHub Actions workflows
 
 - **`infra` workflow** — manual (`workflow_dispatch`). Choose `plan`, `apply`, or `destroy`.
-- **`cd` workflow** — runs automatically on every push to `main` (and is also `workflow_dispatch`-able). Deploys the current `main` to the VM via Ansible.
+- **`cd` workflow** — runs automatically on every push to `main` (and is also `workflow_dispatch`-able). Deploys the current `main` to the VM via Ansible **and** to the Kubernetes cluster via Helm (see [Kubernetes deployment](#kubernetes-deployment-helm)).
 
 ### Required GitHub secrets / variables
 
@@ -179,6 +179,7 @@ automated; no manual VM access is required for normal deploys.
 | Secret | `SSH_PRIVATE_KEY` | Matching private key for Ansible to SSH in |
 | Secret | `VM_HOST` | Host Ansible connects to — use the FQDN above |
 | Secret | `GENAI_ENV_CONTENT` | Contents of `services/py-genai-helper/.env` |
+| Secret | `KUBECONFIG` | Kubeconfig for the RKE2 cluster (used by the `deploy-k8s` job) |
 
 The OIDC service principal needs `Contributor` on the subscription (to manage
 resources in `rg-team-devoops`) and `Storage Blob Data Contributor` on the
@@ -205,6 +206,29 @@ terraform plan
 
 Local and CI share the same remote state, so do not run `apply` in both at the
 same time (the backend's blob lease will block one, but coordinate anyway).
+
+### Kubernetes deployment (Helm)
+
+In addition to the Azure VM, the stack is also deployed to a **Kubernetes
+cluster** (TUM RKE2) via a Helm umbrella chart. Both deploys run in parallel on
+push to `main`; the VM path is unchanged.
+
+| Aspect | Value |
+|---|---|
+| Chart | [`infra/helm/team-devoops`](infra/helm/team-devoops) |
+| Namespace | `ge83mom-devops26` |
+| Host | <https://ge83mom-devops26.stud.k8s.aet.cit.tum.de> |
+| Ingress | cluster `nginx` ingress (path-prefix routing, prefix stripped per service) |
+| Images | built and pushed to `ghcr.io/aet-devops26/team-devoops/<service>` |
+| Database | in-cluster PostgreSQL `StatefulSet` + PVC (cluster default StorageClass) |
+
+The `cd` workflow's `docker-push` job builds and pushes all service images to
+ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
+--install` against the cluster. On pull requests, the `ci` workflow's
+`helm-validate` job lints and schema-validates the chart with `kubeconform`.
+
+See [`infra/helm/README.md`](infra/helm/README.md) for the chart layout, required
+one-time secrets (`genai-env`, `ghcr-pull`), and manual deploy instructions.
 
 ## Docs
 

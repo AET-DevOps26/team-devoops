@@ -39,19 +39,21 @@ which bakes `api/openapi.yaml` into the image — no runtime ConfigMap/volume ne
 ### 1. py-genai-helper environment Secret
 
 The chart references (but does not create) a Secret named `genai-env` for the
-GenAI helper. Create it from the same `.env` used by docker compose:
+GenAI helper. The `deploy-k8s` pipeline job creates/refreshes it automatically
+from the `GENAI_ENV_CONTENT` GitHub secret. For a manual deploy, create it from
+the same `.env` used by docker compose:
 
 ```bash
 kubectl -n ge83mom-devops26 create secret generic genai-env \
   --from-env-file=services/py-genai-helper/.env
 ```
 
-In CI this is created from the `GENAI_ENV_CONTENT` GitHub secret (see cd.yml).
+### 2. ghcr image pull secret
 
-### 2. ghcr image pull (private packages)
-
-If the ghcr packages are private, create a pull secret and add it to the chart
-(or make the packages public under the org's package settings):
+The service images are pushed to ghcr as private packages, so the chart is
+preconfigured to pull them via an `imagePullSecrets` entry named `ghcr-pull`
+(see `global.imagePullSecrets` in `values.yaml`). Create that secret once in the
+namespace with a GitHub PAT that has the `read:packages` scope:
 
 ```bash
 kubectl -n ge83mom-devops26 create secret docker-registry ghcr-pull \
@@ -59,6 +61,9 @@ kubectl -n ge83mom-devops26 create secret docker-registry ghcr-pull \
   --docker-username=<github-user> \
   --docker-password=<PAT-with-read:packages>
 ```
+
+If you instead make the org packages public, remove (or empty)
+`global.imagePullSecrets` in `values.yaml`.
 
 ## Manual deploy
 
@@ -88,7 +93,11 @@ curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/api/v1/members
 
 ## Pipeline integration
 
-`.github/workflows/cd.yml` runs two jobs on push to `main`:
+On pull requests, `.github/workflows/ci.yml` runs a `helm-validate` job that
+lints the chart, renders the templates, and validates the rendered manifests
+against the Kubernetes schemas with `kubeconform`.
+
+`.github/workflows/cd.yml` runs on push to `main`:
 
 - **deploy** — existing Azure VM deploy via Ansible (unchanged).
 - **docker-push** then **deploy-k8s** — builds & pushes all images to ghcr, then
