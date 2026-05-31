@@ -150,4 +150,4 @@ jobs:
           helm upgrade --install team-devoops infra/helm/team-devoops \
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
-            --wait --timeout 5m
+            --wait --timeout 10m

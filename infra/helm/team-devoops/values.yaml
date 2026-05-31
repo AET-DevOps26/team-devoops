@@ -45,8 +45,13 @@ ingress:
   className: nginx
   host: ge83mom-devops26.stud.k8s.aet.cit.tum.de
   tls:
-    enabled: false
-    secretName: ""
+    enabled: true
+    # Secret nginx serves the cert from. With cert-manager this is created
+    # automatically; otherwise it must reference a pre-existing TLS Secret.
+    secretName: team-devoops-tls
+    # cert-manager ClusterIssuer that issues the cert (TUM AET cluster).
+    # Adds the cert-manager.io/cluster-issuer annotation on the ingresses.
+    clusterIssuer: letsencrypt-prod
 
 # Default compute resources applied to every app container (overridable per service).
 resources:
