@@ -265,7 +265,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 30s
+      start_period: 90s
     volumes:
       - ./infra/keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
     ports:
