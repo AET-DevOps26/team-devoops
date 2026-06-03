@@ -10,7 +10,7 @@ export async function getMembersAdminHello(): Promise<string> {
     const res = await membersClient.get<string>('/helloAdmin')
     return res.data
   }
-  catch (error) {
+  catch {
     return "You are not logged into an administrator account"
   }
 }
