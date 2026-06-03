@@ -84,6 +84,7 @@ jobs:
             context: services/py-genai-helper
           - service: web-client
             context: web-client
+            build_args: "VITE_KEYCLOAK_URL=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth"
           - service: api-docs
             context: api
     steps:
@@ -111,6 +112,7 @@ jobs:
           tags: |
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
+          build-args: ${{ matrix.build_args || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -150,4 +152,5 @@ jobs:
           helm upgrade --install team-devoops infra/helm/team-devoops \
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
+            --set keycloak.hostname=ge83mom-devops26.stud.k8s.aet.cit.tum.de \
             --wait --timeout 10m

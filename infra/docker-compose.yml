@@ -15,7 +15,7 @@ services:
       - "traefik.http.routers.py-genai-helper.tls=true"
       - "traefik.http.routers.py-genai-helper.tls.certresolver=le"
       - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
-      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix"
+      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix,forward-auth@file"
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
     networks:
       - proxy
@@ -40,7 +40,7 @@ services:
       - "traefik.http.routers.organization-service.tls=true"
       - "traefik.http.routers.organization-service.tls.certresolver=le"
       - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
-      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix"
+      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix,forward-auth@file"
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -66,7 +66,7 @@ services:
       - "traefik.http.routers.member-service.tls=true"
       - "traefik.http.routers.member-service.tls.certresolver=le"
       - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
-      - "traefik.http.routers.member-service.middlewares=member-stripprefix"
+      - "traefik.http.routers.member-service.middlewares=member-stripprefix,forward-auth@file"
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -92,7 +92,7 @@ services:
       - "traefik.http.routers.event-service.tls=true"
       - "traefik.http.routers.event-service.tls.certresolver=le"
       - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
-      - "traefik.http.routers.event-service.middlewares=event-stripprefix"
+      - "traefik.http.routers.event-service.middlewares=event-stripprefix,forward-auth@file"
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -118,7 +118,7 @@ services:
       - "traefik.http.routers.feedback-service.tls=true"
       - "traefik.http.routers.feedback-service.tls.certresolver=le"
       - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
-      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix"
+      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix,forward-auth@file"
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -144,7 +144,7 @@ services:
       - "traefik.http.routers.finance-service.tls=true"
       - "traefik.http.routers.finance-service.tls.certresolver=le"
       - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
-      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
+      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix,forward-auth@file"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -170,7 +170,7 @@ services:
       - "traefik.http.routers.letter-service.tls=true"
       - "traefik.http.routers.letter-service.tls.certresolver=le"
       - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
-      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix"
+      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix,forward-auth@file"
       - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -211,10 +211,13 @@ services:
       - py-genai-helper
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.web-client.entrypoints=web"
+      - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.routers.web-client.entrypoints=websecure"
       - "traefik.http.routers.web-client.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`)"
       - "traefik.http.routers.web-client.tls=true"
       - "traefik.http.routers.web-client.tls.certresolver=le"
+      - "traefik.http.routers.web-client.middlewares=forward-auth@file"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
     networks:
       - proxy
@@ -222,11 +225,16 @@ services:
   traefik:
     image: traefik:v3.7
     container_name: traefik
+    depends_on:
+      traefik-forward-auth:
+        condition: service_started
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.network=proxy"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       # Redirect all HTTP traffic to HTTPS
@@ -244,8 +252,82 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - letsencrypt:/letsencrypt
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
     networks:
       - proxy
+
+  traefik-forward-auth:
+    image: thomseddon/traefik-forward-auth:2
+    container_name: traefik-forward-auth
+    environment:
+      - DEFAULT_PROVIDER=oidc
+      - PROVIDERS_OIDC_ISSUER_URL=http://localhost:8081/realms/devops
+      - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
+      - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
+      - SECRET=a-random-32-char-secret-changeme!
+      - INSECURE_COOKIE=true
+    extra_hosts:
+      - "localhost:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-forward-auth.rule=Path(`/_oauth`)"
+      - "traefik.http.routers.traefik-forward-auth.entrypoints=web"
+      - "traefik.http.routers.traefik-forward-auth.middlewares=forward-auth@file"
+      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - proxy
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+      keycloak-database:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-database
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "exec 3<>/dev/tcp/localhost/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200 OK'"
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    volumes:
+      - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
+    ports:
+      - "8081:8080"
+    networks:
+      - proxy
+      - keycloak
+
+  keycloak-database:
+    image: postgres:15.6-alpine
+    container_name: keycloak-db
+    volumes:
+    - keycloak_db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak_user -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - keycloak
 
   member-database:
     image: postgres:15.6-alpine
@@ -269,6 +351,7 @@ services:
 
 volumes:
   member_db_data:
+  keycloak_db_data:
   letsencrypt:
 
 networks:
@@ -276,3 +359,5 @@ networks:
     name: proxy
   data:
     name: data
+  keycloak:
+    name: keycloak

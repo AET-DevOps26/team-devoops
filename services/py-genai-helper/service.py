@@ -24,7 +24,5 @@ def hello():
 
 def generate_rag_response(question):
     rag_agent = get_rag_agent()
-    response = rag_agent.invoke({
-        "messages": [{"role": "user", "content": question}]
-    })
+    response = rag_agent.invoke({"messages": [{"role": "user", "content": question}]})
     return response["messages"][-1].content

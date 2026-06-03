@@ -106,3 +106,7 @@ services:
       - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
+
+  traefik-forward-auth:
+    labels: !override
+      - "traefik.enable=false"

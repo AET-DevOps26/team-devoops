@@ -40,6 +40,35 @@ database:
 genai:
   secretName: genai-env
 
+# ---------------------------------------------------------------------------
+# Keycloak identity provider.
+#   path     -> sub-path Keycloak listens on (KC_HTTP_RELATIVE_PATH).
+#   hostname -> public-facing hostname Keycloak puts in issued tokens.
+#   db       -> dedicated Postgres instance (mirrors .database.* pattern).
+# NOTE: files/realm-config.json must be kept in sync with
+#       infra/keycloak/realm-config.json.
+# ---------------------------------------------------------------------------
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:26.0.0
+  path: /auth
+  hostname: ge83mom-devops26.stud.k8s.aet.cit.tum.de
+  adminUsername: admin
+  adminPassword: admin
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  db:
+    name: keycloak
+    user: keycloak_user
+    password: keycloak_password
+    host: keycloak-database
+    storageSize: 2Gi
+
 ingress:
   enabled: true
   className: nginx
@@ -80,36 +109,54 @@ services:
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   member-service:
     path: /api/v1/members
     port: 8080
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   event-service:
     path: /api/v1/events
     port: 8080
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   feedback-service:
     path: /api/v1/feedback
     port: 8080
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   finance-service:
     path: /api/v1/finance
     port: 8080
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   letter-service:
     path: /api/v1/letters
     port: 8080
     db: true
     health: /actuator/health
     stripPrefix: true
+    env:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
   py-genai-helper:
     path: /api/v1/helper
     port: 5000

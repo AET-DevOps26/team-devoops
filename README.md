@@ -230,6 +230,41 @@ ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
 See [`infra/helm/README.md`](infra/helm/README.md) for the chart layout, required
 one-time secrets (`genai-env`, `ghcr-pull`), and manual deploy instructions.
 
+## Authentication (Keycloak)
+
+All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/JWT. Keycloak is included in both the Docker Compose stack and the Helm chart — no separate installation is needed.
+
+### Realm & users
+
+| Realm | `devops` |
+|---|---|
+| Admin user | `admin` / `admin123` (roles: `admin`, `member`) |
+| Regular user | `user` / `user123` (role: `member`) |
+
+### Clients
+
+| Client | Type | Used by |
+|---|---|---|
+| `devops-client` | public, PKCE S256 | React frontend |
+| `traefik-forward-auth` | confidential | Traefik forward-auth middleware |
+
+### Local login
+
+When running with Docker Compose, Keycloak is available at <http://localhost:8081>. The realm is auto-imported on first start from [`infra/keycloak/realm-config.json`](infra/keycloak/realm-config.json).
+
+The web client redirects to Keycloak automatically (`login-required` strategy). Log in with any of the test users above.
+
+### Spring services — JWT validation
+
+Each Spring service is a stateless OAuth2 resource server. It validates Bearer JWTs against Keycloak's JWK set and extracts roles from the `realm_access.roles` claim, mapping them to Spring `ROLE_*` authorities (e.g. `"admin"` → `ROLE_admin`).
+
+| Environment variable | Purpose |
+|---|---|
+| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` | Validates the `iss` claim in incoming JWTs |
+| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` | URL to fetch Keycloak's public signing keys |
+
+Docker Compose sets these to `http://keycloak:8080/auth/realms/devops/…`. On Kubernetes they are injected via the `env:` block in `infra/helm/team-devoops/values.yaml` using the internal `keycloak` ClusterIP DNS name.
+
 ## Docs
 
 - [Problem Statement](docs/problem-statement.md)

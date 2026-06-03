@@ -82,4 +82,13 @@ spec:
                   number: {{ $svc.port }}
           {{- end }}
           {{- end }}
+          {{- if .Values.keycloak.enabled }}
+          - path: {{ .Values.keycloak.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+          {{- end }}
 {{- end }}
