@@ -1,5 +1,3 @@
-import axios from 'axios'
+import { createApiClient } from '@/lib/keycloak'
 
-export const eventsClient = axios.create({
-  baseURL: '/api/v1/events',
-})
+export const eventsClient = createApiClient('/api/v1/events')
