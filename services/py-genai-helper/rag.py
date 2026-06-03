@@ -1,30 +1,41 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from langchain.agents import create_agent
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import create_retriever_tool
 from langchain_openai import OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
-# Loads an existing embedding model
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 
-texts = [
-    "I enjoy oranges.",
-    "I love apples.",
-    "I think pears taste very good",
-    "I hate bananas.",
-    "I dislike raspberries",
-    "I despise mangos.",
-    "I love Linux.",
-    "I hate Windows.",
-]
+_FILE_STORAGE = Path(__file__).parent / "file-storage"
 
-# Creates a vector store of our inputs using embeddings
-vector_store = FAISS.from_texts(texts, embedding=embeddings)
+
+def _load_pdfs() -> FAISS | None:
+    pdf_files = list(_FILE_STORAGE.glob("*.pdf"))
+    if not pdf_files:
+        return None
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    docs = []
+    for path in pdf_files:
+        loader = PyPDFLoader(str(path))
+        docs.extend(loader.load_and_split(splitter))
+
+    return FAISS.from_documents(docs, embedding=embeddings)
+
+
+vector_store = _load_pdfs()
 
 
 def get_rag_agent():
+    if vector_store is None:
+        raise RuntimeError("No PDFs found in file-storage/")
+
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
     retriever_tool = create_retriever_tool(
