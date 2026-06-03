@@ -1,18 +1,19 @@
 package tum.devoops.letterservice;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import tum.devoops.letterservice.config.SecurityConfig;
-
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+
+import tum.devoops.letterservice.config.SecurityConfig;
 
 class SecurityConfigTest {
 
-    private final var converter = new SecurityConfig().jwtAuthenticationConverter();
+    private final JwtAuthenticationConverter converter = new SecurityConfig().jwtAuthenticationConverter();
 
     private Jwt jwtWithRoles(List<String> roles) {
         return Jwt.withTokenValue("test-token")

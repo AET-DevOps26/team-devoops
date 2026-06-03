@@ -4,8 +4,8 @@ import type { InternalAxiosRequestConfig } from 'axios'
 // Shared mock state — must be declared before vi.mock so the factory can close over it.
 const mock = {
   token: 'mock-token' as string | undefined,
-  updateToken: vi.fn<[number], Promise<boolean>>(),
-  login: vi.fn<[], Promise<void>>(),
+  updateToken: vi.fn<(n: number) => Promise<boolean>>(),
+  login: vi.fn<() => Promise<void>>(),
 }
 
 // vi.mock is hoisted before static imports, so keycloak-js is replaced before
