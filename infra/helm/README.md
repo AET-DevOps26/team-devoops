@@ -65,6 +65,33 @@ kubectl -n ge83mom-devops26 create secret docker-registry ghcr-pull \
 If you instead make the org packages public, remove (or empty)
 `global.imagePullSecrets` in `values.yaml`.
 
+### 3. Keycloak
+
+The chart creates the `keycloak-credentials` Secret automatically from `values.yaml` — no manual `kubectl create secret` step is needed.
+
+To use non-default passwords, pass them at deploy time:
+
+```bash
+helm upgrade --install team-devoops infra/helm/team-devoops \
+  --namespace ge83mom-devops26 \
+  --set keycloak.adminPassword=<secure-password> \
+  --set keycloak.db.password=<secure-db-password>
+```
+
+> **First-deploy note:** Keycloak takes ~90 seconds to become ready (readiness probe: HTTP GET `/auth/health/ready`, `initialDelaySeconds: 90`). If `helm upgrade --wait` times out on a cold cluster, re-run once the pod is `Running`.
+
+The realm (`devops`) and all users/clients are auto-imported on first start from `infra/helm/team-devoops/files/realm-config.json` via the `--import-realm` flag.
+
+Validate:
+
+```bash
+kubectl -n ge83mom-devops26 get pods | grep keycloak
+# keycloak-xxxx        1/1  Running
+# keycloak-database-0  1/1  Running
+
+curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops/.well-known/openid-configuration
+```
+
 ## Manual deploy
 
 ```bash
