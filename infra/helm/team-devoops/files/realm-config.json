@@ -1,0 +1,75 @@
+{
+  "realm": "devops",
+  "enabled": true,
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "member"]
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["member"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin"
+      },
+      {
+        "name": "member"
+      }
+    ]
+  },
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "name": "declarative-user-profile",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "devops-client",
+      "publicClient": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "traefik-forward-auth",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "traefik-forward-auth-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost/_oauth"],
+      "webOrigins": ["http://localhost"]
+    }
+  ]
+}
