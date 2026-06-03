@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import keycloak from '@/lib/keycloak'
 import '@/index.css'
 import App from './App.tsx'
+import { ThemeProvider } from './app/theme/ThemeProvider'
 
 keycloak.init({ onLoad: 'login-required', pkceMethod: 'S256' }).then((authenticated) => {
   if (!authenticated) {
@@ -13,9 +14,11 @@ keycloak.init({ onLoad: 'login-required', pkceMethod: 'S256' }).then((authentica
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ThemeProvider>
     </StrictMode>,
   )
 })
