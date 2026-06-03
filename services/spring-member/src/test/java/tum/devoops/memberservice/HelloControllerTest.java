@@ -45,7 +45,7 @@ class HelloControllerTest {
     }
 
     @Test
-    void helloWithJwtMemberRole_returns200() throws Exception {
+    void helloWithJwtMemberRoleReturns200() throws Exception {
         mockMvc.perform(get("/hello")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_member"))))
                 .andExpect(status().isOk())
@@ -53,7 +53,7 @@ class HelloControllerTest {
     }
 
     @Test
-    void helloAdminWithJwtAdminRole_returns200() throws Exception {
+    void helloAdminWithJwtAdminRoleReturns200() throws Exception {
         mockMvc.perform(get("/helloAdmin")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
                 .andExpect(status().isOk())
@@ -61,7 +61,7 @@ class HelloControllerTest {
     }
 
     @Test
-    void helloAdminWithJwtMemberRole_returns403() throws Exception {
+    void helloAdminWithJwtMemberRoleReturns403() throws Exception {
         mockMvc.perform(get("/helloAdmin")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_member"))))
                 .andExpect(status().isForbidden());

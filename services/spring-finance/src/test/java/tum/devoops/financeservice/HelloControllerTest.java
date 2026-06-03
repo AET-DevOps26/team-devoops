@@ -35,7 +35,7 @@ class HelloControllerTest {
     }
 
     @Test
-    void helloWithValidJwt_returns200() throws Exception {
+    void helloWithValidJwtReturns200() throws Exception {
         mockMvc.perform(get("/hello").with(jwt()))
                 .andExpect(status().isOk());
     }

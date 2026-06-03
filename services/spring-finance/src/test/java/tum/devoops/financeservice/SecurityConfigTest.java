@@ -24,7 +24,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void adminRole_mapsToROLE_admin() {
+    void adminRoleMapsToROLEAdmin() {
         var token = converter.convert(jwtWithRoles(List.of("admin")));
         assertThat(token.getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)
@@ -32,7 +32,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void memberRole_mapsToROLE_member() {
+    void memberRoleMapsToROLEMember() {
         var token = converter.convert(jwtWithRoles(List.of("member")));
         assertThat(token.getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)
@@ -40,7 +40,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void multipleRoles_allMapped() {
+    void multipleRolesAllMapped() {
         var token = converter.convert(jwtWithRoles(List.of("admin", "member")));
         assertThat(token.getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)
@@ -48,7 +48,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void noRealmAccess_returnsEmptyAuthorities() {
+    void noRealmAccessReturnsEmptyAuthorities() {
         Jwt jwt = Jwt.withTokenValue("test-token")
                 .header("alg", "none")
                 .claim("sub", "test-user")
@@ -58,7 +58,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void emptyRoles_returnsEmptyAuthorities() {
+    void emptyRolesReturnsEmptyAuthorities() {
         var token = converter.convert(jwtWithRoles(List.of()));
         assertThat(token.getAuthorities()).isEmpty();
     }
