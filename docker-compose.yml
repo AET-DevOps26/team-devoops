@@ -203,6 +203,9 @@ services:
   traefik:
     image: traefik:v3.7
     container_name: traefik
+    depends_on:
+      traefik-forward-auth:
+        condition: service_started
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
