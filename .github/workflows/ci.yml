@@ -13,6 +13,35 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------------
+  # Changed-path detection
+  # ------------------------------------------------------------------
+  changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      web_client: ${{ steps.manual.outputs.web_client || steps.pr_changes.outputs.web_client }}
+    steps:
+      - name: Default changed paths for non-PR runs
+        id: manual
+        if: github.event_name != 'pull_request'
+        run: echo "web_client=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: pr_changes
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            web_client:
+              - 'web-client/**'
+
+  # ------------------------------------------------------------------
   # Java / Spring Boot - organization-service
   # ------------------------------------------------------------------
   organization-service:
@@ -283,6 +312,8 @@ jobs:
   # ------------------------------------------------------------------
   web-client:
     name: web-client (Node)
+    needs: changes
+    if: ${{ needs.changes.outputs.web_client == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -307,14 +338,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck (TypeScript)
+        run: pnpm typecheck
+
       - name: Lint (ESLint)
-        run: pnpm run lint
+        run: pnpm lint
 
       - name: Run tests (Vitest)
         run: pnpm test
 
       - name: Build (Vite)
-        run: pnpm run build
+        run: pnpm build
 
   # ------------------------------------------------------------------
   # Whole-system Docker build
@@ -323,6 +357,7 @@ jobs:
     name: docker-build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     needs:
       - member-service
       - organization-service
@@ -472,6 +507,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - changes
       - member-service
       - organization-service
       - event-service
@@ -489,8 +525,20 @@ jobs:
         run: |
           results='${{ toJSON(needs) }}'
           echo "Job results: $results"
-          if echo "$results" | grep -E '"result":\s*"(failure|cancelled|skipped)"' > /dev/null; then
+          if echo "$results" | jq -e '
+            to_entries[]
+            | select(.value.result == "failure" or .value.result == "cancelled")
+          ' > /dev/null; then
             echo "::error::One or more required jobs did not succeed."
             exit 1
           fi
+
+          if echo "$results" | jq -e '
+            to_entries[]
+            | select(.value.result == "skipped" and .key != "web-client")
+          ' > /dev/null; then
+            echo "::error::A required job was skipped unexpectedly."
+            exit 1
+          fi
+
           echo "All required jobs passed."
