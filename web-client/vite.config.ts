@@ -18,6 +18,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            // Strip cookies — backend services don't need them and
+            // the browser sends huge cookie jars from other localhost apps
+            // which can exceed http-proxy's header size limit (→ 400).
+            proxyReq.removeHeader('cookie')
+          })
+        },
       },
     },
   },

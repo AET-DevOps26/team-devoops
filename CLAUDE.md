@@ -1,5 +1,9 @@
 # Claude Code Guidelines
 
+## UI components
+
+This project uses shadcn/ui. When adding or modifying UI components, always use the `shadcn` MCP server to look up component APIs, variants, and usage before writing or editing component code.
+
 ## Branch naming
 
 Pattern: `<type>/<issue-number>-<short-slug>`
