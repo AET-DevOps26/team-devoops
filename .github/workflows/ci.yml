@@ -344,8 +344,16 @@ jobs:
       - name: Lint (ESLint)
         run: pnpm lint
 
-      - name: Run tests (Vitest)
-        run: pnpm test
+      - name: Run tests with coverage (Vitest)
+        run: pnpm test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-client-coverage
+          path: web-client/coverage/
+          if-no-files-found: ignore
 
       - name: Build (Vite)
         run: pnpm build
@@ -533,9 +541,11 @@ jobs:
             exit 1
           fi
 
+          # web-client and docker-build are allowed to be skipped together
+          # (docker-build cascades when web-client is skipped via path filter)
           if echo "$results" | jq -e '
             to_entries[]
-            | select(.value.result == "skipped" and .key != "web-client")
+            | select(.value.result == "skipped" and (.key | IN("web-client", "docker-build") | not))
           ' > /dev/null; then
             echo "::error::A required job was skipped unexpectedly."
             exit 1
