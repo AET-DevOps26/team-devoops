@@ -206,10 +206,12 @@ export function AppRouter() {
             <Route path="/" element={<Navigate to="/members" replace />} />
             <Route
               path="/members"
-              element={<>
-                <ServicePlaceholderPage title="Member Service" loadMessage={getMembersHello} />
-                <ServicePlaceholderPage title="Member Service Admin" loadMessage={getMembersAdminHello} />
-              </>}
+              element={
+                <div className="space-y-6">
+                  <ServicePlaceholderPage title="Member Service" loadMessage={getMembersHello} />
+                  <ServicePlaceholderPage title="Member Service Admin" loadMessage={getMembersAdminHello} />
+                </div>
+              }
             />
             <Route
               path="/events"

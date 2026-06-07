@@ -11,8 +11,8 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement
   const resolved = theme === 'system' ? getSystemTheme() : theme
 
-  root.classList.remove('light', 'dark')
-  root.classList.add(resolved)
+  root.classList.remove('dark')
+  root.classList.toggle('dark', resolved === 'dark')
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -37,19 +37,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handler)
   }, [theme])
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme)
-  }
-
   const toggleTheme = () => {
     setThemeState((prev) => {
-      const resolved = prev === 'system' ? getSystemTheme() : prev
-      return resolved === 'light' ? 'dark' : 'light'
+      if (prev === 'light') return 'dark'
+      if (prev === 'dark') return 'system'
+      return 'light'
     })
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )
