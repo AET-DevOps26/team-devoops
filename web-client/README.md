@@ -1,4 +1,4 @@
-# web-client
+# Web Client
 
 React + TypeScript single-page application for the team-devoops club management platform.
 
@@ -14,6 +14,16 @@ React + TypeScript single-page application for the team-devoops club management 
 | Auth | keycloak-js 26 (PKCE S256) |
 | Tests | Vitest + jsdom |
 | Linting | ESLint (flat config) |
+
+## Design System
+
+The client uses:
+
+- `shadcn` primitives for reusable UI building blocks
+- Tailwind CSS v4 with CSS variable theming
+- the `Sera` style preset configured in `components.json`
+
+The global theme lives in `src/index.css`. Light and dark mode are driven by semantic tokens such as `--background`, `--primary`, and `--card`.
 
 ## Prerequisites
 
@@ -66,6 +76,15 @@ docker build \
 
 In the CD pipeline this is set automatically to the cluster hostname via the `build_args` matrix entry in `.github/workflows/cd.yml`.
 
+## Scripts
+
+- `pnpm dev` starts the Vite dev server
+- `pnpm lint` runs ESLint
+- `pnpm typecheck` runs TypeScript in build mode without emitting files
+- `pnpm test` runs Vitest
+- `pnpm build` creates the production bundle
+- `pnpm verify` runs lint, typecheck, tests, and build
+
 ## Running tests
 
 ```bash
@@ -75,67 +94,8 @@ pnpm test --watch  # watch mode
 
 Tests live in `src/__tests__/` and use Vitest with jsdom.
 
-## React Compiler
+## Notes
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Use the `@/` alias for imports from `src`
+- Add new reusable primitives under `src/components/ui`
+- Prefer semantic theme tokens over hard-coded colors when extending the UI
