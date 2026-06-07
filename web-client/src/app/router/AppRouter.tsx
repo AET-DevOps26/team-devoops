@@ -4,7 +4,7 @@ import { ArrowRight, LayoutGrid, Orbit, Sparkles } from 'lucide-react'
 import { getEventsHello } from '@/features/events/api'
 import { getFeedbackHello } from '@/features/feedback/api'
 import { getLettersHello } from '@/features/letters/api'
-import { getMembersHello } from '@/features/members/api'
+import { getMembersHello, getMembersAdminHello } from '@/features/members/api'
 import { getOrganizationHello } from '@/features/organization/api'
 import { getPaymentsHello } from '@/features/payments/api'
 import { ThemeToggle } from '@/app/theme/ThemeToggle'
@@ -206,7 +206,10 @@ export function AppRouter() {
             <Route path="/" element={<Navigate to="/members" replace />} />
             <Route
               path="/members"
-              element={<ServicePlaceholderPage title="Member Service" loadMessage={getMembersHello} />}
+              element={<>
+                <ServicePlaceholderPage title="Member Service" loadMessage={getMembersHello} />
+                <ServicePlaceholderPage title="Member Service Admin" loadMessage={getMembersAdminHello} />
+              </>}
             />
             <Route
               path="/events"

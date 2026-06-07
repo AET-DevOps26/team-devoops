@@ -1,16 +1,24 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import keycloak from '@/lib/keycloak'
 import '@/index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './app/theme/ThemeProvider'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ThemeProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ThemeProvider>
-  </StrictMode>,
-)
+keycloak.init({ onLoad: 'login-required', pkceMethod: 'S256' }).then((authenticated) => {
+  if (!authenticated) {
+    keycloak.login()
+    return
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ThemeProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ThemeProvider>
+    </StrictMode>,
+  )
+})

@@ -1,0 +1,156 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    name: deploy (Ansible)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Write SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Write genai .env file
+        env:
+          GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
+        run: printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
+
+      - name: Create inventory
+        run: |
+          cat > /tmp/inventory.yml << INVENTORY
+          all:
+            hosts:
+              team_devoops_vm:
+                ansible_host: ${{ secrets.VM_HOST }}
+                ansible_user: azureuser
+                ansible_ssh_private_key_file: ~/.ssh/deploy_key
+                ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+          INVENTORY
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook \
+            -i /tmp/inventory.yml \
+            infra/ansible/playbook.yml \
+            -e "repo_url=https://github.com/${{ github.repository }}.git" \
+            -e "genai_env_file=/tmp/genai.env"
+
+  # ------------------------------------------------------------------
+  # Build & push all service images to GitHub Container Registry.
+  # Kubernetes pulls these (unlike the VM, which builds locally), so this
+  # runs before the Helm deploy.
+  # ------------------------------------------------------------------
+  docker-push:
+    name: docker-push (ghcr)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: organization-service
+            context: services/spring-organization
+          - service: member-service
+            context: services/spring-member
+          - service: event-service
+            context: services/spring-event
+          - service: feedback-service
+            context: services/spring-feedback
+          - service: finance-service
+            context: services/spring-finance
+          - service: letter-service
+            context: services/spring-letter
+          - service: py-genai-helper
+            context: services/py-genai-helper
+          - service: web-client
+            context: web-client
+            build_args: "VITE_KEYCLOAK_URL=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth"
+          - service: api-docs
+            context: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase image name
+        id: img
+        run: echo "repo=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ steps.img.outputs.repo }}:${{ github.sha }}
+            ${{ steps.img.outputs.repo }}:latest
+          build-args: ${{ matrix.build_args || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ------------------------------------------------------------------
+  # Deploy to the RKE2 Kubernetes cluster via Helm.
+  # ------------------------------------------------------------------
+  deploy-k8s:
+    name: deploy (Kubernetes/Helm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: docker-push
+    env:
+      NAMESPACE: ge83mom-devops26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Write kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          printf '%s' "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Create/refresh genai-env secret
+        env:
+          GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
+        run: |
+          printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
+          kubectl -n "$NAMESPACE" create secret generic genai-env \
+            --from-env-file=/tmp/genai.env \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install team-devoops infra/helm/team-devoops \
+            --namespace "$NAMESPACE" \
+            --set global.image.tag=${{ github.sha }} \
+            --set keycloak.hostname=ge83mom-devops26.stud.k8s.aet.cit.tum.de \
+            --wait --timeout 15m

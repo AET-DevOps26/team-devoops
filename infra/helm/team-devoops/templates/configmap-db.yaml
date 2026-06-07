@@ -1,0 +1,12 @@
+{{- if .Values.database.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "db-config" "root" $) | nindent 4 }}
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}
+  SPRING_DATASOURCE_USERNAME: {{ .Values.database.user | quote }}
+  SPRING_JPA_HIBERNATE_DDL_AUTO: update
+{{- end }}

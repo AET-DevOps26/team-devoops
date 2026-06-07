@@ -1,0 +1,66 @@
+{{- if .Values.database.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.database.host }}
+  labels:
+    {{- include "team-devoops.labels" (dict "name" .Values.database.host "root" $) | nindent 4 }}
+spec:
+  serviceName: {{ .Values.database.host }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" .Values.database.host) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" .Values.database.host) | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.database.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.database.port }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.database.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.database.name | quote }}
+            # Ceph RBD volumes are ext4-formatted and contain a lost+found
+            # directory, so initdb cannot use the mount root. Point PGDATA at
+            # an empty subdirectory instead.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.database.user }}", "-d", "{{ .Values.database.name }}"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.database.user }}", "-d", "{{ .Values.database.name }}"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClassName }}
+        storageClassName: {{ .Values.global.storageClassName }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.database.storageSize }}
+{{- end }}
