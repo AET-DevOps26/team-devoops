@@ -29,10 +29,10 @@ database:
   storageSize: 5Gi
   resources:
     requests:
-      cpu: 250m
+      cpu: 100m
       memory: 256Mi
     limits:
-      cpu: "1"
+      cpu: 250m
       memory: 512Mi
 
 # py-genai-helper reads its configuration from a Secret created out-of-band by the
@@ -62,13 +62,13 @@ keycloak:
       cpu: 100m
       memory: 256Mi
     limits:
-      cpu: 500m
+      cpu: 250m
       memory: 512Mi
   db:
     # enabled: false means Keycloak uses its built-in H2 database (start-dev mode).
     # The realm is re-imported from the ConfigMap on every pod start, so no
     # user/client data is lost. Set to true only if you need persistent sessions.
-    enabled: false
+    enabled: true
     name: keycloak
     user: keycloak_user
     password: keycloak_password
@@ -79,7 +79,7 @@ keycloak:
         cpu: 100m
         memory: 128Mi
       limits:
-        cpu: 250m
+        cpu: 150m
         memory: 256Mi
 
 ingress:
@@ -101,7 +101,7 @@ resources:
     cpu: 100m
     memory: 256Mi
   limits:
-    cpu: 500m
+    cpu: 200m
     memory: 512Mi
 
 # ---------------------------------------------------------------------------
