@@ -82,4 +82,26 @@ public class MemberController {
         return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
     }
 
+    /**
+     * Updates a member in the member db and the keycloak db (if email changes)
+     * <p>
+     * This endpoint updates a member and further updates the corresponding user in keycloak.
+     * </p>
+     * @param newMember the updated member.
+     * @return ResponseEntity containing the updated member and HTTP 200. If the member does not exist, return HTTP 404.
+     */
+    @PreAuthorize("hasRole('admin') or hasRole('member') and #newMember.id.toString() == authentication.name")
+    @PutMapping("/{id}")
+    public ResponseEntity<Member> updateMember(@PathVariable UUID id, @RequestBody Member newMember, @AuthenticationPrincipal Jwt jwt) {
+
+        Optional<Member> newMemberOptional = memberService.updateMember(newMember);
+
+        if (newMemberOptional.isPresent()) {
+            newMember = newMemberOptional.get();
+            return ResponseEntity.ok(newMember);
+        }
+        else {
+            return  ResponseEntity.notFound().build();
+        }
+    }
 }

@@ -26,8 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MemberController.class)
@@ -46,12 +45,13 @@ public class MemberControllerTest {
     private Member member;
     private MemberCreate memberCreate;
     private String mockToken;
+    private Member newMember;
 
-    // 2. Initialize it inside the @BeforeEach method
     @BeforeEach
     void setUp() {
-         member = new Member(
-                UUID.randomUUID(),
+        UUID id = UUID.randomUUID();
+        member = new Member(
+                id,
                 "firstName",
                 "lastName",
                 "email@email.com",
@@ -62,7 +62,7 @@ public class MemberControllerTest {
                 "information"
         );
 
-         memberCreate = new MemberCreate();
+        memberCreate = new MemberCreate();
         memberCreate.setFirstName(member.getFirstName());
         memberCreate.setLastName(member.getLastName());
         memberCreate.setEmail(member.getEmail());
@@ -72,6 +72,18 @@ public class MemberControllerTest {
         memberCreate.setBirthday(member.getBirthday());
 
         mockToken = "mock-token";
+
+        newMember = new Member(
+                id,
+                "newFirstName",
+                "newLastName",
+                "newemail@email.com",
+                LocalDate.now(),
+                "newPhoneNumber",
+                "newAddress",
+                LocalDate.now(),
+                "newInformation"
+        );
     }
 
     // Test cases for createMember() endpoint
@@ -233,12 +245,12 @@ public class MemberControllerTest {
         when(memberService.createMember(memberCreate, mockToken)).thenReturn(member);
 
         mockMvc.perform(post("/")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(memberCreate))
-                .with(jwt()
-                        .jwt(j -> j.tokenValue(mockToken))
-                        .authorities(new SimpleGrantedAuthority("ROLE_admin"))
-                ))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(memberCreate))
+                        .with(jwt()
+                                .jwt(j -> j.tokenValue(mockToken))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        ))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(member)));
 
@@ -249,8 +261,8 @@ public class MemberControllerTest {
     @WithMockUser(roles = "member")
     void createMemberNotAllowedForAdmin() throws Exception {
         mockMvc.perform(post("/")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(memberCreate))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(memberCreate))
                 )
                 .andExpect(status().isForbidden());
     }
@@ -281,5 +293,151 @@ public class MemberControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // Test for updateMember() endpoint
+
+    // Verifies that a user with role "admin" is allowed to update a member
+    @Test
+    @WithMockUser(roles = "admin")
+    void updateMemberAllowedForAdmin() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(newMember)));
+    }
+
+    // Verifies that a user wit role "member" is forbidden to update a member that is not himself (401 forbidden)
+    @Test
+    void updateMemberNotAllowedForUserOtherId() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(randomId.toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that a user with role "member" is allowed to update himself
+    @Test
+    void updateMemberAllowedForUserSameId() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isOk());
+    }
+
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a user that is not himself (401 forbidden)
+    @Test
+    void updateMemberNotAllowedForUndefinedRoleOtherId() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(randomId.toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_guest"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a user that is himself (401 forbidden)
+    @Test
+    void updateMemberNotAllowedForUndefinedRoleSameId() throws Exception {
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_guest"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that an anonymous user is not allowed to update a user (403 unauthorized)
+    @Test
+    @WithAnonymousUser
+    void updateMemberUnauthorizedForAnonymous() throws Exception {
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Verifies that the content type of the response is application/json
+    @Test
+    @WithMockUser(roles = "admin")
+    void updateMemberContentType() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    // Verifies that the endpoint updates the member properly (200 ok)
+    @Test
+    void updateMemberCorrectUpdateForUserSameId() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(newMember)));
+    }
+
+    // Verify that a non-existing member cannot be updated by an admin
+    @Test
+    @WithMockUser(roles = "admin")
+    void updateMemberNotFoundNonExistingId() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.empty());
+
+        mockMvc.perform(put(String.format("/%s", UUID.randomUUID()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isNotFound());
+    }
+
+    // Verify that an non-existing member cannot updated by a user even if the id is the same as the user
+    @Test
+    void updateMemberNotFoundUserSameId() throws Exception {
+        when(memberService.updateMember(newMember)).thenReturn(Optional.empty());
+
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isNotFound());
+    }
 
 }

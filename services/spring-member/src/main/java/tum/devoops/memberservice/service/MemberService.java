@@ -22,7 +22,7 @@ public class MemberService {
     }
 
     public Optional<Member> getMemberById(UUID id) {
-        return null;
+        return Optional.empty();
     }
 
     private Member createMemberFromDTO(MemberCreate memberCreate, UUID id) {
@@ -43,6 +43,11 @@ public class MemberService {
         UUID id = keycloakService.createUser(memberCreate, bearerToken);
         // TODO Store member in database
         return createMemberFromDTO(memberCreate, id);
+    }
+
+    public Optional<Member> updateMember(Member member) {
+        // TODO Update email in keycloak
+        return Optional.empty();
     }
 
 }
