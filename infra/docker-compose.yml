@@ -270,6 +270,7 @@ services:
       - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
       - SECRET=a-random-32-char-secret-changeme!
       - INSECURE_COOKIE=false
+      - LOG_LEVEL=debug
     extra_hosts:
       - "team-devoops.uaenorth.cloudapp.azure.com:host-gateway"
     labels:

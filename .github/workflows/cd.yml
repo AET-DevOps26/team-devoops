@@ -116,8 +116,6 @@ jobs:
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
           build-args: ${{ matrix.build_args || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # ------------------------------------------------------------------
   # Deploy to the RKE2 Kubernetes cluster via Helm.
