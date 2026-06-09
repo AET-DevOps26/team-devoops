@@ -67,6 +67,8 @@ spec:
               value: "true"
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.path | quote }}
+            - name: KC_HTTP_MANAGEMENT_RELATIVE_PATH
+              value: "/"
             - name: KC_HOSTNAME
               value: {{ .Values.keycloak.hostname | quote }}
             - name: KC_PROXY_HEADERS
