@@ -65,6 +65,10 @@ keycloak:
       cpu: 500m
       memory: 512Mi
   db:
+    # enabled: false means Keycloak uses its built-in H2 database (start-dev mode).
+    # The realm is re-imported from the ConfigMap on every pod start, so no
+    # user/client data is lost. Set to true only if you need persistent sessions.
+    enabled: false
     name: keycloak
     user: keycloak_user
     password: keycloak_password

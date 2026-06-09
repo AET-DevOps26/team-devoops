@@ -1,4 +1,4 @@
-{{- if .Values.keycloak.enabled }}
+{{- if and .Values.keycloak.enabled .Values.keycloak.db.enabled }}
 # Headless service so the StatefulSet pod is reachable at <host>:5432 inside the cluster.
 apiVersion: v1
 kind: Service

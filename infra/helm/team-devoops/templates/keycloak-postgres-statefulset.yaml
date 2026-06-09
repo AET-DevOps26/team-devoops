@@ -1,4 +1,4 @@
-{{- if .Values.keycloak.enabled }}
+{{- if and .Values.keycloak.enabled .Values.keycloak.db.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
