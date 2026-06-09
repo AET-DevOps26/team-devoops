@@ -16,6 +16,14 @@ public class MemberController {
     @Autowired
     MemberService memberService;
 
+    /**
+     * Retrieves all members.
+     * <p>
+     * This endpoint searches the primary database and returns all members.
+     * Only the MemberSummary is returned.
+     * </p>
+     * @return ResponseEntity containing a List of MemberSummary and HTTP 200
+     */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/")
     public ResponseEntity<List<MemberSummary>> getAllMembers() {
