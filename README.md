@@ -52,6 +52,7 @@ The Spring Boot services and the GenAI service share a **PostgreSQL** database.
 | GenAI Service | `/api/v1/helper/…` | 5000 | Python 3.12, Flask, LangChain |
 | Web Client | `/` | 8080 | React, Vite |
 | Swagger UI | `/docs` | 8080 | swaggerapi/swagger-ui |
+| Keycloak | `/auth` | 8080 | Keycloak 26 |
 | Traefik dashboard | `http://localhost:8080` (local only) | — | Traefik v3 |
 | PostgreSQL | internal only | 5432 | postgres:15 |
 
@@ -250,20 +251,24 @@ All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/J
 
 ### Local login
 
-When running with Docker Compose, Keycloak is available at <http://localhost:8081>. The realm is auto-imported on first start from [`infra/keycloak/realm-config.json`](infra/keycloak/realm-config.json).
+When running with Docker Compose, Keycloak is available at <http://localhost:8081/auth>. The realm is auto-imported on first start from [`infra/keycloak/realm-config.json`](infra/keycloak/realm-config.json).
 
 The web client redirects to Keycloak automatically (`login-required` strategy). Log in with any of the test users above.
+
+### Production admin console
+
+Keycloak is publicly accessible via Traefik at <https://team-devoops.uaenorth.cloudapp.azure.com/auth>. Admin console: `/auth/admin`.
 
 ### Spring services — JWT validation
 
 Each Spring service is a stateless OAuth2 resource server. It validates Bearer JWTs against Keycloak's JWK set and extracts roles from the `realm_access.roles` claim, mapping them to Spring `ROLE_*` authorities (e.g. `"admin"` → `ROLE_admin`).
 
-| Environment variable | Purpose |
+| Property | Purpose |
 |---|---|
-| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` | Validates the `iss` claim in incoming JWTs |
-| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` | URL to fetch Keycloak's public signing keys |
+| `spring.security.oauth2.resourceserver.jwt.issuer-uri` | Validates the `iss` claim in incoming JWTs |
+| `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | URL to fetch Keycloak's public signing keys |
 
-Docker Compose sets these to `http://keycloak:8080/auth/realms/devops/…`. On Kubernetes they are injected via the `env:` block in `infra/helm/team-devoops/values.yaml` using the internal `keycloak` ClusterIP DNS name.
+These are set in each service's `src/main/resources/application.properties` as defaults (pointing at the local Keycloak on `localhost:8081/auth`). On the Azure VM, `docker-compose.yml` overrides `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` with the public HTTPS issuer so it matches the `iss` claim in tokens issued by production Keycloak. The JWK set URI always uses the internal Docker hostname `http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs`. On Kubernetes they are injected via the `env:` block in `infra/helm/team-devoops/values.yaml` using the internal `keycloak` ClusterIP DNS name.
 
 ## Docs
 

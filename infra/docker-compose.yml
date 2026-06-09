@@ -33,6 +33,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=websecure"
@@ -59,6 +60,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=websecure"
@@ -85,6 +87,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.event-service.entrypoints=websecure"
@@ -111,6 +114,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.feedback-service.entrypoints=websecure"
@@ -137,6 +141,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.finance-service.entrypoints=websecure"
@@ -163,6 +168,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.letter-service.entrypoints=websecure"
@@ -197,7 +203,10 @@ services:
       - proxy
 
   web-client:
-    build: ../web-client/
+    build:
+      context: ../web-client/
+      args:
+        VITE_KEYCLOAK_URL: https://team-devoops.uaenorth.cloudapp.azure.com/auth
     container_name: web-client
     expose:
       - 8080
@@ -211,8 +220,6 @@ services:
       - py-genai-helper
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.web-client.entrypoints=web"
-      - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.routers.web-client.entrypoints=websecure"
       - "traefik.http.routers.web-client.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`)"
       - "traefik.http.routers.web-client.tls=true"
@@ -261,24 +268,22 @@ services:
     container_name: traefik-forward-auth
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=http://localhost:8081/realms/devops
+      - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
       - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
       - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
       - SECRET=a-random-32-char-secret-changeme!
-      - INSECURE_COOKIE=true
+      - INSECURE_COOKIE=false
+      - LOG_LEVEL=debug
     extra_hosts:
-      - "localhost:host-gateway"
+      - "team-devoops.uaenorth.cloudapp.azure.com:host-gateway"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-forward-auth.rule=Path(`/_oauth`)"
-      - "traefik.http.routers.traefik-forward-auth.entrypoints=web"
-      - "traefik.http.routers.traefik-forward-auth.middlewares=forward-auth@file"
-      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
+      - "traefik.enable=false"
     depends_on:
       keycloak:
         condition: service_healthy
     networks:
       - proxy
+    restart: on-failure
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
@@ -295,6 +300,17 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com/auth
+      KC_PROXY_HEADERS: xforwarded
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.tls.certresolver=le"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -302,7 +318,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 90s
+      start_period: 30s
     volumes:
       - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
     ports:

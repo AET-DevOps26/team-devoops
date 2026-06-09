@@ -68,8 +68,14 @@
       "secret": "traefik-forward-auth-secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost/_oauth"],
-      "webOrigins": ["http://localhost"]
+      "redirectUris": [
+        "https://team-devoops.uaenorth.cloudapp.azure.com/_oauth",
+        "http://localhost/_oauth"
+      ],
+      "webOrigins": [
+        "https://team-devoops.uaenorth.cloudapp.azure.com",
+        "http://localhost"
+      ]
     }
   ]
 }
