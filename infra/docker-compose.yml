@@ -278,7 +278,6 @@ services:
       - "traefik.http.routers.traefik-forward-auth.entrypoints=websecure"
       - "traefik.http.routers.traefik-forward-auth.tls=true"
       - "traefik.http.routers.traefik-forward-auth.tls.certresolver=le"
-      - "traefik.http.routers.traefik-forward-auth.middlewares=forward-auth@file"
       - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
     depends_on:
       keycloak:
