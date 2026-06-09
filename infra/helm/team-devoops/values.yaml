@@ -95,6 +95,14 @@ ingress:
     # Adds the cert-manager.io/cluster-issuer annotation on the ingresses.
     clusterIssuer: letsencrypt-prod
 
+# Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
+# scheduling the new one, which is required to stay within the namespace CPU quota.
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
+
 # Default compute resources applied to every app container (overridable per service).
 resources:
   requests:

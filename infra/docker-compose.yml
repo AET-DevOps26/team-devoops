@@ -303,7 +303,7 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
-      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com
+      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com/auth
       KC_PROXY_HEADERS: xforwarded
     labels:
       - "traefik.enable=true"

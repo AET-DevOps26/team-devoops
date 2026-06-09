@@ -121,7 +121,7 @@ services:
 
   keycloak:
     environment:
-      KC_HOSTNAME: "http://localhost:8081"
+      KC_HOSTNAME: "http://localhost:8081/auth"
 
   traefik-forward-auth:
     labels: !override
