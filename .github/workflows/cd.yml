@@ -154,7 +154,7 @@ jobs:
               -l "owner=helm,name=team-devoops" -o name 2>/dev/null); do
             status=$(kubectl -n "$NAMESPACE" get "$secret" \
               -o jsonpath='{.metadata.labels.status}' 2>/dev/null || echo "")
-            if [[ "$status" == pending-* ]]; then
+            if [[ "$status" == pending-* || "$status" == "failed" ]]; then
               echo "Deleting stuck Helm secret $secret (status=$status)"
               kubectl -n "$NAMESPACE" delete "$secret"
             fi
