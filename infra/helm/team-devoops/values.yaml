@@ -55,19 +55,28 @@ keycloak:
   hostname: ge83mom-devops26.stud.k8s.aet.cit.tum.de
   adminUsername: admin
   adminPassword: admin
+  # Constrain JVM heap so Keycloak stays within its memory limit.
+  javaOptsAppend: "-Xms64m -Xmx256m"
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
-      cpu: "1"
-      memory: 1Gi
+      cpu: 500m
+      memory: 512Mi
   db:
     name: keycloak
     user: keycloak_user
     password: keycloak_password
     host: keycloak-database
     storageSize: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
 
 ingress:
   enabled: true
