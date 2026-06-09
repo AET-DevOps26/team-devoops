@@ -60,6 +60,8 @@ spec:
               value: {{ .Values.keycloak.hostname | quote }}
             - name: KC_PROXY_HEADERS
               value: xforwarded
+            - name: JAVA_OPTS_APPEND
+              value: {{ .Values.keycloak.javaOptsAppend | quote }}
           volumeMounts:
             - name: realm-config
               mountPath: /opt/keycloak/data/import

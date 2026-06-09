@@ -153,4 +153,4 @@ jobs:
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
             --set keycloak.hostname=ge83mom-devops26.stud.k8s.aet.cit.tum.de \
-            --wait --timeout 15m
+            --atomic --timeout 15m
