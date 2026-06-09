@@ -35,6 +35,9 @@ public class MemberControllerTest {
     @MockitoBean
     private MemberService memberService;
 
+    // Test cases for createMember() endpoint
+
+    // Verifies that members are allowed to access the endpoint
     @Test
     @WithMockUser(roles = "member")
     void getMembersAllowedForMember() throws Exception {
@@ -42,6 +45,7 @@ public class MemberControllerTest {
                 .andExpect(status().isOk());
     }
 
+    // Verifies that admin are allowed to access the endpoint
     @Test
     @WithMockUser(roles = "admin")
     void getMembersAllowedForAdmin() throws Exception {
@@ -49,6 +53,7 @@ public class MemberControllerTest {
                 .andExpect(status().isOk());
     }
 
+    // Verifies that a user with a role other than admin and member is not allowed to access the endpoint (401 forbidden)
     @Test
     @WithMockUser(roles = "guest")
     void getMembersForbiddenForWrongRole() throws Exception {
@@ -56,6 +61,7 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // Verifies that an anonymous user is not allowed to access the endpoint (403 unauthorized)
     @Test
     @WithAnonymousUser
     void getMembersUnauthorizedForAnonymous() throws Exception {
@@ -63,6 +69,7 @@ public class MemberControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // Verifies that the content type of the response is application/json
     @Test
     @WithMockUser(roles = "member")
     void getMembersContentType() throws Exception {
@@ -74,6 +81,7 @@ public class MemberControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
+    // Verifies that the endpoint returns an empty list if there are no members
     @Test
     @WithMockUser(roles = "member")
     void getMembersEmptyList() throws Exception {
@@ -85,6 +93,7 @@ public class MemberControllerTest {
                 .andExpect(content().json("[]"));
     }
 
+    // Verifies that the endpoint returns the list of members correctly when the list is not empty
     @Test
     @WithMockUser(roles = "member")
     void getMemberNonEmptyList() throws Exception {
