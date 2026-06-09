@@ -29,11 +29,11 @@ database:
   storageSize: 5Gi
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
     limits:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 150m
+      memory: 256Mi
 
 # py-genai-helper reads its configuration from a Secret created out-of-band by the
 # pipeline (kubectl create secret --from-env-file). Helm only references it by name.
@@ -99,10 +99,10 @@ ingress:
 resources:
   requests:
     cpu: 100m
-    memory: 256Mi
+    memory: 128Mi
   limits:
     cpu: 200m
-    memory: 512Mi
+    memory: 384Mi
 
 # ---------------------------------------------------------------------------
 # Service catalogue. Keys are the Kubernetes object names.
@@ -125,6 +125,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   member-service:
     path: /api/v1/members
     port: 8080
@@ -134,6 +135,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   event-service:
     path: /api/v1/events
     port: 8080
@@ -143,6 +145,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   feedback-service:
     path: /api/v1/feedback
     port: 8080
@@ -152,6 +155,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   finance-service:
     path: /api/v1/finance
     port: 8080
@@ -161,6 +165,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   letter-service:
     path: /api/v1/letters
     port: 8080
@@ -170,6 +175,7 @@ services:
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms64m"
   py-genai-helper:
     path: /api/v1/helper
     port: 5000
@@ -177,14 +183,35 @@ services:
     health: /health
     stripPrefix: true
     envFromSecret: genai-env
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
   web-client:
     path: /
     port: 8080
     db: false
     health: /
     stripPrefix: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   api-docs:
     path: /docs
     port: 8080
     db: false
     stripPrefix: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
