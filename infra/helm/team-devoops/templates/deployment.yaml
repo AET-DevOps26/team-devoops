@@ -50,19 +50,25 @@ spec:
             {{- end }}
           {{- end }}
           {{- if $svc.health }}
+          startupProbe:
+            httpGet:
+              path: {{ $svc.health }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 6
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 90
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
