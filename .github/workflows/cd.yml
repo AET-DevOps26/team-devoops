@@ -53,6 +53,7 @@ jobs:
             -i /tmp/inventory.yml \
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
+            -e "branch=${{ github.ref_name }}" \
             -e "genai_env_file=/tmp/genai.env"
 
   # ------------------------------------------------------------------
