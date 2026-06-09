@@ -190,11 +190,4 @@ public class MemberControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // Verifies that an invalid ID returns a 400 bad request
-    void getMemberByIdReturnsBadRequestForInvalidId() throws Exception {
-        String invalidUuid = "invalid-uuid-12345";
-
-        mockMvc.perform(get(String.format("/%s", invalidUuid)))
-                .andExpect(status().isBadRequest());
-    }
 }
