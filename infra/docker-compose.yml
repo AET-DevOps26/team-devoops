@@ -285,6 +285,7 @@ services:
         condition: service_healthy
     networks:
       - proxy
+    restart: on-failure
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
@@ -303,7 +304,7 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
-      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com/auth
+      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com
       KC_PROXY_HEADERS: xforwarded
     labels:
       - "traefik.enable=true"

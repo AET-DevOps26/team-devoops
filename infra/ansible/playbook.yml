@@ -81,6 +81,8 @@
         src: "{{ genai_env_file }}"
         dest: "{{ app_dir }}/services/py-genai-helper/.env"
         mode: "0600"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
     - name: Deploy with docker compose
       shell: >
