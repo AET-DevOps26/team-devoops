@@ -165,5 +165,5 @@ jobs:
           helm upgrade --install team-devoops infra/helm/team-devoops \
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
-            --set keycloak.hostname=ge83mom-devops26.stud.k8s.aet.cit.tum.de \
+            --set keycloak.hostname=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth \
             --rollback-on-failure --timeout 15m

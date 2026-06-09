@@ -52,7 +52,7 @@ keycloak:
   enabled: true
   image: quay.io/keycloak/keycloak:26.0.0
   path: /auth
-  hostname: ge83mom-devops26.stud.k8s.aet.cit.tum.de
+  hostname: https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth
   adminUsername: admin
   adminPassword: admin
   # Constrain JVM heap so Keycloak stays within its memory limit.
