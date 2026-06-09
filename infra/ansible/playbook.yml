@@ -76,6 +76,13 @@
         force: true
         update: true
 
+    - name: Set repository ownership to ansible_user
+      file:
+        path: "{{ app_dir }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        recurse: true
+
     - name: Write py-genai-helper .env file
       copy:
         src: "{{ genai_env_file }}"
