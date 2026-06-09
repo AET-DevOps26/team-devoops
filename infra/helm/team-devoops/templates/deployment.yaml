@@ -54,19 +54,23 @@ spec:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           {{- else }}
           readinessProbe:
             tcpSocket:
               port: {{ $svc.port }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 10
           {{- end }}
           resources:
