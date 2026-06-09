@@ -27,6 +27,13 @@ spec:
                 echo "waiting for keycloak-database..."
                 sleep 3
               done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
       {{- end }}
       containers:
         - name: keycloak
