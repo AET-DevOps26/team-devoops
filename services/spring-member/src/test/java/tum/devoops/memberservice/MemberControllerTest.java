@@ -1,6 +1,7 @@
 package tum.devoops.memberservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -38,12 +39,31 @@ public class MemberControllerTest {
     @MockitoBean
     private MemberService memberService;
 
+    private Member member;
+
+    // 2. Initialize it inside the @BeforeEach method
+    @BeforeEach
+    void setUp() {
+         member = new Member(
+                UUID.randomUUID(),
+                "firstName",
+                "lastName",
+                "email",
+                LocalDate.now(),
+                "phoneNumber",
+                "address",
+                LocalDate.now(),
+                "information"
+        );
+    }
+
     // Test cases for createMember() endpoint
 
     // Verifies that a user with role "member" is allowed to get all members
     @Test
     @WithMockUser(roles = "member")
     void getMembersAllowedForMember() throws Exception {
+        when(memberService.getAllMembers()).thenReturn(List.of());
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk());
     }
@@ -52,6 +72,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "admin")
     void getMembersAllowedForAdmin() throws Exception {
+        when(memberService.getAllMembers()).thenReturn(List.of());
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk());
     }
@@ -60,6 +81,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "guest")
     void getMembersForbiddenForWrongRole() throws Exception {
+        when(memberService.getAllMembers()).thenReturn(List.of());
         mockMvc.perform(get("/"))
                 .andExpect(status().isForbidden());
     }
@@ -68,6 +90,7 @@ public class MemberControllerTest {
     @Test
     @WithAnonymousUser
     void getMembersUnauthorizedForAnonymous() throws Exception {
+        when(memberService.getAllMembers()).thenReturn(List.of());
         mockMvc.perform(get("/"))
                 .andExpect(status().isUnauthorized());
     }
@@ -116,8 +139,9 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdAllowedForMember() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        mockMvc.perform(get(String.format("/%s", randomId), UUID.randomUUID()))
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
     }
 
@@ -125,8 +149,9 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "admin")
     void getMemberByIdAllowedForAdmin() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        mockMvc.perform(get(String.format("/%s", randomId), UUID.randomUUID()))
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
     }
 
@@ -134,8 +159,9 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "guest")
     void getMemberByIdForbiddenForWrongRole() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        mockMvc.perform(get(String.format("/%s", randomId), UUID.randomUUID()))
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isForbidden());
     }
 
@@ -143,8 +169,9 @@ public class MemberControllerTest {
     @Test
     @WithAnonymousUser
     void getMemberByIdUnauthorizedForAnonymous() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        mockMvc.perform(get(String.format("/%s", randomId), UUID.randomUUID()))
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -152,8 +179,9 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdContentType() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        mockMvc.perform(get(String.format("/%s", randomId), UUID.randomUUID()))
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
@@ -162,18 +190,6 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdReturnsCorrectMember() throws Exception {
-        Member member = new Member(
-                UUID.randomUUID(),
-                "firstName",
-                "lastName",
-                "email",
-                LocalDate.now(),
-                "phoneNumber",
-                "address",
-                LocalDate.now(),
-                "information"
-        );
-
         when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s", member.getId())))
