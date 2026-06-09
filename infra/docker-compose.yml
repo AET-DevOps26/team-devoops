@@ -203,7 +203,10 @@ services:
       - proxy
 
   web-client:
-    build: ../web-client/
+    build:
+      context: ../web-client/
+      args:
+        VITE_KEYCLOAK_URL: https://team-devoops.uaenorth.cloudapp.azure.com/auth
     container_name: web-client
     expose:
       - 8080
