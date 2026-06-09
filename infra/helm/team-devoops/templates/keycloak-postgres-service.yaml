@@ -9,7 +9,7 @@ metadata:
 spec:
   clusterIP: None
   selector:
-    app: {{ .Values.keycloak.db.host }}
+    {{- include "team-devoops.selectorLabels" (dict "name" .Values.keycloak.db.host) | nindent 4 }}
   ports:
     - port: 5432
       targetPort: 5432
