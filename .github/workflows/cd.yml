@@ -147,10 +147,22 @@ jobs:
             --from-env-file=/tmp/genai.env \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Unlock stuck Helm release (if any)
+        run: |
+          for secret in $(kubectl -n "$NAMESPACE" get secret \
+              -l "owner=helm,name=team-devoops" -o name 2>/dev/null); do
+            status=$(kubectl -n "$NAMESPACE" get "$secret" \
+              -o jsonpath='{.metadata.labels.status}' 2>/dev/null || echo "")
+            if [[ "$status" == pending-* ]]; then
+              echo "Deleting stuck Helm secret $secret (status=$status)"
+              kubectl -n "$NAMESPACE" delete "$secret"
+            fi
+          done
+
       - name: Helm upgrade
         run: |
           helm upgrade --install team-devoops infra/helm/team-devoops \
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
             --set keycloak.hostname=ge83mom-devops26.stud.k8s.aet.cit.tum.de \
-            --atomic --timeout 15m
+            --rollback-on-failure --timeout 15m
