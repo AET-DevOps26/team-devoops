@@ -274,12 +274,7 @@ services:
     extra_hosts:
       - "team-devoops.uaenorth.cloudapp.azure.com:host-gateway"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-forward-auth.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && Path(`/_oauth`)"
-      - "traefik.http.routers.traefik-forward-auth.entrypoints=websecure"
-      - "traefik.http.routers.traefik-forward-auth.tls=true"
-      - "traefik.http.routers.traefik-forward-auth.tls.certresolver=le"
-      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
+      - "traefik.enable=false"
     depends_on:
       keycloak:
         condition: service_healthy
