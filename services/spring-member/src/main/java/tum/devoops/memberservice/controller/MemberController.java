@@ -3,13 +3,16 @@ package tum.devoops.memberservice.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
 import tum.devoops.memberservice.model.Member;
+import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;
 import tum.devoops.memberservice.service.MemberService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,7 +42,7 @@ public class MemberController {
      * <p>
      * This endpoint searches the primary database and returns the corresponding member to an ID.
      * </p>
-     * @param The unique {@link UUID} of the member.
+     * @param id The unique {@link UUID} of the member.
      * @return ResponseEntity containing a List of MemberSummary and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
@@ -54,6 +57,29 @@ public class MemberController {
         else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Creates a member in the member-db and the corresponding user in keycloak
+     * <p>
+     * This endpoint creates a member and further creates a corresponding user in keycloak using the email of the member as username.
+     * If the email is null, the username is firstName.lastName
+     * </p>
+     * @param memberCreate the member without id.
+     * @return ResponseEntity containing the created member and HTTP 201. If the email or username exists, returns HTTP 400.
+     */
+    @PreAuthorize("hasRole('admin')")
+    @PostMapping("/")
+    public ResponseEntity<Member> createMember(@RequestBody MemberCreate memberCreate, @AuthenticationPrincipal Jwt jwt) {
+        Member member;
+        try{
+            member = memberService.createMember(memberCreate, jwt.getTokenValue());
+        }
+        catch (Exception e){
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
     }
 
 }

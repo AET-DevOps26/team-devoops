@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tum.devoops.memberservice.config.SecurityConfig;
 import tum.devoops.memberservice.controller.MemberController;
 import tum.devoops.memberservice.model.Member;
+import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;
 import tum.devoops.memberservice.service.MemberService;
 
@@ -23,7 +25,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MemberController.class)
@@ -40,6 +44,8 @@ public class MemberControllerTest {
     private MemberService memberService;
 
     private Member member;
+    private MemberCreate memberCreate;
+    private String mockToken;
 
     // 2. Initialize it inside the @BeforeEach method
     @BeforeEach
@@ -48,13 +54,24 @@ public class MemberControllerTest {
                 UUID.randomUUID(),
                 "firstName",
                 "lastName",
-                "email",
+                "email@email.com",
                 LocalDate.now(),
                 "phoneNumber",
                 "address",
                 LocalDate.now(),
                 "information"
         );
+
+         memberCreate = new MemberCreate();
+        memberCreate.setFirstName(member.getFirstName());
+        memberCreate.setLastName(member.getLastName());
+        memberCreate.setEmail(member.getEmail());
+        memberCreate.setPhoneNumber(member.getPhoneNumber());
+        memberCreate.setAddress(member.getAddress());
+        memberCreate.setInformation(member.getInformation());
+        memberCreate.setBirthday(member.getBirthday());
+
+        mockToken = "mock-token";
     }
 
     // Test cases for createMember() endpoint
@@ -198,6 +215,8 @@ public class MemberControllerTest {
     }
 
     // Verifies that a 404 not found is returned, when no member for the given id is found
+    @Test
+    @WithMockUser(roles = "member")
     void getMemberByIdReturnsNotFound() throws Exception {
         UUID randomId = UUID.randomUUID();
         when(memberService.getMemberById(randomId)).thenReturn(Optional.empty());
@@ -205,5 +224,62 @@ public class MemberControllerTest {
         mockMvc.perform(get(String.format("/%s", randomId)))
                 .andExpect(status().isNotFound());
     }
+
+    // Test cases for createMember() endpoint
+
+    // Verifies that a user with role "admin" can create a member
+    @Test
+    void createMemberAllowedForAdmin() throws Exception {
+        when(memberService.createMember(memberCreate, mockToken)).thenReturn(member);
+
+        mockMvc.perform(post("/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(memberCreate))
+                .with(jwt()
+                        .jwt(j -> j.tokenValue(mockToken))
+                        .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                ))
+                .andExpect(status().isCreated())
+                .andExpect(content().json(objectMapper.writeValueAsString(member)));
+
+    }
+
+    // Verifies that a user with role "member" cannot create a member (403 forbidden)
+    @Test
+    @WithMockUser(roles = "member")
+    void createMemberNotAllowedForAdmin() throws Exception {
+        mockMvc.perform(post("/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(memberCreate))
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that an anonymous user cannot create a member (401 unauthorized)
+    @Test
+    @WithAnonymousUser
+    void createMemberNotAllowedForAnonymousUser() throws Exception {
+        mockMvc.perform(post("/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(memberCreate))
+                )
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Verifies that 400 (bad request) is returned when service throws an error
+    @Test
+    void createMemberServiceThrows() throws Exception {
+        when(memberService.createMember(memberCreate, mockToken)).thenThrow(new IllegalAccessException());
+
+        mockMvc.perform(post("/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(memberCreate))
+                        .with(jwt()
+                                .jwt(j -> j.tokenValue(mockToken))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        ))
+                .andExpect(status().isBadRequest());
+    }
+
 
 }
