@@ -2,10 +2,12 @@
 {{- $host := .Values.ingress.host }}
 {{- $tls := .Values.ingress.tls }}
 {{- $fa := .Values.forwardAuth }}
+{{- $fa := .Values.forwardAuth }}
 # ---------------------------------------------------------------------------
 # Stripped ingress: services whose path prefix must be removed before the
 # request reaches the backend (Traefik stripPrefix parity). Uses a regex
 # capture group so `/api/v1/members/foo` -> `/foo`.
+# Auth-protected when forwardAuth is enabled.
 # Auth-protected when forwardAuth is enabled.
 # ---------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
@@ -21,8 +23,10 @@ metadata:
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
     {{- end }}
     {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
+    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      proxy_set_header X-Forwarded-Uri $request_uri;
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -53,6 +57,7 @@ spec:
 # ---------------------------------------------------------------------------
 # Plain ingress: services served at their path as-is (web-client, api-docs).
 # Auth-protected when forwardAuth is enabled.
+# Auth-protected when forwardAuth is enabled.
 # ---------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -62,11 +67,14 @@ metadata:
     {{- include "team-devoops.labels" (dict "name" "ingress-plain" "root" $) | nindent 4 }}
   annotations:
     {{- if and $tls.enabled $tls.clusterIssuer }}
+    {{- if and $tls.enabled $tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
     {{- end }}
     {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
+    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      proxy_set_header X-Forwarded-Uri $request_uri;
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -122,6 +130,35 @@ spec:
     - host: {{ $host | quote }}
       http:
         paths:
+---
+# ---------------------------------------------------------------------------
+# Open ingress: Keycloak (auth provider) and the forward-auth OAuth callback
+# must never be behind forward-auth to avoid redirect loops.
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: team-devoops-open
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "ingress-open" "root" $) | nindent 4 }}
+  {{- if and $tls.enabled $tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if $tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      {{- if $tls.secretName }}
+      secretName: {{ $tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
           {{- if .Values.keycloak.enabled }}
           - path: {{ .Values.keycloak.path }}
             pathType: Prefix
@@ -132,23 +169,12 @@ spec:
                   number: 8080
           {{- end }}
           {{- if $fa.enabled }}
-          - path: /oauth2/
+          - path: /_oauth
             pathType: Prefix
             backend:
               service:
-                name: oauth2-proxy
+                name: traefik-forward-auth
                 port:
-                  number: 80
-          {{- end }}
-          {{- range $name, $svc := .Values.services }}
-          {{- if $svc.open }}
-          - path: {{ $svc.path }}
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ $name }}
-                port:
-                  number: {{ $svc.port }}
-          {{- end }}
+                  number: 4181
           {{- end }}
 {{- end }}

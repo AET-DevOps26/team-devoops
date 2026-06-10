@@ -70,11 +70,12 @@
       "directAccessGrantsEnabled": false,
       "redirectUris": [
         "https://team-devoops.uaenorth.cloudapp.azure.com/_oauth",
-        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/oauth2/callback",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/_oauth",
         "http://localhost/_oauth"
       ],
       "webOrigins": [
         "https://team-devoops.uaenorth.cloudapp.azure.com",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
         "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
         "http://localhost"
       ]

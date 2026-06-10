@@ -2,80 +2,62 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oauth2-proxy
+  name: traefik-forward-auth
   labels:
-    {{- include "team-devoops.labels" (dict "name" "oauth2-proxy" "root" $) | nindent 4 }}
+    {{- include "team-devoops.labels" (dict "name" "traefik-forward-auth" "root" $) | nindent 4 }}
 spec:
   replicas: 1
   strategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      {{- include "team-devoops.selectorLabels" (dict "name" "oauth2-proxy") | nindent 6 }}
+      {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "team-devoops.selectorLabels" (dict "name" "oauth2-proxy") | nindent 8 }}
+        {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 8 }}
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: oauth2-proxy
-          image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+        - name: traefik-forward-auth
+          image: thomseddon/traefik-forward-auth:2
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 4180
+            - containerPort: 4181
           env:
-            - name: OAUTH2_PROXY_PROVIDER
+            - name: DEFAULT_PROVIDER
               value: oidc
-            - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+            - name: PROVIDERS_OIDC_ISSUER_URL
               value: {{ .Values.forwardAuth.oidcIssuerUrl | quote }}
-            - name: OAUTH2_PROXY_CLIENT_ID
+            - name: PROVIDERS_OIDC_CLIENT_ID
               value: {{ .Values.forwardAuth.clientId | quote }}
-            - name: OAUTH2_PROXY_CLIENT_SECRET
+            - name: PROVIDERS_OIDC_CLIENT_SECRET
               value: {{ .Values.forwardAuth.clientSecret | quote }}
-            - name: OAUTH2_PROXY_COOKIE_SECRET
+            - name: SECRET
               value: {{ .Values.forwardAuth.cookieSecret | quote }}
-            - name: OAUTH2_PROXY_EMAIL_DOMAINS
-              value: "*"
-            - name: OAUTH2_PROXY_UPSTREAM
-              value: "static://202"
-            - name: OAUTH2_PROXY_HTTP_ADDRESS
-              value: "0.0.0.0:4180"
-            - name: OAUTH2_PROXY_REDIRECT_URL
-              value: {{ printf "https://%s/oauth2/callback" .Values.ingress.host | quote }}
-            - name: OAUTH2_PROXY_COOKIE_SECURE
-              value: "true"
-            - name: OAUTH2_PROXY_SKIP_PROVIDER_BUTTON
-              value: "true"
-            - name: OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL
-              value: "true"
-            - name: OAUTH2_PROXY_OIDC_EMAIL_CLAIM
-              value: "sub"
-            - name: OAUTH2_PROXY_COOKIE_CSRF_PER_REQUEST
-              value: "true"
-            - name: OAUTH2_PROXY_COOKIE_CSRF_EXPIRE
-              value: "5m"
+            - name: INSECURE_COOKIE
+              value: "false"
           resources:
             requests:
               cpu: 10m
               memory: 16Mi
             limits:
               cpu: 50m
-              memory: 32Mi
+              memory: 64Mi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: oauth2-proxy
+  name: traefik-forward-auth
   labels:
-    {{- include "team-devoops.labels" (dict "name" "oauth2-proxy" "root" $) | nindent 4 }}
+    {{- include "team-devoops.labels" (dict "name" "traefik-forward-auth" "root" $) | nindent 4 }}
 spec:
   selector:
-    {{- include "team-devoops.selectorLabels" (dict "name" "oauth2-proxy") | nindent 4 }}
+    {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 4 }}
   ports:
-    - port: 80
-      targetPort: 4180
+    - port: 4181
+      targetPort: 4181
 {{- end }}

@@ -96,9 +96,9 @@ ingress:
     clusterIssuer: letsencrypt-prod
 
 # ---------------------------------------------------------------------------
-# Forward-auth: deploys oauth2-proxy as an OIDC session proxy and wires all
-# nginx ingresses through it via auth_request. Keycloak and /oauth2/ are
-# excluded from auth to prevent redirect loops.
+# Forward-auth: deploys thomseddon/traefik-forward-auth as an OIDC session
+# proxy and wires all nginx ingresses through it (parity with the VM's
+# traefik-forward-auth middleware). Keycloak and /_oauth are excluded.
 # ---------------------------------------------------------------------------
 forwardAuth:
   enabled: true
