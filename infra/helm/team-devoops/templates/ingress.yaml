@@ -23,8 +23,8 @@ metadata:
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
     {{- end }}
     {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
+    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -69,8 +69,8 @@ metadata:
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
     {{- end }}
     {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
+    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -165,12 +165,23 @@ spec:
                   number: 8080
           {{- end }}
           {{- if $fa.enabled }}
-          - path: /_oauth
+          - path: /oauth2/
             pathType: Prefix
             backend:
               service:
-                name: traefik-forward-auth
+                name: oauth2-proxy
                 port:
-                  number: 4181
+                  number: 80
+          {{- end }}
+          {{- range $name, $svc := .Values.services }}
+          {{- if $svc.open }}
+          - path: {{ $svc.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: {{ $svc.port }}
+          {{- end }}
           {{- end }}
 {{- end }}
