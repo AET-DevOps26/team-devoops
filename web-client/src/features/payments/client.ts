@@ -1,5 +1,3 @@
-import axios from 'axios'
+import { createApiClient } from '@/lib/keycloak'
 
-export const paymentsClient = axios.create({
-  baseURL: '/api/v1/finance',
-})
+export const paymentsClient = createApiClient('/api/v1/finance')

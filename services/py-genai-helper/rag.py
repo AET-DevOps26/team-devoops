@@ -45,13 +45,13 @@ def get_rag_agent():
     )
 
     rag_agent = create_agent(
-        model = "gpt-4.1-mini",
-        tools = [retriever_tool],
+        model="gpt-4.1-mini",
+        tools=[retriever_tool],
         system_prompt=(
             "You are a helpful assistant."
             "Always call kb_search first to retrieve relevant context."
             "Base your answer strictly on what the tool returns."
-        )
+        ),
     )
 
     return rag_agent

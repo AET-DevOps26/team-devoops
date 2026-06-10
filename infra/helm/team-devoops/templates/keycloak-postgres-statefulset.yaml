@@ -1,0 +1,63 @@
+{{- if and .Values.keycloak.enabled .Values.keycloak.db.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.keycloak.db.host }}
+  labels:
+    {{- include "team-devoops.labels" (dict "name" .Values.keycloak.db.host "root" $) | nindent 4 }}
+spec:
+  serviceName: {{ .Values.keycloak.db.host }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" .Values.keycloak.db.host) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" .Values.keycloak.db.host) | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.database.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.keycloak.db.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.keycloak.db.name | quote }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.keycloak.db.user }}", "-d", "{{ .Values.keycloak.db.name }}"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.keycloak.db.user }}", "-d", "{{ .Values.keycloak.db.name }}"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.keycloak.db.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClassName }}
+        storageClassName: {{ .Values.global.storageClassName }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.keycloak.db.storageSize }}
+{{- end }}

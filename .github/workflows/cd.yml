@@ -53,6 +53,7 @@ jobs:
             -i /tmp/inventory.yml \
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
+            -e "branch=${{ github.ref_name }}" \
             -e "genai_env_file=/tmp/genai.env"
 
   # ------------------------------------------------------------------
@@ -84,6 +85,7 @@ jobs:
             context: services/py-genai-helper
           - service: web-client
             context: web-client
+            build_args: "VITE_KEYCLOAK_URL=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth"
           - service: api-docs
             context: api
     steps:
@@ -91,6 +93,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -111,8 +115,7 @@ jobs:
           tags: |
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          build-args: ${{ matrix.build_args || '' }}
 
   # ------------------------------------------------------------------
   # Deploy to the RKE2 Kubernetes cluster via Helm.
@@ -145,9 +148,22 @@ jobs:
             --from-env-file=/tmp/genai.env \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Unlock stuck Helm release (if any)
+        run: |
+          for secret in $(kubectl -n "$NAMESPACE" get secret \
+              -l "owner=helm,name=team-devoops" -o name 2>/dev/null); do
+            status=$(kubectl -n "$NAMESPACE" get "$secret" \
+              -o jsonpath='{.metadata.labels.status}' 2>/dev/null || echo "")
+            if [[ "$status" == pending-* || "$status" == "failed" ]]; then
+              echo "Deleting stuck Helm secret $secret (status=$status)"
+              kubectl -n "$NAMESPACE" delete "$secret"
+            fi
+          done
+
       - name: Helm upgrade
         run: |
           helm upgrade --install team-devoops infra/helm/team-devoops \
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
-            --wait --timeout 10m
+            --set keycloak.hostname=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth \
+            --rollback-on-failure --timeout 15m

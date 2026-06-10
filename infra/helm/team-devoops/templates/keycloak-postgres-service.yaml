@@ -1,0 +1,16 @@
+{{- if and .Values.keycloak.enabled .Values.keycloak.db.enabled }}
+# Headless service so the StatefulSet pod is reachable at <host>:5432 inside the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.keycloak.db.host }}
+  labels:
+    {{- include "team-devoops.labels" (dict "name" .Values.keycloak.db.host "root" $) | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "team-devoops.selectorLabels" (dict "name" .Values.keycloak.db.host) | nindent 4 }}
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

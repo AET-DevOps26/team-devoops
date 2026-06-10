@@ -40,6 +40,8 @@ services:
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
 
   organization-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=web"
@@ -49,6 +51,8 @@ services:
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
 
   member-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=web"
@@ -58,6 +62,8 @@ services:
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
 
   event-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.event-service.entrypoints=web"
@@ -67,6 +73,8 @@ services:
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
 
   feedback-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.feedback-service.entrypoints=web"
@@ -76,6 +84,8 @@ services:
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
 
   finance-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.finance-service.entrypoints=web"
@@ -85,6 +95,8 @@ services:
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
 
   letter-service:
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/auth/realms/devops
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.letter-service.entrypoints=web"
@@ -106,3 +118,14 @@ services:
       - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
+
+  keycloak:
+    environment:
+      KC_HOSTNAME: "http://localhost:8081/auth"
+
+  traefik-forward-auth:
+    labels: !override
+      - "traefik.enable=false"
+    environment:
+      - PROVIDERS_OIDC_ISSUER_URL=http://localhost:8081/auth/realms/devops
+      - INSECURE_COOKIE=true
