@@ -23,8 +23,6 @@ metadata:
     {{- if $fa.enabled }}
     nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
     nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
-    nginx.ingress.kubernetes.io/auth-snippet: |
-      proxy_set_header X-Forwarded-Uri $request_uri;
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -69,8 +67,6 @@ metadata:
     {{- if $fa.enabled }}
     nginx.ingress.kubernetes.io/auth-url: "http://traefik-forward-auth:4181"
     nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/_oauth"
-    nginx.ingress.kubernetes.io/auth-snippet: |
-      proxy_set_header X-Forwarded-Uri $request_uri;
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
