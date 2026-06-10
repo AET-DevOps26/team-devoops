@@ -160,6 +160,13 @@ jobs:
             fi
           done
 
+      - name: Pre-upgrade ingress migration
+        run: |
+          # team-devoops-plain previously contained the /auth (Keycloak) path.
+          # It has been moved to team-devoops-open. Delete the old ingress so
+          # the nginx admission webhook does not reject the new one for duplicate paths.
+          kubectl -n "$NAMESPACE" delete ingress team-devoops-plain --ignore-not-found
+
       - name: Helm upgrade
         run: |
           helm upgrade --install team-devoops infra/helm/team-devoops \
