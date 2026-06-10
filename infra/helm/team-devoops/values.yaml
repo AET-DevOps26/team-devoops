@@ -95,6 +95,21 @@ ingress:
     # Adds the cert-manager.io/cluster-issuer annotation on the ingresses.
     clusterIssuer: letsencrypt-prod
 
+# ---------------------------------------------------------------------------
+# Forward-auth: deploys oauth2-proxy as an OIDC session proxy and wires all
+# nginx ingresses through it via auth_request. Keycloak and /oauth2/ are
+# excluded from auth to prevent redirect loops.
+# ---------------------------------------------------------------------------
+forwardAuth:
+  enabled: true
+  oidcIssuerUrl: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+  clientId: "traefik-forward-auth"
+  clientSecret: "traefik-forward-auth-secret"
+  # 32+ character random string used to sign session cookies.
+  # Override at deploy time: --set forwardAuth.cookieSecret="$FORWARD_AUTH_COOKIE_SECRET"
+  # Generate with: openssl rand -base64 32
+  cookieSecret: ""
+
 # Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
 # scheduling the new one, which is required to stay within the namespace CPU quota.
 strategy:
@@ -216,6 +231,7 @@ services:
     port: 8080
     db: false
     stripPrefix: false
+    open: true
     resources:
       requests:
         cpu: 50m
