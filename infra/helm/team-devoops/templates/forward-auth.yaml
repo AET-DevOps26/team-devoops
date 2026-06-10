@@ -40,6 +40,8 @@ spec:
               value: {{ .Values.forwardAuth.cookieSecret | quote }}
             - name: INSECURE_COOKIE
               value: "false"
+            - name: AUTH_HOST
+              value: {{ .Values.ingress.host | quote }}
           resources:
             requests:
               cpu: 10m
