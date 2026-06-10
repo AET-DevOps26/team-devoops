@@ -126,4 +126,26 @@ public class MemberController {
             return  ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * Deletes a member in the member db and the keycloak db
+     * <p>
+     * This endpoint deletes a member and further deletes the corresponding user in keycloak.
+     * </p>
+     * @param id the id of the member to be deleted.
+     * @return Empty response and HTTP 204. If the member does not exist, return HTTP 404.
+     */
+    @PreAuthorize("hasRole('admin')")
+    @PutMapping("/{id}")
+    public ResponseEntity<Member> updateMember(@PathVariable UUID id) {
+
+        boolean isDeleted = memberService.deleteMember(id);
+
+        if (isDeleted) {
+            return ResponseEntity.noContent().build();
+        }
+        else {
+            return  ResponseEntity.notFound().build();
+        }
+    }
 }

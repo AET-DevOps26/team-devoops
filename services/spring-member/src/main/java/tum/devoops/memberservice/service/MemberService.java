@@ -54,4 +54,9 @@ public class MemberService {
         return Optional.empty();
     }
 
+    public boolean deleteMember(UUID id) {
+        // TODO Additionally delete user in keycloak
+        return false;
+    }
+
 }

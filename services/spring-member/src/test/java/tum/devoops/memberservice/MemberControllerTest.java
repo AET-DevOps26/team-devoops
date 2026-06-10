@@ -419,7 +419,7 @@ public class MemberControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a user that is not himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a member that is not himself (401 forbidden)
     @Test
     void updateMemberNotAllowedForUndefinedRoleOtherId() throws Exception {
         UUID randomId = UUID.randomUUID();
@@ -434,7 +434,7 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a user that is himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a member that is himself (401 forbidden)
     @Test
     void updateMemberNotAllowedForUndefinedRoleSameId() throws Exception {
         mockMvc.perform(put(String.format("/%s", member.getId()))
@@ -448,7 +448,7 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies that an anonymous user is not allowed to update a user (403 unauthorized)
+    // Verifies that an anonymous user is not allowed to update a member (403 unauthorized)
     @Test
     @WithAnonymousUser
     void updateMemberUnauthorizedForAnonymous() throws Exception {
@@ -516,6 +516,89 @@ public class MemberControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newMember))
                 )
+                .andExpect(status().isNotFound());
+    }
+
+    // Test for deleteMember() endpoint
+
+    // Verifies that a user with role "admin" is allowed to delete a member (204 no content)
+    @Test
+    @WithMockUser(roles = "admin")
+    void deleteMemberAllowedForAdmin() throws Exception {
+        when(memberService.deleteMember(member.getId())).thenReturn(true);
+
+        mockMvc.perform(delete(String.format("/%s", member.getId())))
+                .andExpect(status().isNoContent());
+    }
+
+    // Verifies that a user with role "member" is not allowed to delete a member that is not himself
+    @Test
+    @WithMockUser(roles = "member")
+    void deleteMemberNotAllowedForUserOtherId() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(randomId.toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that a user wit role "member" is forbidden to delete a member even though it is himself (401 forbidden)
+    @Test
+    void deleteMemberNotAllowedForUserSameId() throws Exception {
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_member"))
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMember))
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to delete a member that is not himself (401 forbidden)
+    @Test
+    void deleteMemberNotAllowedForUndefinedRoleOtherId() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(randomId.toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_guest"))
+                        )
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to delete a member that is himself (401 forbidden)
+    @Test
+    void deleteMemberNotAllowedForUndefinedRoleSameId() throws Exception {
+        mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_guest"))
+                        )
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that an anonymous user is not allowed to delete a member (403 unauthorized)
+    @Test
+    @WithAnonymousUser
+    void deleteMemberUnauthorizedForAnonymous() throws Exception {
+        mockMvc.perform(delete(String.format("/%s", member.getId())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Verify that a non-existing member cannot be delted by an admin
+    @Test
+    @WithMockUser(roles = "admin")
+    void deleteMemberNotFoundNonExistingId() throws Exception {
+        when(memberService.deleteMember(member.getId())).thenReturn(false);
+
+        mockMvc.perform(put(String.format("/%s", member.getId())))
                 .andExpect(status().isNotFound());
     }
 }
