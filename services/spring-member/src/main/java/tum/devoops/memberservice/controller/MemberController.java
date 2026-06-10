@@ -43,12 +43,34 @@ public class MemberController {
      * This endpoint searches the primary database and returns the corresponding member to an ID.
      * </p>
      * @param id The unique {@link UUID} of the member.
-     * @return ResponseEntity containing a List of MemberSummary and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
+     * @return ResponseEntity containing a MemberSummary and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/{id}")
-    public ResponseEntity<Member> getMemberById(@PathVariable UUID id) {
-        Optional<Member> memberOptional = memberService.getMemberById(id);
+    public ResponseEntity<MemberSummary> getMemberById(@PathVariable UUID id) {
+        Optional<MemberSummary> memberOptional = memberService.getMemberById(id);
+
+        if (memberOptional.isPresent()) {
+            MemberSummary member = memberOptional.get();
+            return ResponseEntity.ok(member);
+        }
+        else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Retrieves a member with all details given its ID.
+     * <p>
+     * This endpoint searches the primary database and returns the corresponding member to an ID.
+     * </p>
+     * @param id The unique {@link UUID} of the member.
+     * @return ResponseEntity containing a Member and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
+     */
+    @PreAuthorize("hasAnyRole('member', 'admin')")
+    @GetMapping("/{id}/details")
+    public ResponseEntity<Member> getMemberDetailsById(@PathVariable UUID id) {
+        Optional<Member> memberOptional = memberService.getMemberDetailsById(id);
 
         if (memberOptional.isPresent()) {
             Member member = memberOptional.get();

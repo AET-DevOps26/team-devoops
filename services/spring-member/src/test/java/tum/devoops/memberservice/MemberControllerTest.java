@@ -42,6 +42,8 @@ public class MemberControllerTest {
     @MockitoBean
     private MemberService memberService;
 
+    MemberSummary memberSummary;
+    MemberSummary memberSummary1;
     private Member member;
     private MemberCreate memberCreate;
     private String mockToken;
@@ -50,6 +52,10 @@ public class MemberControllerTest {
     @BeforeEach
     void setUp() {
         UUID id = UUID.randomUUID();
+
+        memberSummary = new MemberSummary(id, "Alice", "Aberdeen", "alice.aberdeen@example.com");
+        memberSummary1 = new MemberSummary(UUID.randomUUID(), "Bob", "Builder", "bob.the.builder@example.com");
+
         member = new Member(
                 id,
                 "firstName",
@@ -152,14 +158,87 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberNonEmptyList() throws Exception {
-        MemberSummary alice = new MemberSummary(UUID.randomUUID(), "Alice", "Aberdeen", "alice.aberdeen@example.com");
-        MemberSummary bob = new MemberSummary(UUID.randomUUID(), "Bob", "Builder", "bob.the.builder@example.com");
-        List<MemberSummary> list = List.of(alice, bob);
+        List<MemberSummary> list = List.of(memberSummary, memberSummary1);
         when(memberService.getAllMembers()).thenReturn(list);
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(list)));
+    }
+
+    // Test cases for getMemberByIdDetails() endpoint
+
+    // Verifies that a user with role "member" is allowed to retrieve a member by ID
+    @Test
+    @WithMockUser(roles = "member")
+    void getMemberDetailsByIdAllowedForMember() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
+                .andExpect(status().isOk());
+    }
+
+    // Verifies that a user with role "admin" is allowed to retrieve a member by ID
+    @Test
+    @WithMockUser(roles = "admin")
+    void getMemberDetailsByIdAllowedForAdmin() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
+                .andExpect(status().isOk());
+    }
+
+    // Verifies that a user with a role other than admin and member is not allowed to get a member by ID (403 forbidden)
+    @Test
+    @WithMockUser(roles = "guest")
+    void getMemberDetailsByIdForbiddenForWrongRole() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
+                .andExpect(status().isForbidden());
+    }
+
+    // Verifies that an anonymous user is not allowed to get a member by ID (401 unauthorized)
+    @Test
+    @WithAnonymousUser
+    void getMemberDetailsByIdUnauthorizedForAnonymous() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Verifies that the content type of the response is application/json
+    @Test
+    @WithMockUser(roles = "member")
+    void getMemberDetailsByIdContentType() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    // Verifies that the entire member is returned correctly
+    @Test
+    @WithMockUser(roles = "member")
+    void getMemberDetailsByIdReturnsCorrectMember() throws Exception {
+        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+
+        mockMvc.perform(get(String.format("/%s/details", member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(member)));
+    }
+
+    // Verifies that a 404 not found is returned, when no member for the given id is found
+    @Test
+    @WithMockUser(roles = "member")
+    void getMemberDetailsByIdReturnsNotFound() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        when(memberService.getMemberById(randomId)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get(String.format("/%s/details", randomId)))
+                .andExpect(status().isNotFound());
     }
 
     // Test cases for getMemberById() endpoint
@@ -168,7 +247,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdAllowedForMember() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -178,7 +257,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "admin")
     void getMemberByIdAllowedForAdmin() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -188,7 +267,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "guest")
     void getMemberByIdForbiddenForWrongRole() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isForbidden());
@@ -198,7 +277,7 @@ public class MemberControllerTest {
     @Test
     @WithAnonymousUser
     void getMemberByIdUnauthorizedForAnonymous() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
@@ -208,7 +287,7 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdContentType() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk())
@@ -219,11 +298,11 @@ public class MemberControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void getMemberByIdReturnsCorrectMember() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId())))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(member)));
+                .andExpect(content().json(objectMapper.writeValueAsString(memberSummary)));
     }
 
     // Verifies that a 404 not found is returned, when no member for the given id is found
@@ -439,5 +518,4 @@ public class MemberControllerTest {
                 )
                 .andExpect(status().isNotFound());
     }
-
 }

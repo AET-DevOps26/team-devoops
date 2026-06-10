@@ -21,7 +21,11 @@ public class MemberService {
         return List.of();
     }
 
-    public Optional<Member> getMemberById(UUID id) {
+    public Optional<MemberSummary> getMemberById(UUID id) {
+        return Optional.empty();
+    }
+
+    public Optional<Member> getMemberDetailsById(UUID id) {
         return Optional.empty();
     }
 
