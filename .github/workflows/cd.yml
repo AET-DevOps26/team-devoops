@@ -166,4 +166,5 @@ jobs:
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
             --set keycloak.hostname=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth \
+            --set forwardAuth.cookieSecret="${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}" \
             --rollback-on-failure --timeout 15m

@@ -1,0 +1,63 @@
+{{- if .Values.forwardAuth.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-forward-auth
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "traefik-forward-auth" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: traefik-forward-auth
+          image: thomseddon/traefik-forward-auth:2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4181
+          env:
+            - name: DEFAULT_PROVIDER
+              value: oidc
+            - name: PROVIDERS_OIDC_ISSUER_URL
+              value: {{ .Values.forwardAuth.oidcIssuerUrl | quote }}
+            - name: PROVIDERS_OIDC_CLIENT_ID
+              value: {{ .Values.forwardAuth.clientId | quote }}
+            - name: PROVIDERS_OIDC_CLIENT_SECRET
+              value: {{ .Values.forwardAuth.clientSecret | quote }}
+            - name: SECRET
+              value: {{ .Values.forwardAuth.cookieSecret | quote }}
+            - name: INSECURE_COOKIE
+              value: "false"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-forward-auth
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "traefik-forward-auth" "root" $) | nindent 4 }}
+spec:
+  selector:
+    {{- include "team-devoops.selectorLabels" (dict "name" "traefik-forward-auth") | nindent 4 }}
+  ports:
+    - port: 4181
+      targetPort: 4181
+{{- end }}
