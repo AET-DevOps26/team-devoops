@@ -4,10 +4,18 @@ import { paymentsClient } from './client'
 import type { Balance, Transaction, TransactionCreate, TransactionPartialUpdate } from '../types'
 
 export const paymentsKeys = {
+  hello: ['payments', 'hello'] as const,
   balances: ['payments', 'balances'] as const,
   balance: (memberId: string) => ['payments', 'balances', memberId] as const,
   transactions: ['payments', 'transactions'] as const,
   transaction: (id: string) => ['payments', 'transactions', id] as const,
+}
+
+export function usePaymentsHello() {
+  return useQuery<string>({
+    queryKey: paymentsKeys.hello,
+    queryFn: () => paymentsClient.get<string>('/hello').then(r => r.data),
+  })
 }
 
 export function useBalances() {

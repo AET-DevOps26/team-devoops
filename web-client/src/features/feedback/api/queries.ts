@@ -6,6 +6,14 @@ import type { Feedback, FeedbackCreate, FeedbackPartialUpdate, FeedbackSummary }
 export const feedbackKeys = {
   all: ['feedback'] as const,
   detail: (id: string) => ['feedback', id] as const,
+  hello: ['feedback', 'hello'] as const,
+}
+
+export function useFeedbackHello() {
+  return useQuery<string>({
+    queryKey: feedbackKeys.hello,
+    queryFn: () => feedbackClient.get<string>('/hello').then(r => r.data),
+  })
 }
 
 export function useFeedbackList() {

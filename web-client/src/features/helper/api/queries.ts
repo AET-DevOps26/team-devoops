@@ -3,7 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import { helperClient } from './client'
 
 export const helperKeys = {
+  hello: ['helper', 'hello'] as const,
   report: (memberId: string) => ['helper', 'report', memberId] as const,
+}
+
+export function useHelperHello() {
+  return useQuery<string>({
+    queryKey: helperKeys.hello,
+    queryFn: () =>
+      helperClient.get<string>('/hello').then(r =>
+        r.data.replace(/<[^>]+>/g, '').trim()
+      ),
+  })
 }
 
 export function useMemberReport(memberId: string) {

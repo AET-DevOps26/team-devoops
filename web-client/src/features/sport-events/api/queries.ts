@@ -4,8 +4,16 @@ import { sportEventsClient } from './client'
 import type { SportEvent, EventCreate, EventPartialUpdate, EventSummary } from '../types'
 
 export const sportEventsKeys = {
+  hello: ['sport-events', 'hello'] as const,
   all: ['sport-events'] as const,
   detail: (id: string) => ['sport-events', id] as const,
+}
+
+export function useSportEventsHello() {
+  return useQuery<string>({
+    queryKey: sportEventsKeys.hello,
+    queryFn: () => sportEventsClient.get<string>('/hello').then(r => r.data),
+  })
 }
 
 export function useSportEvents() {
