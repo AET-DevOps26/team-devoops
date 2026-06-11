@@ -15,6 +15,7 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" "keycloak") | nindent 8 }}
     spec:
+      {{- if .Values.keycloak.db.enabled }}
       initContainers:
         - name: wait-for-db
           image: busybox:1.36
@@ -26,6 +27,14 @@ spec:
                 echo "waiting for keycloak-database..."
                 sleep 3
               done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      {{- end }}
       containers:
         - name: keycloak
           image: {{ .Values.keycloak.image }}
@@ -34,6 +43,7 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            {{- if .Values.keycloak.db.enabled }}
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL_HOST
@@ -45,6 +55,7 @@ spec:
                 secretKeyRef:
                   name: keycloak-credentials
                   key: KC_DB_PASSWORD
+            {{- end }}
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: {{ .Values.keycloak.adminUsername | quote }}
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
@@ -56,28 +67,40 @@ spec:
               value: "true"
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.path | quote }}
+            - name: KC_HTTP_MANAGEMENT_RELATIVE_PATH
+              value: "/"
             - name: KC_HOSTNAME
               value: {{ .Values.keycloak.hostname | quote }}
             - name: KC_PROXY_HEADERS
               value: xforwarded
+            - name: JAVA_OPTS_APPEND
+              value: {{ .Values.keycloak.javaOptsAppend | quote }}
           volumeMounts:
             - name: realm-config
               mountPath: /opt/keycloak/data/import
               readOnly: true
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
           readinessProbe:
             httpGet:
-              path: {{ printf "%s/health/ready" .Values.keycloak.path }}
-              port: 8080
-            initialDelaySeconds: 120
+              path: /health/ready
+              port: 9000
             periodSeconds: 10
-            failureThreshold: 12
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: {{ printf "%s/health/live" .Values.keycloak.path }}
-              port: 8080
-            initialDelaySeconds: 180
+              path: /health/live
+              port: 9000
             periodSeconds: 20
-            failureThreshold: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
       volumes:
