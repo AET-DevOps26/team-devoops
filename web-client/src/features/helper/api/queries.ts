@@ -10,10 +10,7 @@ export const helperKeys = {
 export function useHelperHello() {
   return useQuery<string>({
     queryKey: helperKeys.hello,
-    queryFn: () =>
-      helperClient.get<string>('/hello').then(r =>
-        r.data.replace(/<[^>]+>/g, '').trim()
-      ),
+    queryFn: () => helperClient.get<string>('/hello').then(r => r.data),
   })
 }
 
