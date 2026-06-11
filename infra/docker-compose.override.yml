@@ -123,6 +123,11 @@ services:
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
 
   keycloak:
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.routers.keycloak.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     environment:
       KC_HOSTNAME: "http://localhost:8081/auth"
 
