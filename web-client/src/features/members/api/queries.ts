@@ -4,8 +4,16 @@ import { membersClient } from './client'
 import type { Member, MemberCreate, MemberPartialUpdate, MemberSummary } from '../types'
 
 export const membersKeys = {
+  hello: ['members', 'hello'] as const,
   all: ['members'] as const,
   detail: (id: string) => ['members', id] as const,
+}
+
+export function useMembersHello() {
+  return useQuery<string>({
+    queryKey: membersKeys.hello,
+    queryFn: () => membersClient.get<string>('/hello').then(r => r.data),
+  })
 }
 
 export function useMembers() {

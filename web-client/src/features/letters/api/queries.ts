@@ -1,7 +1,18 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { lettersClient } from './client'
 import type { GeneratePdfRequest, SendMailRequest } from '../types'
+
+export const lettersKeys = {
+  hello: ['letters', 'hello'] as const,
+}
+
+export function useLettersHello() {
+  return useQuery<string>({
+    queryKey: lettersKeys.hello,
+    queryFn: () => lettersClient.get<string>('/hello').then(r => r.data),
+  })
+}
 
 export function useSendMail() {
   return useMutation<void, Error, SendMailRequest>({

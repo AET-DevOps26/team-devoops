@@ -11,10 +11,18 @@ import type {
 } from '../types'
 
 export const organizationKeys = {
+  hello: ['organization', 'hello'] as const,
   sports: ['organization', 'sports'] as const,
   sport: (name: string) => ['organization', 'sports', name] as const,
   teams: ['organization', 'teams'] as const,
   team: (id: string) => ['organization', 'teams', id] as const,
+}
+
+export function useOrganizationHello() {
+  return useQuery<string>({
+    queryKey: organizationKeys.hello,
+    queryFn: () => organizationClient.get<string>('/hello').then(r => r.data),
+  })
 }
 
 export function useSports() {
