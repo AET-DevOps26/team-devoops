@@ -5,17 +5,16 @@ from langchain.agents import create_agent
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import create_retriever_tool
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
 
-def _load_pdfs() -> FAISS | None:
+def _load_pdfs(embeddings) -> FAISS | None:
     pdf_files = list(_FILE_STORAGE.glob("*.pdf"))
     if not pdf_files:
         return None
@@ -29,10 +28,18 @@ def _load_pdfs() -> FAISS | None:
     return FAISS.from_documents(docs, embedding=embeddings)
 
 
-vector_store = _load_pdfs()
+_local_vector_store = _load_pdfs(OllamaEmbeddings(model="nomic-embed-text"))
+_remote_vector_store = _load_pdfs(OpenAIEmbeddings(model="text-embedding-3-large"))
 
 
-def get_rag_agent():
+def get_rag_agent(local: bool):
+    if local:
+        vector_store = _local_vector_store
+        model = ChatOllama(model="llama3.2")
+    else:
+        vector_store = _remote_vector_store
+        model = "gpt-4.1-mini"
+
     if vector_store is None:
         raise RuntimeError("No PDFs found in file-storage/")
 
@@ -45,7 +52,7 @@ def get_rag_agent():
     )
 
     rag_agent = create_agent(
-        model="gpt-4.1-mini",
+        model=model,
         tools=[retriever_tool],
         system_prompt=(
             "You are a helpful assistant."

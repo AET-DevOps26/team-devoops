@@ -27,3 +27,15 @@ def rag_response():
 
     response = generate_rag_response(question)
     return {"response": response}, 200
+
+@app.route("/rag-response-local", methods=["POST"])
+def rag_response():
+    # Get the json of the object. force=True ignores the stated MimeType
+    data = request.get_json(force=True) or {}
+    question = data.get("question")
+
+    if not question:
+        return {"error": "Missing required field: 'question'"}, 400
+
+    response = generate_rag_response(question, local=True)
+    return {"response": response}, 200

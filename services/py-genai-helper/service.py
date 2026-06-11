@@ -22,7 +22,7 @@ def hello():
     return response["messages"][-1].content
 
 
-def generate_rag_response(question):
-    rag_agent = get_rag_agent()
+def generate_rag_response(question, local=False):
+    rag_agent = get_rag_agent(local)
     response = rag_agent.invoke({"messages": [{"role": "user", "content": question}]})
     return response["messages"][-1].content
