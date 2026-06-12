@@ -32,7 +32,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=organization_user
       - SPRING_DATASOURCE_PASSWORD=organization_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -59,7 +58,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -86,7 +84,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=event_user
       - SPRING_DATASOURCE_PASSWORD=event_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -113,7 +110,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=feedback_user
       - SPRING_DATASOURCE_PASSWORD=feedback_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -140,7 +136,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=finance_user
       - SPRING_DATASOURCE_PASSWORD=finance_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -167,7 +162,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=letter_user
       - SPRING_DATASOURCE_PASSWORD=letter_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"

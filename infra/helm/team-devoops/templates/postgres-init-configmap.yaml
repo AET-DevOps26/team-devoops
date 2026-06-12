@@ -95,5 +95,21 @@ data:
         IN SCHEMA finance
         GRANT SELECT ON TABLES TO reader;
 
+    -- -----------------------------------------------------------------------
+    -- Cross-schema REFERENCES: required for FK constraints across schemas.
+    -- Granted per-user on the schemas they reference.
+    -- -----------------------------------------------------------------------
+    ALTER DEFAULT PRIVILEGES FOR ROLE member_user
+        IN SCHEMA member
+        GRANT REFERENCES ON TABLES TO organization_user, event_user, feedback_user, finance_user;
+
+    ALTER DEFAULT PRIVILEGES FOR ROLE organization_user
+        IN SCHEMA organization
+        GRANT REFERENCES ON TABLES TO event_user;
+
+    ALTER DEFAULT PRIVILEGES FOR ROLE event_user
+        IN SCHEMA event
+        GRANT REFERENCES ON TABLES TO feedback_user;
+
     EOSQL
 {{- end }}
