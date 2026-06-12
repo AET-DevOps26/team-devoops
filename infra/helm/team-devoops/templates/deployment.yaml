@@ -8,6 +8,8 @@ metadata:
     {{- include "team-devoops.labels" (dict "name" $name "root" $root) | nindent 4 }}
 spec:
   replicas: {{ $svc.replicas | default 1 }}
+  strategy:
+    {{- toYaml $root.Values.strategy | nindent 4 }}
   selector:
     matchLabels:
       {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 6 }}
@@ -38,9 +40,9 @@ spec:
           envFrom:
             {{- if $svc.db }}
             - configMapRef:
-                name: db-config
+                name: db-config-{{ $name }}
             - secretRef:
-                name: db-credentials
+                name: db-credentials-{{ $svc.dbUser }}-service
             {{- end }}
             {{- if $svc.envFromSecret }}
             - secretRef:
@@ -48,23 +50,33 @@ spec:
             {{- end }}
           {{- end }}
           {{- if $svc.health }}
+          startupProbe:
+            httpGet:
+              path: {{ $svc.health }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: {{ $svc.health }}
               port: {{ $svc.port }}
-            initialDelaySeconds: 60
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           {{- else }}
           readinessProbe:
             tcpSocket:
               port: {{ $svc.port }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 10
           {{- end }}
           resources:

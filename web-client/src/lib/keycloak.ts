@@ -2,7 +2,7 @@ import Keycloak from 'keycloak-js'
 import axios, { type AxiosInstance } from 'axios'
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081',
+  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081/auth',
   realm: 'devops',
   clientId: 'devops-client',
 })

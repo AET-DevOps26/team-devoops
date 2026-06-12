@@ -28,7 +28,7 @@ public class MemberCreate {
 
   private String lastName;
 
-  private @Nullable String email;
+  private String email;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
   private @Nullable LocalDate birthday;
@@ -46,9 +46,10 @@ public class MemberCreate {
   /**
    * Constructor with only required parameters
    */
-  public MemberCreate(String firstName, String lastName) {
+  public MemberCreate(String firstName, String lastName, String email) {
     this.firstName = firstName;
     this.lastName = lastName;
+    this.email = email;
   }
 
   public MemberCreate firstName(String firstName) {
@@ -91,7 +92,7 @@ public class MemberCreate {
     this.lastName = lastName;
   }
 
-  public MemberCreate email(@Nullable String email) {
+  public MemberCreate email(String email) {
     this.email = email;
     return this;
   }
@@ -100,14 +101,14 @@ public class MemberCreate {
    * Get email
    * @return email
    */
-  
-  @Schema(name = "email", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @NotNull 
+  @Schema(name = "email", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("email")
-  public @Nullable String getEmail() {
+  public String getEmail() {
     return email;
   }
 
-  public void setEmail(@Nullable String email) {
+  public void setEmail(String email) {
     this.email = email;
   }
 

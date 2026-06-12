@@ -26,13 +26,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
-      - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=organization_user
+      - SPRING_DATASOURCE_PASSWORD=organization_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=websecure"
@@ -52,13 +52,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=websecure"
@@ -78,13 +78,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
-      - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=event_user
+      - SPRING_DATASOURCE_PASSWORD=event_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.event-service.entrypoints=websecure"
@@ -104,13 +104,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
-      - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=feedback_user
+      - SPRING_DATASOURCE_PASSWORD=feedback_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.feedback-service.entrypoints=websecure"
@@ -130,13 +130,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
-      - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=finance_user
+      - SPRING_DATASOURCE_PASSWORD=finance_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.finance-service.entrypoints=websecure"
@@ -156,13 +156,13 @@ services:
     expose:
       - 8080
     depends_on:
-      member-database:
+      app-database:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://member-database:5432/member_db
-      - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=letter_user
+      - SPRING_DATASOURCE_PASSWORD=letter_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.letter-service.entrypoints=websecure"
@@ -197,7 +197,10 @@ services:
       - proxy
 
   web-client:
-    build: ../web-client/
+    build:
+      context: ../web-client/
+      args:
+        VITE_KEYCLOAK_URL: https://team-devoops.uaenorth.cloudapp.azure.com/auth
     container_name: web-client
     expose:
       - 8080
@@ -211,8 +214,6 @@ services:
       - py-genai-helper
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.web-client.entrypoints=web"
-      - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
       - "traefik.http.routers.web-client.entrypoints=websecure"
       - "traefik.http.routers.web-client.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`)"
       - "traefik.http.routers.web-client.tls=true"
@@ -261,24 +262,22 @@ services:
     container_name: traefik-forward-auth
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=http://localhost:8081/realms/devops
+      - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
       - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
       - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
       - SECRET=a-random-32-char-secret-changeme!
-      - INSECURE_COOKIE=true
+      - INSECURE_COOKIE=false
+      - LOG_LEVEL=debug
     extra_hosts:
-      - "localhost:host-gateway"
+      - "team-devoops.uaenorth.cloudapp.azure.com:host-gateway"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-forward-auth.rule=Path(`/_oauth`)"
-      - "traefik.http.routers.traefik-forward-auth.entrypoints=web"
-      - "traefik.http.routers.traefik-forward-auth.middlewares=forward-auth@file"
-      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
+      - "traefik.enable=false"
     depends_on:
       keycloak:
         condition: service_healthy
     networks:
       - proxy
+    restart: on-failure
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
@@ -295,6 +294,17 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+      KC_HOSTNAME: https://team-devoops.uaenorth.cloudapp.azure.com/auth
+      KC_PROXY_HEADERS: xforwarded
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.tls.certresolver=le"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -302,7 +312,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 90s
+      start_period: 30s
     volumes:
       - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
     ports:
@@ -329,19 +339,26 @@ services:
     networks:
       - keycloak
 
-  member-database:
+  app-database:
     image: postgres:15.6-alpine
-    container_name: member-db
+    container_name: app-db
     expose:
       - 5432
     environment:
-      POSTGRES_USER: member_user
-      POSTGRES_PASSWORD: member_password
-      POSTGRES_DB: member_db
+      POSTGRES_USER: app_admin
+      POSTGRES_PASSWORD: app_admin_password
+      POSTGRES_DB: app_db
+      ORGANIZATION_USER_PASSWORD: organization_password
+      MEMBER_USER_PASSWORD: member_password
+      EVENT_USER_PASSWORD: event_password
+      FEEDBACK_USER_PASSWORD: feedback_password
+      FINANCE_USER_PASSWORD: finance_password
+      LETTER_USER_PASSWORD: letter_password
     volumes:
-      - member_db_data:/var/lib/postgresql/data
+      - app_db_data:/var/lib/postgresql/data
+      - ./postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U member_user -d member_db"]
+      test: ["CMD-SHELL", "pg_isready -U app_admin -d app_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -350,7 +367,7 @@ services:
       - data
 
 volumes:
-  member_db_data:
+  app_db_data:
   keycloak_db_data:
   letsencrypt:
 
