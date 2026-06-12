@@ -15,6 +15,13 @@
     <module name="SuppressionSingleFilter">
         <property name="files" value="[\\/]generated[\\/]"/>
     </module>
+
+    <!-- Spring Data JPA derived query methods for @EmbeddedId fields use underscores
+         (e.g. findAllById_SportName) which violates the MethodName pattern. -->
+    <module name="SuppressionSingleFilter">
+        <property name="files" value="Repository\.java"/>
+        <property name="checks" value="MethodName"/>
+    </module>
     <property name="fileExtensions" value="java, properties, xml"/>
 
     <!-- No tabs -->

@@ -417,7 +417,7 @@ export interface components {
         MemberCreate: {
             first_name: string;
             last_name: string;
-            email?: string;
+            email: string;
             /** Format: date */
             birthday?: string;
             phone_number?: string;
