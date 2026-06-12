@@ -43,10 +43,10 @@ public class Team {
     private String sportName;
 
     @OneToMany
-    @JoinColumn(name = "team_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<Trainer> trainers;
 
     @OneToMany
-    @JoinColumn(name = "team_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<Trainee> trainees;
 }

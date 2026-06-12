@@ -44,14 +44,14 @@ public class Event {
     private UUID creatorId;
 
     @OneToMany
-    @JoinColumn(name = "event_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "event_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<Attendance> attendees;
 
     @OneToMany
-    @JoinColumn(name = "event_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "event_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<SportEvent> sportsLinked;
 
     @OneToMany
-    @JoinColumn(name = "event_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "event_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<TeamEvent> teamsLinked;
 }

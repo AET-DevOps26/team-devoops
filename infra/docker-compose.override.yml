@@ -127,12 +127,18 @@ services:
   keycloak:
     environment:
       KC_HOSTNAME: "http://localhost:8081/auth"
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.routers.keycloak.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
 
   app-database:
     ports:
       - "5432:5432"
 
   traefik-forward-auth:
+    restart: "no"
     labels: !override
       - "traefik.enable=false"
     environment:

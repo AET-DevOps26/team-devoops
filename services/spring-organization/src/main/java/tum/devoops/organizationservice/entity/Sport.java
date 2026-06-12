@@ -30,6 +30,6 @@ public class Sport {
 
     // Each Director row links this sport to a member (director role).
     @OneToMany
-    @JoinColumn(name = "sport_name", referencedColumnName = "name", nullable = false)
+    @JoinColumn(name = "sport_name", referencedColumnName = "name", insertable = false, updatable = false)
     private List<Director> directors;
 }
