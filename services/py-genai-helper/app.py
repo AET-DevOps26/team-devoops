@@ -29,7 +29,7 @@ def rag_response():
     return {"response": response}, 200
 
 @app.route("/rag-response-local", methods=["POST"])
-def rag_response():
+def rag_response_local():
     # Get the json of the object. force=True ignores the stated MimeType
     data = request.get_json(force=True) or {}
     question = data.get("question")

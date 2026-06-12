@@ -10,6 +10,7 @@ sleep 5
 
 echo "Retrieve model..."
 ollama pull qwen3:8b
+ollama pull nomic-embed-text
 echo "Done!"
 
 # Wait for Ollama process to finish.

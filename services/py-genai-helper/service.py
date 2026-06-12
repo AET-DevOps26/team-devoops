@@ -5,11 +5,18 @@ from langchain.messages import HumanMessage, SystemMessage
 from rag import get_rag_agent
 
 load_dotenv()
-agent = create_agent("gpt-4.1-mini")
+_agent = None
+
+
+def _get_agent():
+    global _agent
+    if _agent is None:
+        _agent = create_agent("gpt-4.1-mini")
+    return _agent
 
 
 def hello():
-    response = agent.invoke(
+    response = _get_agent().invoke(
         {
             "messages": [
                 SystemMessage(

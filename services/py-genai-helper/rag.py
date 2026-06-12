@@ -28,14 +28,15 @@ def _load_pdfs(embeddings) -> FAISS | None:
     return FAISS.from_documents(docs, embedding=embeddings)
 
 
-_local_vector_store = _load_pdfs(OllamaEmbeddings(model="nomic-embed-text"))
+_local_vector_store = _load_pdfs(OllamaEmbeddings(model="nomic-embed-text", base_url="http://ollama:11434"))
 _remote_vector_store = _load_pdfs(OpenAIEmbeddings(model="text-embedding-3-large"))
 
 
 def get_rag_agent(local: bool):
+    global _local_vector_store, _remote_vector_store
     if local:
         vector_store = _local_vector_store
-        model = ChatOllama(model="llama3.2")
+        model = ChatOllama(model="qwen3:8b", base_url="http://ollama:11434", think=False)
     else:
         vector_store = _remote_vector_store
         model = "gpt-4.1-mini"
