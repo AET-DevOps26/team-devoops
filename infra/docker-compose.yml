@@ -365,10 +365,23 @@ services:
     networks:
       - data
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    expose:
+      - 11434
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./ollama/entrypoint_ollama.sh:/entrypoint_ollama.sh
+    networks:
+      - proxy
+    entrypoint: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
+
 volumes:
   member_db_data:
   keycloak_db_data:
   letsencrypt:
+  ollama_data:
 
 networks:
   proxy:
