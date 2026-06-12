@@ -1,8 +1,10 @@
 import Keycloak from 'keycloak-js'
 import axios, { type AxiosInstance } from 'axios'
 
+export const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081/auth'
+
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081/auth',
+  url: KEYCLOAK_URL,
   realm: 'devops',
   clientId: 'devops-client',
 })
