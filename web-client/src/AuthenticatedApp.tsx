@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { GlobalErrorBoundary } from '@/app/ErrorBoundary'
 import App from '@/App'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorCard } from '@/components/ui/ErrorCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import keycloak, { KEYCLOAK_URL } from '@/lib/keycloak'
 import {
   AUTH_INIT_TIMEOUT_MS,
@@ -17,7 +16,11 @@ function removeSplash() {
   document.getElementById('splash')?.remove()
 }
 
-export default function AuthenticatedApp() {
+interface AuthenticatedAppProps {
+  queryClient: QueryClient
+}
+
+export default function AuthenticatedApp({ queryClient }: AuthenticatedAppProps) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [authError, setAuthError] = useState<AuthError | null>(null)
   const didInitRef = useRef(false)
@@ -107,31 +110,14 @@ export default function AuthenticatedApp() {
     }
     const { title, description } = messages[authError ?? 'unknown']
 
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertCircle className="size-4" />
-              <AlertTitle>Sign-in error</AlertTitle>
-              <AlertDescription>
-                If this keeps happening, contact support.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" onClick={() => window.location.reload()}>
-              Try again
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    )
+    return <ErrorCard title={title} description={description} alertTitle="Sign-in error" />
   }
 
-  return <App />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <GlobalErrorBoundary>
+        <App />
+      </GlobalErrorBoundary>
+    </QueryClientProvider>
+  )
 }
