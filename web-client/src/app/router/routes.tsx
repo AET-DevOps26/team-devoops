@@ -7,6 +7,7 @@ import { LettersPage } from '@/features/letters'
 import { OrganizationPage } from '@/features/organization'
 import { FeedbackPage } from '@/features/feedback'
 import { HelperPage } from '@/features/helper'
+import { NotFoundPage } from '@/app/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: 'organization', element: <OrganizationPage /> },
       { path: 'feedback', element: <FeedbackPage /> },
       { path: 'helper', element: <HelperPage /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ])

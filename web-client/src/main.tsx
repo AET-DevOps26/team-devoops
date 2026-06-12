@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
+import { GlobalErrorBoundary } from '@/app/ErrorBoundary'
 import { ThemeProvider } from '@/app/theme/ThemeProvider'
 import AuthenticatedApp from './AuthenticatedApp.tsx'
 import '@/index.css'
@@ -28,10 +29,12 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthenticatedApp />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GlobalErrorBoundary>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthenticatedApp />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GlobalErrorBoundary>
   </StrictMode>,
 )
