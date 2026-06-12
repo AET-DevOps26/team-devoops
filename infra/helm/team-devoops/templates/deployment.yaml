@@ -40,9 +40,9 @@ spec:
           envFrom:
             {{- if $svc.db }}
             - configMapRef:
-                name: db-config
+                name: db-config-{{ $name }}
             - secretRef:
-                name: db-credentials
+                name: db-credentials-{{ $svc.dbUser }}-service
             {{- end }}
             {{- if $svc.envFromSecret }}
             - secretRef:

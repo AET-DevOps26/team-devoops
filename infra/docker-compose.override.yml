@@ -11,12 +11,14 @@
 #   * Removes TLS (no Let's Encrypt, no HTTPS, no 443) -- local has no public DNS
 #   * Strips the Host(...) requirement from every router so localhost works
 #   * Disables the HTTP -> HTTPS redirect so plain http://localhost works
+#   * Exposes the app database on localhost:5432 for direct DB client access
 #
 # Access locally:
 #     http://localhost/                       web client
 #     http://localhost/docs                   Swagger UI
 #     http://localhost/api/v1/<service>/...   APIs
 #     http://localhost:8080                   Traefik dashboard
+#     localhost:5432  (app_admin/app_admin_password, db: app_db)   PostgreSQL
 
 services:
   traefik:
@@ -125,6 +127,10 @@ services:
   keycloak:
     environment:
       KC_HOSTNAME: "http://localhost:8081/auth"
+
+  app-database:
+    ports:
+      - "5432:5432"
 
   traefik-forward-auth:
     labels: !override
