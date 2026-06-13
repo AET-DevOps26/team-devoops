@@ -1,5 +1,6 @@
 import { StrictMode, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const keycloakMock = {
@@ -23,12 +24,14 @@ const { default: AuthenticatedApp } = await import('@/AuthenticatedApp')
 describe('AuthenticatedApp', () => {
   let container: HTMLDivElement
   let root: Root
+  let queryClient: QueryClient
 
   beforeEach(() => {
     vi.clearAllMocks()
     keycloakMock.onTokenExpired = undefined
     keycloakMock.login.mockResolvedValue(undefined)
     keycloakMock.updateToken.mockResolvedValue(true)
+    queryClient = new QueryClient()
     document.body.innerHTML = '<div id="root"></div><div id="splash"></div>'
     container = document.getElementById('root') as HTMLDivElement
     root = createRoot(container)
@@ -43,7 +46,7 @@ describe('AuthenticatedApp', () => {
 
   async function render() {
     await act(async () => {
-      root.render(<AuthenticatedApp />)
+      root.render(<AuthenticatedApp queryClient={queryClient} />)
       // flush microtasks so the async init chain resolves
       await new Promise((r) => setTimeout(r, 0))
     })
@@ -53,7 +56,7 @@ describe('AuthenticatedApp', () => {
     await act(async () => {
       root.render(
         <StrictMode>
-          <AuthenticatedApp />
+          <AuthenticatedApp queryClient={queryClient} />
         </StrictMode>,
       )
       await new Promise((r) => setTimeout(r, 0))

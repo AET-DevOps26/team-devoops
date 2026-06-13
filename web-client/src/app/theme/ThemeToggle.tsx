@@ -1,6 +1,13 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTheme } from './useTheme'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+const themeIconClassName = (isActive: boolean, inactiveRotationClass: string) =>
+  cn(
+    'size-4 transition-all duration-200',
+    isActive ? 'scale-100 rotate-0 opacity-100' : `absolute scale-0 ${inactiveRotationClass} opacity-0`,
+  )
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
@@ -14,9 +21,9 @@ export function ThemeToggle() {
       title={`Toggle theme (current: ${theme})`}
       className="relative border border-border bg-background/70"
     >
-      <Sun className={`h-4 w-4 transition-all duration-200 ${theme === 'light' ? 'scale-100 rotate-0 opacity-100' : 'absolute scale-0 -rotate-90 opacity-0'}`} />
-      <Moon className={`h-4 w-4 transition-all duration-200 ${theme === 'dark' ? 'scale-100 rotate-0 opacity-100' : 'absolute scale-0 rotate-90 opacity-0'}`} />
-      <Monitor className={`h-4 w-4 transition-all duration-200 ${theme === 'system' ? 'scale-100 rotate-0 opacity-100' : 'absolute scale-0 -rotate-90 opacity-0'}`} />
+      <Sun className={themeIconClassName(theme === 'light', '-rotate-90')} />
+      <Moon className={themeIconClassName(theme === 'dark', 'rotate-90')} />
+      <Monitor className={themeIconClassName(theme === 'system', '-rotate-90')} />
     </Button>
   )
 }

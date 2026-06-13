@@ -27,12 +27,12 @@ describe('NotFoundPage', () => {
     })
   }
 
-  it('renders the "Page not found" text in the heading', async () => {
+  it('renders the "404 - Page not found" text in the heading', async () => {
     await render()
 
     const heading = container.querySelector('h1')
 
-    expect(heading?.textContent).toContain('Page not found')
+    expect(heading?.textContent).toContain('404 - Page not found')
   })
 
   it('renders a Go back button', async () => {
