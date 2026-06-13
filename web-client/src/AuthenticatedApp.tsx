@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import keycloak, { KEYCLOAK_URL } from '@/lib/keycloak'
+import keycloak, { KEYCLOAK_URL, TOKEN_REFRESH_MIN_VALIDITY_SECONDS } from '@/lib/keycloak'
 import {
   AUTH_INIT_TIMEOUT_MS,
   classifyAuthError,
@@ -70,7 +70,7 @@ export default function AuthenticatedApp() {
     }
 
     keycloak.onTokenExpired = () => {
-      keycloak.updateToken(30).catch(() => keycloak.login())
+      keycloak.updateToken(TOKEN_REFRESH_MIN_VALIDITY_SECONDS).catch(() => undefined)
     }
 
     return () => {
