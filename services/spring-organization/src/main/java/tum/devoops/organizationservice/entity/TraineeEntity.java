@@ -15,9 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(schema = "organization", name = "trainers")
+@Table(schema = "organization", name = "trainees")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class Trainer {
+public class TraineeEntity {
 
     // Composite PK: (team_id, member_id).
     // team_id references organization.team(id).

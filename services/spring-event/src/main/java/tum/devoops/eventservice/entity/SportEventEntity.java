@@ -1,4 +1,4 @@
-package tum.devoops.organizationservice.entity;
+package tum.devoops.eventservice.entity;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -15,23 +15,23 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(schema = "organization", name = "trainees")
+@Table(schema = "event", name = "sport_events")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class Trainee {
+public class SportEventEntity {
 
-    // Composite PK: (team_id, member_id).
-    // team_id references organization.team(id).
-    // member_id references member.member(id) — FK added in V3 migration.
+    // Composite PK: (event_id, sport_name).
+    // event_id references event.event(id).
+    // sport_name references organization.sport(name) — FK added in V3 migration.
     @EmbeddedId
     private Id id;
 
     @Embeddable
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class Id implements Serializable {
-        @Column(name = "team_id", nullable = false)
-        private UUID teamId;
+        @Column(name = "event_id", nullable = false)
+        private UUID eventId;
 
-        @Column(name = "member_id", nullable = false)
-        private UUID memberId;
+        @Column(name = "sport_name", nullable = false)
+        private String sportName;
     }
 }

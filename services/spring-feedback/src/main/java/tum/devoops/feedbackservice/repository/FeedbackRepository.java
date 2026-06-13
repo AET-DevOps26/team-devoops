@@ -5,16 +5,16 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import tum.devoops.feedbackservice.entity.Feedback;
+import tum.devoops.feedbackservice.entity.FeedbackEntity;
 
-public interface FeedbackRepository extends JpaRepository<Feedback, UUID> {
+public interface FeedbackRepository extends JpaRepository<FeedbackEntity, UUID> {
 
     // SELECT * FROM feedback.feedback WHERE event_id = ?
-    List<Feedback> findAllByEventId(UUID eventId);
+    List<FeedbackEntity> findAllByEventId(UUID eventId);
 
     // SELECT * FROM feedback.feedback WHERE member_id = ?
-    List<Feedback> findAllByMemberId(UUID memberId);
+    List<FeedbackEntity> findAllByMemberId(UUID memberId);
 
     // SELECT * FROM feedback.feedback WHERE creator_id = ?
-    List<Feedback> findAllByCreatorId(UUID creatorId);
+    List<FeedbackEntity> findAllByCreatorId(UUID creatorId);
 }

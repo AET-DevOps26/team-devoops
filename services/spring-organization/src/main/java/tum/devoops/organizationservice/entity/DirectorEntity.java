@@ -17,7 +17,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "organization", name = "directors")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class Director {
+public class DirectorEntity {
 
     // Composite PK: (sport_name, member_id).
     // sport_name references organization.sport(name).

@@ -15,13 +15,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(schema = "event", name = "sport_events")
+@Table(schema = "event", name = "team_events")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class SportEvent {
+public class TeamEventEntity {
 
-    // Composite PK: (event_id, sport_name).
+    // Composite PK: (event_id, team_id).
     // event_id references event.event(id).
-    // sport_name references organization.sport(name) — FK added in V3 migration.
+    // team_id references organization.team(id) — FK added in V3 migration.
     @EmbeddedId
     private Id id;
 
@@ -31,7 +31,7 @@ public class SportEvent {
         @Column(name = "event_id", nullable = false)
         private UUID eventId;
 
-        @Column(name = "sport_name", nullable = false)
-        private String sportName;
+        @Column(name = "team_id", nullable = false)
+        private UUID teamId;
     }
 }
