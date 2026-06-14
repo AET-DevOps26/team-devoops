@@ -5,15 +5,15 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import tum.devoops.organizationservice.entity.Director;
+import tum.devoops.organizationservice.entity.DirectorEntity;
 
-public interface DirectorRepository extends JpaRepository<Director, Director.Id> {
+public interface DirectorRepository extends JpaRepository<DirectorEntity, DirectorEntity.Id> {
 
     // SELECT * FROM organization.directors WHERE sport_name = ?
-    List<Director> findAllById_SportName(String sportName);
+    List<DirectorEntity> findAllById_SportName(String sportName);
 
     // SELECT * FROM organization.directors WHERE member_id = ?
-    List<Director> findAllById_MemberId(UUID memberId);
+    List<DirectorEntity> findAllById_MemberId(UUID memberId);
 
     // DELETE FROM organization.directors WHERE sport_name = ?
     void deleteAllById_SportName(String sportName);

@@ -16,7 +16,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "organization", name = "sports")
 @Getter @Setter @NoArgsConstructor
-public class Sport {
+public class SportEntity {
 
     @Id
     @Column(name = "name", nullable = false)
@@ -31,5 +31,5 @@ public class Sport {
     // Each Director row links this sport to a member (director role).
     @OneToMany
     @JoinColumn(name = "sport_name", referencedColumnName = "name", insertable = false, updatable = false)
-    private List<Director> directors;
+    private List<DirectorEntity> directors;
 }

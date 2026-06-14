@@ -5,10 +5,10 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import tum.devoops.organizationservice.entity.Team;
+import tum.devoops.organizationservice.entity.TeamEntity;
 
-public interface TeamRepository extends JpaRepository<Team, UUID> {
+public interface TeamRepository extends JpaRepository<TeamEntity, UUID> {
 
     // SELECT * FROM organization.teams WHERE sport_name = ?
-    List<Team> findAllBySportName(String sportName);
+    List<TeamEntity> findAllBySportName(String sportName);
 }

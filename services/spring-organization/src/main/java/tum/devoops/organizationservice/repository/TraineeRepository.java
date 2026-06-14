@@ -5,15 +5,15 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import tum.devoops.organizationservice.entity.Trainee;
+import tum.devoops.organizationservice.entity.TraineeEntity;
 
-public interface TraineeRepository extends JpaRepository<Trainee, Trainee.Id> {
+public interface TraineeRepository extends JpaRepository<TraineeEntity, TraineeEntity.Id> {
 
     // SELECT * FROM organization.trainees WHERE team_id = ?
-    List<Trainee> findAllById_TeamId(UUID teamId);
+    List<TraineeEntity> findAllById_TeamId(UUID teamId);
 
     // SELECT * FROM organization.trainees WHERE member_id = ?
-    List<Trainee> findAllById_MemberId(UUID memberId);
+    List<TraineeEntity> findAllById_MemberId(UUID memberId);
 
     // DELETE FROM organization.trainees WHERE team_id = ?
     void deleteAllById_TeamId(UUID teamId);

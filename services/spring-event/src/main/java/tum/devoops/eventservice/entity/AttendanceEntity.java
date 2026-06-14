@@ -17,7 +17,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "event", name = "attendances")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class Attendance {
+public class AttendanceEntity {
 
     // Composite PK: (event_id, member_id).
     // event_id references event.event(id).
