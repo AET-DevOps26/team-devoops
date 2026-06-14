@@ -11,12 +11,14 @@
 #   * Removes TLS (no Let's Encrypt, no HTTPS, no 443) -- local has no public DNS
 #   * Strips the Host(...) requirement from every router so localhost works
 #   * Disables the HTTP -> HTTPS redirect so plain http://localhost works
+#   * Exposes the app database on localhost:5432 for direct DB client access
 #
 # Access locally:
 #     http://localhost/                       web client
 #     http://localhost/docs                   Swagger UI
 #     http://localhost/api/v1/<service>/...   APIs
 #     http://localhost:8080                   Traefik dashboard
+#     localhost:5432  (app_admin/app_admin_password, db: app_db)   PostgreSQL
 
 services:
   traefik:
@@ -25,6 +27,8 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.network=proxy"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
     ports: !override
       - "80:80"
@@ -36,7 +40,7 @@ services:
       - "traefik.http.routers.py-genai-helper.entrypoints=web"
       - "traefik.http.routers.py-genai-helper.rule=PathPrefix(`/api/v1/helper`)"
       - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
-      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix"
+      - "traefik.http.routers.py-genai-helper.middlewares=helper-stripprefix,forward-auth@file"
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
 
   organization-service:
@@ -47,7 +51,7 @@ services:
       - "traefik.http.routers.organization-service.entrypoints=web"
       - "traefik.http.routers.organization-service.rule=PathPrefix(`/api/v1/organization`)"
       - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
-      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix"
+      - "traefik.http.routers.organization-service.middlewares=organization-stripprefix,forward-auth@file"
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
 
   member-service:
@@ -58,7 +62,7 @@ services:
       - "traefik.http.routers.member-service.entrypoints=web"
       - "traefik.http.routers.member-service.rule=PathPrefix(`/api/v1/members`)"
       - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
-      - "traefik.http.routers.member-service.middlewares=member-stripprefix"
+      - "traefik.http.routers.member-service.middlewares=member-stripprefix,forward-auth@file"
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
 
   event-service:
@@ -69,7 +73,7 @@ services:
       - "traefik.http.routers.event-service.entrypoints=web"
       - "traefik.http.routers.event-service.rule=PathPrefix(`/api/v1/events`)"
       - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
-      - "traefik.http.routers.event-service.middlewares=event-stripprefix"
+      - "traefik.http.routers.event-service.middlewares=event-stripprefix,forward-auth@file"
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
 
   feedback-service:
@@ -80,7 +84,7 @@ services:
       - "traefik.http.routers.feedback-service.entrypoints=web"
       - "traefik.http.routers.feedback-service.rule=PathPrefix(`/api/v1/feedback`)"
       - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
-      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix"
+      - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix,forward-auth@file"
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
 
   finance-service:
@@ -91,7 +95,7 @@ services:
       - "traefik.http.routers.finance-service.entrypoints=web"
       - "traefik.http.routers.finance-service.rule=PathPrefix(`/api/v1/finance`)"
       - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
-      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix"
+      - "traefik.http.routers.finance-service.middlewares=finance-stripprefix,forward-auth@file"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
 
   letter-service:
@@ -102,7 +106,7 @@ services:
       - "traefik.http.routers.letter-service.entrypoints=web"
       - "traefik.http.routers.letter-service.rule=PathPrefix(`/api/v1/letters`)"
       - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
-      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix"
+      - "traefik.http.routers.letter-service.middlewares=letter-stripprefix,forward-auth@file"
       - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
 
   api-docs:
@@ -120,13 +124,26 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.web-client.entrypoints=web"
       - "traefik.http.routers.web-client.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.web-client.middlewares=forward-auth@file"
       - "traefik.http.services.web-client.loadbalancer.server.port=8080"
 
   keycloak:
     environment:
       KC_HOSTNAME: "http://localhost:8081/auth"
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.routers.keycloak.rule=PathPrefix(`/auth`)"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  app-database:
+    ports:
+      - "5432:5432"
 
   traefik-forward-auth:
+    restart: "no"
+    extra_hosts:
+      - "localhost:host-gateway"
     labels: !override
       - "traefik.enable=false"
     environment:
