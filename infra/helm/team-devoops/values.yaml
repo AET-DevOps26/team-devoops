@@ -232,6 +232,9 @@ services:
     health: /health
     stripPrefix: true
     envFromSecret: genai-env
+    env:
+      KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
+      KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
     resources:
       requests:
         cpu: 100m
