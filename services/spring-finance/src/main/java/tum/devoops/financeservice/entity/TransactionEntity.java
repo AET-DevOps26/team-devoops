@@ -16,7 +16,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "finance", name = "transactions")
 @Getter @Setter @NoArgsConstructor
-public class Transaction {
+public class TransactionEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -16,7 +16,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "member", name = "members")
 @Getter @Setter @NoArgsConstructor
-public class Member {
+public class MemberEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

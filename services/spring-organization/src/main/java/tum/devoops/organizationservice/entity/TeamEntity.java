@@ -19,7 +19,7 @@ import lombok.Setter;
 @Entity
 @Table(schema = "organization", name = "teams")
 @Getter @Setter @NoArgsConstructor
-public class Team {
+public class TeamEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -44,9 +44,9 @@ public class Team {
 
     @OneToMany
     @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)
-    private List<Trainer> trainers;
+    private List<TrainerEntity> trainers;
 
     @OneToMany
     @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)
-    private List<Trainee> trainees;
+    private List<TraineeEntity> trainees;
 }
