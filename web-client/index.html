@@ -12,8 +12,33 @@
         if (isDark) document.documentElement.classList.add('dark');
       })();
     </script>
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--background, #f7f7fa);
+      }
+      .dark #splash {
+        background: oklch(0.141 0.005 285.823);
+      }
+      #splash-spinner {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid oklch(0.768 0.233 130.85);
+        border-top-color: transparent;
+        animation: splash-spin 0.7s linear infinite;
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash"><div id="splash-spinner"></div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

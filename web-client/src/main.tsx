@@ -2,10 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
-import keycloak from '@/lib/keycloak'
 import { ThemeProvider } from '@/app/theme/ThemeProvider'
+import AuthenticatedApp from './AuthenticatedApp.tsx'
 import '@/index.css'
-import App from './App.tsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,19 +26,12 @@ const queryClient = new QueryClient({
   },
 })
 
-keycloak.init({ onLoad: 'login-required', pkceMethod: 'S256' }).then((authenticated) => {
-  if (!authenticated) {
-    keycloak.login()
-    return
-  }
-
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </ThemeProvider>
-    </StrictMode>,
-  )
-})
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthenticatedApp />
+      </QueryClientProvider>
+    </ThemeProvider>
+  </StrictMode>,
+)
