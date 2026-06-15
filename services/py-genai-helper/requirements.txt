@@ -54,6 +54,7 @@ pydantic-settings==2.14.1
 pydantic_core==2.46.4
 pypdf==5.6.0
 python-dotenv==1.2.2
+PyJWT[crypto]==2.10.1
 PyYAML==6.0.3
 regex==2026.5.9
 requests==2.34.0

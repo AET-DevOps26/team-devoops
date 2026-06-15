@@ -6,6 +6,9 @@ services:
     container_name: py-genai-helper
     env_file:
       - ../services/py-genai-helper/.env
+    environment:
+      - KEYCLOAK_ISSUER_URL=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
     expose:
       - 5000
     labels:

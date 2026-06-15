@@ -35,6 +35,9 @@ services:
       - "8080:8080"
 
   py-genai-helper:
+    environment:
+      - KEYCLOAK_ISSUER_URL=http://localhost:8081/auth/realms/devops
+      - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.py-genai-helper.entrypoints=web"
