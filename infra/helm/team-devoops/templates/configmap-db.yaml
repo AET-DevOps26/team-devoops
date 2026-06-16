@@ -1,12 +1,18 @@
 {{- if .Values.database.enabled }}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.db }}
+{{- $dbKey := $svc.dbUser }}
+{{- $dbUser := index $.Values.database.users $dbKey }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: db-config
+  name: db-config-{{ $name }}
   labels:
-    {{- include "team-devoops.labels" (dict "name" "db-config" "root" $) | nindent 4 }}
+    {{- include "team-devoops.labels" (dict "name" (printf "db-config-%s" $name) "root" $) | nindent 4 }}
 data:
-  SPRING_DATASOURCE_URL: jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}
-  SPRING_DATASOURCE_USERNAME: {{ .Values.database.user | quote }}
-  SPRING_JPA_HIBERNATE_DDL_AUTO: update
+  SPRING_DATASOURCE_URL: jdbc:postgresql://{{ $.Values.database.host }}:{{ $.Values.database.port }}/{{ $.Values.database.name }}
+  SPRING_DATASOURCE_USERNAME: {{ $dbUser.username | quote }}
+{{- end }}
+{{- end }}
 {{- end }}

@@ -16,7 +16,7 @@ vi.mock('@/App', () => ({
 
 vi.mock('@/lib/keycloak', () => ({
   KEYCLOAK_URL: 'http://keycloak.test',
-  createApiClient: vi.fn(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() })),
+  TOKEN_REFRESH_MIN_VALIDITY_SECONDS: 30,
   default: keycloakMock,
 }))
 
@@ -114,7 +114,7 @@ describe('AuthenticatedApp', () => {
     expect(keycloakMock.updateToken).toHaveBeenCalledWith(30)
   })
 
-  it('calls login() when token refresh fails on expiry', async () => {
+  it('does not call login() when token refresh fails on expiry', async () => {
     keycloakMock.init.mockResolvedValue(true)
     keycloakMock.updateToken.mockRejectedValue(new Error('session gone'))
 
@@ -125,7 +125,7 @@ describe('AuthenticatedApp', () => {
       await new Promise((r) => setTimeout(r, 0))
     })
 
-    expect(keycloakMock.login).toHaveBeenCalled()
+    expect(keycloakMock.login).not.toHaveBeenCalled()
   })
 
   // ---------------------------------------------------------------------------

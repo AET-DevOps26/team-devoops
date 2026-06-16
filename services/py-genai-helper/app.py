@@ -1,11 +1,13 @@
 from flask import Flask, request
 
+from auth import require_auth
 from service import generate_rag_response, hello
 
 app = Flask("genai-service")
 
 
 @app.route("/hello")
+@require_auth
 def hello_world():
     hello_message = hello()
     return f"<p>{hello_message}</p>"
@@ -17,6 +19,7 @@ def health():
 
 
 @app.route("/rag-response", methods=["POST"])
+@require_auth
 def rag_response():
     # Get the json of the object. force=True ignores the stated MimeType
     data = request.get_json(force=True) or {}

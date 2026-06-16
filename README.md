@@ -133,6 +133,8 @@ everything is reachable on plain HTTP:
 | <http://localhost/> | Web client |
 | <http://localhost/docs> | Swagger UI |
 | <http://localhost/api/v1/&lt;service&gt;/…> | APIs (organization, members, events, feedback, finance, letters, helper) |
+| <http://localhost/auth> | Keycloak (via Traefik) |
+| <http://localhost:8081/auth> | Keycloak (direct, for admin console) |
 | <http://localhost:8080> | Traefik dashboard |
 
 > **Do not run** `docker compose -f infra/docker-compose.yml up` locally — that
@@ -230,6 +232,27 @@ ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
 
 See [`infra/helm/README.md`](infra/helm/README.md) for the chart layout, required
 one-time secrets (`genai-env`, `ghcr-pull`), and manual deploy instructions.
+
+## Database
+
+All five Spring services share a single **PostgreSQL 15** instance (`app_db`) but each owns a dedicated schema and a least-privilege user:
+
+| Service | Schema | User |
+|---|---|---|
+| Organization | `organization` | `organization_user` |
+| Member | `member` | `member_user` |
+| Event | `event` | `event_user` |
+| Feedback | `feedback` | `feedback_user` |
+| Finance | `finance` | `finance_user` |
+
+Schemas and users are created at DB init time by [`infra/postgres/init-db.sh`](infra/postgres/init-db.sh). Each service runs its own **Flyway** migrations on startup:
+
+- `V1__create_tables.sql` — creates all tables for that schema
+- `V2__add_foreign_keys.sql` — adds cross-schema foreign keys (e.g. `event.events.creator_id → member.members.id`)
+
+Cross-schema `REFERENCES` privileges are granted via `ALTER DEFAULT PRIVILEGES` in `init-db.sh`, so foreign-key constraints across schemas work on fresh deploys without manual intervention.
+
+The letter service has no database (`spring.flyway.enabled=false`). The GenAI service uses file-based storage for RAG documents.
 
 ## Authentication (Keycloak)
 

@@ -4,7 +4,7 @@ import { GlobalErrorBoundary } from '@/app/ErrorBoundary'
 import App from '@/App'
 import { ErrorCard } from '@/components/ui/ErrorCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import keycloak, { KEYCLOAK_URL } from '@/lib/keycloak'
+import keycloak, { KEYCLOAK_URL, TOKEN_REFRESH_MIN_VALIDITY_SECONDS } from '@/lib/keycloak'
 import {
   AUTH_INIT_TIMEOUT_MS,
   classifyAuthError,
@@ -73,7 +73,7 @@ export default function AuthenticatedApp({ queryClient }: AuthenticatedAppProps)
     }
 
     keycloak.onTokenExpired = () => {
-      keycloak.updateToken(30).catch(() => keycloak.login())
+      keycloak.updateToken(TOKEN_REFRESH_MIN_VALIDITY_SECONDS).catch(() => undefined)
     }
 
     return () => {
