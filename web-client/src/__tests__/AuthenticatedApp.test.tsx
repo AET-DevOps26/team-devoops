@@ -17,6 +17,7 @@ vi.mock('@/App', () => ({
 vi.mock('@/lib/keycloak', () => ({
   KEYCLOAK_URL: 'http://keycloak.test',
   TOKEN_REFRESH_MIN_VALIDITY_SECONDS: 30,
+  createApiClient: vi.fn(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() })),
   default: keycloakMock,
 }))
 
