@@ -1,4 +1,4 @@
-package tum.devoops.memberservice;
+package tum.devoops.memberservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +13,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tum.devoops.memberservice.config.SecurityConfig;
-import tum.devoops.memberservice.controller.MemberController;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;

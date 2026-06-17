@@ -1,4 +1,4 @@
-package tum.devoops.memberservice;
+package tum.devoops.memberservice.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import tum.devoops.memberservice.config.SecurityConfig;
-import tum.devoops.memberservice.controller.HelloController;
 
 @WebMvcTest(HelloController.class)
 @Import(SecurityConfig.class)
