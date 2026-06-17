@@ -18,7 +18,7 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = {
         "spring.jpa.hibernate.ddl-auto=none"
 })
-class MemberServiceApplicationTests {
+class MemberServiceApplicationTest {
 
     @Test
     void contextLoads() {
