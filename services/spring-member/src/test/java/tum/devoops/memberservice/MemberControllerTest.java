@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -166,13 +167,13 @@ public class MemberControllerTest {
                 .andExpect(content().json(objectMapper.writeValueAsString(list)));
     }
 
-    // Test cases for getMemberByIdDetails() endpoint
+    // Test cases for getMemberById() endpoint
 
     // Verifies that a user with role "member" is allowed to retrieve a member by ID
     @Test
     @WithMockUser(roles = "member")
-    void getMemberDetailsByIdAllowedForMember() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdAllowedForMember() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -181,8 +182,8 @@ public class MemberControllerTest {
     // Verifies that a user with role "admin" is allowed to retrieve a member by ID
     @Test
     @WithMockUser(roles = "admin")
-    void getMemberDetailsByIdAllowedForAdmin() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdAllowedForAdmin() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -191,8 +192,8 @@ public class MemberControllerTest {
     // Verifies that a user with a role other than admin and member is not allowed to get a member by ID (403 forbidden)
     @Test
     @WithMockUser(roles = "guest")
-    void getMemberDetailsByIdForbiddenForWrongRole() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdForbiddenForWrongRole() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isForbidden());
@@ -201,8 +202,8 @@ public class MemberControllerTest {
     // Verifies that an anonymous user is not allowed to get a member by ID (401 unauthorized)
     @Test
     @WithAnonymousUser
-    void getMemberDetailsByIdUnauthorizedForAnonymous() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdUnauthorizedForAnonymous() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
@@ -211,8 +212,8 @@ public class MemberControllerTest {
     // Verifies that the content type of the response is application/json
     @Test
     @WithMockUser(roles = "member")
-    void getMemberDetailsByIdContentType() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdContentType() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk())
@@ -222,8 +223,8 @@ public class MemberControllerTest {
     // Verifies that the entire member is returned correctly
     @Test
     @WithMockUser(roles = "member")
-    void getMemberDetailsByIdReturnsCorrectMember() throws Exception {
-        when(memberService.getMemberDetailsById(member.getId())).thenReturn(Optional.of(member));
+    void getMemberByIdReturnsCorrectMember() throws Exception {
+        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(member));
 
         mockMvc.perform(get(String.format("/%s/details", member.getId())))
                 .andExpect(status().isOk())
@@ -233,7 +234,7 @@ public class MemberControllerTest {
     // Verifies that a 404 not found is returned, when no member for the given id is found
     @Test
     @WithMockUser(roles = "member")
-    void getMemberDetailsByIdReturnsNotFound() throws Exception {
+    void getMemberByIdReturnsNotFound() throws Exception {
         UUID randomId = UUID.randomUUID();
         when(memberService.getMemberById(randomId)).thenReturn(Optional.empty());
 
@@ -241,13 +242,13 @@ public class MemberControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // Test cases for getMemberById() endpoint
+    // Test cases for getMemberSummaryById() endpoint
 
     // Verifies that a user with role "member" is allowed to retrieve a member by ID
     @Test
     @WithMockUser(roles = "member")
-    void getMemberByIdAllowedForMember() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdAllowedForMember() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -256,8 +257,8 @@ public class MemberControllerTest {
     // Verifies that a user with role "admin" is allowed to retrieve a member by ID
     @Test
     @WithMockUser(roles = "admin")
-    void getMemberByIdAllowedForAdmin() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdAllowedForAdmin() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk());
@@ -266,8 +267,8 @@ public class MemberControllerTest {
     // Verifies that a user with a role other than admin and member is not allowed to get a member by ID (403 forbidden)
     @Test
     @WithMockUser(roles = "guest")
-    void getMemberByIdForbiddenForWrongRole() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdForbiddenForWrongRole() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isForbidden());
@@ -276,8 +277,8 @@ public class MemberControllerTest {
     // Verifies that an anonymous user is not allowed to get a member by ID (401 unauthorized)
     @Test
     @WithAnonymousUser
-    void getMemberByIdUnauthorizedForAnonymous() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdUnauthorizedForAnonymous() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
@@ -286,8 +287,8 @@ public class MemberControllerTest {
     // Verifies that the content type of the response is application/json
     @Test
     @WithMockUser(roles = "member")
-    void getMemberByIdContentType() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdContentType() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId()), UUID.randomUUID()))
                 .andExpect(status().isOk())
@@ -297,8 +298,8 @@ public class MemberControllerTest {
     // Verifies that the entire member is returned correctly
     @Test
     @WithMockUser(roles = "member")
-    void getMemberByIdReturnsCorrectMember() throws Exception {
-        when(memberService.getMemberById(member.getId())).thenReturn(Optional.of(memberSummary));
+    void getMemberSummaryByIdReturnsCorrectMember() throws Exception {
+        when(memberService.getMemberSummaryById(member.getId())).thenReturn(Optional.of(memberSummary));
 
         mockMvc.perform(get(String.format("/%s", member.getId())))
                 .andExpect(status().isOk())
@@ -308,7 +309,7 @@ public class MemberControllerTest {
     // Verifies that a 404 not found is returned, when no member for the given id is found
     @Test
     @WithMockUser(roles = "member")
-    void getMemberByIdReturnsNotFound() throws Exception {
+    void getMemberSummaryByIdReturnsNotFound() throws Exception {
         UUID randomId = UUID.randomUUID();
         when(memberService.getMemberById(randomId)).thenReturn(Optional.empty());
 
@@ -321,7 +322,7 @@ public class MemberControllerTest {
     // Verifies that a user with role "admin" can create a member
     @Test
     void createMemberAllowedForAdmin() throws Exception {
-        when(memberService.createMember(memberCreate, mockToken)).thenReturn(member);
+        when(memberService.createMember(memberCreate, mockToken)).thenReturn(Optional.of(member));
 
         mockMvc.perform(post("/")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -357,10 +358,10 @@ public class MemberControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // Verifies that 400 (bad request) is returned when service throws an error
+    // Verifies that 400 (bad request) is returned when cannot create the member
     @Test
     void createMemberServiceThrows() throws Exception {
-        when(memberService.createMember(memberCreate, mockToken)).thenThrow(new IllegalAccessException());
+        when(memberService.createMember(memberCreate, mockToken)).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -376,11 +377,14 @@ public class MemberControllerTest {
 
     // Verifies that a user with role "admin" is allowed to update a member
     @Test
-    @WithMockUser(roles = "admin")
     void updateMemberAllowedForAdmin() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.of(newMember));
 
         mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(newMember.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newMember))
                 )
@@ -406,7 +410,7 @@ public class MemberControllerTest {
     // Verifies that a user with role "member" is allowed to update himself
     @Test
     void updateMemberAllowedForUserSameId() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.of(newMember));
 
         mockMvc.perform(put(String.format("/%s", member.getId()))
                         .with(jwt()
@@ -461,11 +465,14 @@ public class MemberControllerTest {
 
     // Verifies that the content type of the response is application/json
     @Test
-    @WithMockUser(roles = "admin")
     void updateMemberContentType() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.of(newMember));
 
         mockMvc.perform(put(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newMember))
                 )
@@ -476,7 +483,7 @@ public class MemberControllerTest {
     // Verifies that the endpoint updates the member properly (200 ok)
     @Test
     void updateMemberCorrectUpdateForUserSameId() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.of(newMember));
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.of(newMember));
 
         mockMvc.perform(put(String.format("/%s", member.getId()))
                         .with(jwt()
@@ -492,11 +499,14 @@ public class MemberControllerTest {
 
     // Verify that a non-existing member cannot be updated by an admin
     @Test
-    @WithMockUser(roles = "admin")
     void updateMemberNotFoundNonExistingId() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.empty());
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.empty());
 
         mockMvc.perform(put(String.format("/%s", UUID.randomUUID()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(newMember.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newMember))
                 )
@@ -506,7 +516,7 @@ public class MemberControllerTest {
     // Verify that an non-existing member cannot updated by a user even if the id is the same as the user
     @Test
     void updateMemberNotFoundUserSameId() throws Exception {
-        when(memberService.updateMember(newMember)).thenReturn(Optional.empty());
+        when(memberService.updateMember(eq(newMember), anyString())).thenReturn(Optional.empty());
 
         mockMvc.perform(put(String.format("/%s", member.getId()))
                         .with(jwt()
@@ -523,11 +533,15 @@ public class MemberControllerTest {
 
     // Verifies that a user with role "admin" is allowed to delete a member (204 no content)
     @Test
-    @WithMockUser(roles = "admin")
     void deleteMemberAllowedForAdmin() throws Exception {
-        when(memberService.deleteMember(member.getId())).thenReturn(true);
+        when(memberService.deleteMember(eq(member.getId()), anyString())).thenReturn(true);
 
-        mockMvc.perform(delete(String.format("/%s", member.getId())))
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        )
+                )
                 .andExpect(status().isNoContent());
     }
 
@@ -548,13 +562,11 @@ public class MemberControllerTest {
     // Verifies that a user wit role "member" is forbidden to delete a member even though it is himself (401 forbidden)
     @Test
     void deleteMemberNotAllowedForUserSameId() throws Exception {
-        mockMvc.perform(put(String.format("/%s", member.getId()))
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
                         .with(jwt()
                                 .jwt(j -> j.subject(member.getId().toString()))
                                 .authorities(new SimpleGrantedAuthority("ROLE_member"))
                         )
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newMember))
                 )
                 .andExpect(status().isForbidden());
     }
@@ -575,7 +587,7 @@ public class MemberControllerTest {
     // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to delete a member that is himself (401 forbidden)
     @Test
     void deleteMemberNotAllowedForUndefinedRoleSameId() throws Exception {
-        mockMvc.perform(put(String.format("/%s", member.getId()))
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
                         .with(jwt()
                                 .jwt(j -> j.subject(member.getId().toString()))
                                 .authorities(new SimpleGrantedAuthority("ROLE_guest"))
@@ -592,13 +604,18 @@ public class MemberControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // Verify that a non-existing member cannot be delted by an admin
+    // Verify that a non-existing member cannot be deleted by an admin
     @Test
     @WithMockUser(roles = "admin")
     void deleteMemberNotFoundNonExistingId() throws Exception {
-        when(memberService.deleteMember(member.getId())).thenReturn(false);
+        when(memberService.deleteMember(eq(member.getId()), anyString())).thenReturn(false);
 
-        mockMvc.perform(put(String.format("/%s", member.getId())))
+        mockMvc.perform(delete(String.format("/%s", member.getId()))
+                        .with(jwt()
+                                .jwt(j -> j.subject(member.getId().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_admin"))
+                        )
+                )
                 .andExpect(status().isNotFound());
     }
 }

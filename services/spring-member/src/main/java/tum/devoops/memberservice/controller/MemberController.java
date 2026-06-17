@@ -12,6 +12,7 @@ import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;
 import tum.devoops.memberservice.service.MemberService;
 
+import javax.swing.text.html.Option;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
@@ -47,8 +48,8 @@ public class MemberController {
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/{id}")
-    public ResponseEntity<MemberSummary> getMemberById(@PathVariable UUID id) {
-        Optional<MemberSummary> memberOptional = memberService.getMemberById(id);
+    public ResponseEntity<MemberSummary> getMemberSummaryById(@PathVariable UUID id) {
+        Optional<MemberSummary> memberOptional = memberService.getMemberSummaryById(id);
 
         if (memberOptional.isPresent()) {
             MemberSummary member = memberOptional.get();
@@ -69,8 +70,8 @@ public class MemberController {
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/{id}/details")
-    public ResponseEntity<Member> getMemberDetailsById(@PathVariable UUID id) {
-        Optional<Member> memberOptional = memberService.getMemberDetailsById(id);
+    public ResponseEntity<Member> getMemberById(@PathVariable UUID id) {
+        Optional<Member> memberOptional = memberService.getMemberById(id);
 
         if (memberOptional.isPresent()) {
             Member member = memberOptional.get();
@@ -93,13 +94,13 @@ public class MemberController {
     @PreAuthorize("hasRole('admin')")
     @PostMapping("/")
     public ResponseEntity<Member> createMember(@RequestBody MemberCreate memberCreate, @AuthenticationPrincipal Jwt jwt) {
-        Member member;
-        try{
-            member = memberService.createMember(memberCreate, jwt.getTokenValue());
-        }
-        catch (Exception e){
+        Optional<Member> optionalMember = memberService.createMember(memberCreate, jwt.getTokenValue());
+
+        if (optionalMember.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+
+        Member member = optionalMember.get();
 
         return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
     }
@@ -116,15 +117,14 @@ public class MemberController {
     @PutMapping("/{id}")
     public ResponseEntity<Member> updateMember(@PathVariable UUID id, @RequestBody Member newMember, @AuthenticationPrincipal Jwt jwt) {
 
-        Optional<Member> newMemberOptional = memberService.updateMember(newMember);
+        Optional<Member> newMemberOptional = memberService.updateMember(newMember, jwt.getTokenValue());
 
-        if (newMemberOptional.isPresent()) {
-            newMember = newMemberOptional.get();
-            return ResponseEntity.ok(newMember);
-        }
-        else {
+        if (newMemberOptional.isEmpty()) {
             return  ResponseEntity.notFound().build();
         }
+
+        newMember = newMemberOptional.get();
+        return ResponseEntity.ok(newMember);
     }
 
     /**
@@ -136,10 +136,10 @@ public class MemberController {
      * @return Empty response and HTTP 204. If the member does not exist, return HTTP 404.
      */
     @PreAuthorize("hasRole('admin')")
-    @PutMapping("/{id}")
-    public ResponseEntity<Member> updateMember(@PathVariable UUID id) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Member> deleteMember(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
 
-        boolean isDeleted = memberService.deleteMember(id);
+        boolean isDeleted = memberService.deleteMember(id, jwt.getTokenValue());
 
         if (isDeleted) {
             return ResponseEntity.noContent().build();
