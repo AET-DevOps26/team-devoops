@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 
 import java.net.URI;
@@ -22,14 +23,14 @@ public class KeycloakService {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
     }
 
-    public UUID createUser(MemberCreate member, String bearerToken) throws IllegalAccessException {
+    public UUID createUser(MemberCreate member, String bearerToken) throws Exception {
         String username = member.getEmail() != null ? member.getEmail() : (member.getFirstName() + member.getLastName()).toLowerCase();
 
         UserRepresentation body = new UserRepresentation(username, member.getFirstName(), member.getLastName(), member.getEmail(), true);
 
         ResponseEntity<Void> response;
 
-        try{
+        try {
             response = restClient.post()
                     .uri("/admin/realms/{realm}/users", realm)
                     .header("Authorization", "Bearer " + bearerToken)
@@ -51,6 +52,39 @@ public class KeycloakService {
 
         String path = location.getPath();
         return UUID.fromString(path.substring(path.lastIndexOf("/") + 1));
+    }
+
+    public void updateUser(Member member, String bearerToken) throws HttpClientErrorException{
+
+        UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(), member.getLastName(), member.getEmail() ,true);
+
+        try {
+            restClient.put()
+                    .uri("/admin/realms/{realm}/users/{id}", realm, member.getId())
+                    .header("Authorization", "Bearer " + bearerToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.Conflict e) {
+            throw new IllegalArgumentException("A Keycloak user with this email already exists");
+        } catch (HttpClientErrorException.Forbidden e) {
+            throw new SecurityException("Insufficient permissions to update this Keycloak user");
+        }
+    }
+
+    public void deleteUser(UUID keycloakId, String bearerToken) throws HttpClientErrorException, SecurityException{
+        try {
+            restClient.delete()
+                    .uri("/admin/realms/{realm}/users/{id}", realm, keycloakId)
+                    .header("Authorization", "Bearer " + bearerToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new IllegalArgumentException("Keycloak user not found: " + keycloakId);
+        } catch (HttpClientErrorException.Forbidden e) {
+            throw new SecurityException("Insufficient permissions to delete a keycloak user");
+        }
     }
 
     private record UserRepresentation(
