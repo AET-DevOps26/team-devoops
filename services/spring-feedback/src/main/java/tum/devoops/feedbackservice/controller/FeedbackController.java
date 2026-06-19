@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,6 +19,7 @@ import tum.devoops.feedbackservice.model.FeedbackSummary;
 import tum.devoops.feedbackservice.service.FeedbackService;
 
 @RestController
+@PreAuthorize("hasAnyRole('admin', 'member')")
 public class FeedbackController implements FeedbackApi {
 
     private final FeedbackService feedbackService;

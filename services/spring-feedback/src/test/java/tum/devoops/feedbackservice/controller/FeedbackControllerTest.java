@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,6 +64,16 @@ class FeedbackControllerTest {
         return "{\"event\":\"" + eventId + "\",\"member\":\"" + memberId + "\",\"feedback\":\"" + text + "\"}";
     }
 
+    private static RequestPostProcessor memberJwt() {
+        return jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_member"));
+    }
+
+    private static RequestPostProcessor trainerJwt() {
+        return jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_trainer"));
+    }
+
     // ─── GET /feedback ────────────────────────────────────────────────────────
 
     @Test
@@ -76,7 +87,7 @@ class FeedbackControllerTest {
         when(feedbackService.getAllFeedback(REQUESTER_ID, false)).thenReturn(List.of(sampleSummary()));
 
         mockMvc.perform(get("/feedback")
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].event").exists())
@@ -111,7 +122,7 @@ class FeedbackControllerTest {
         when(feedbackService.createFeedback(any(), eq(REQUESTER_ID), eq(false))).thenReturn(sampleFeedback());
 
         mockMvc.perform(post("/feedback")
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(feedbackCreateJson(EVENT_ID, MEMBER_ID, "Great!")))
                 .andExpect(status().isCreated())
@@ -128,7 +139,7 @@ class FeedbackControllerTest {
                 .thenThrow(new ForbiddenException("Access denied"));
 
         mockMvc.perform(post("/feedback")
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(feedbackCreateJson(EVENT_ID, MEMBER_ID, "x")))
                 .andExpect(status().isForbidden())
@@ -141,7 +152,7 @@ class FeedbackControllerTest {
                 .thenThrow(new BadRequestException("Event not found"));
 
         mockMvc.perform(post("/feedback")
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(feedbackCreateJson(EVENT_ID, MEMBER_ID, "x")))
                 .andExpect(status().isBadRequest())
@@ -161,7 +172,7 @@ class FeedbackControllerTest {
         when(feedbackService.getFeedbackDetails(FEEDBACK_ID, REQUESTER_ID, false)).thenReturn(sampleFeedback());
 
         mockMvc.perform(get("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.feedback").exists());
@@ -173,7 +184,7 @@ class FeedbackControllerTest {
                 .thenThrow(new NotFoundException("Not found"));
 
         mockMvc.perform(get("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").exists());
     }
@@ -184,7 +195,7 @@ class FeedbackControllerTest {
                 .thenThrow(new ForbiddenException("Access denied"));
 
         mockMvc.perform(get("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").exists());
     }
@@ -205,7 +216,7 @@ class FeedbackControllerTest {
                 .thenReturn(sampleFeedback());
 
         mockMvc.perform(patch("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"feedback\":\"updated\"}"))
                 .andExpect(status().isOk())
@@ -218,7 +229,7 @@ class FeedbackControllerTest {
                 .thenThrow(new ForbiddenException("Access denied"));
 
         mockMvc.perform(patch("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"feedback\":\"x\"}"))
                 .andExpect(status().isForbidden())
@@ -231,7 +242,7 @@ class FeedbackControllerTest {
                 .thenThrow(new NotFoundException("Not found"));
 
         mockMvc.perform(patch("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
+                        .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"feedback\":\"x\"}"))
                 .andExpect(status().isNotFound())
@@ -249,7 +260,7 @@ class FeedbackControllerTest {
     @Test
     void deleteFeedbackWithAuthReturns204() throws Exception {
         mockMvc.perform(delete("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isNoContent());
     }
 
@@ -259,7 +270,7 @@ class FeedbackControllerTest {
                 .when(feedbackService).deleteFeedback(any(), any(), anyBoolean());
 
         mockMvc.perform(delete("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").exists());
     }
@@ -270,8 +281,49 @@ class FeedbackControllerTest {
                 .when(feedbackService).deleteFeedback(any(), any(), anyBoolean());
 
         mockMvc.perform(delete("/feedback/{id}", FEEDBACK_ID)
-                        .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString()))))
+                        .with(memberJwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    // ─── @PreAuthorize role checks ────────────────────────────────────────────
+
+    @Test
+    void getAllFeedbackWithWrongRoleReturns403() throws Exception {
+        mockMvc.perform(get("/feedback")
+                        .with(trainerJwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createFeedbackWithWrongRoleReturns403() throws Exception {
+        mockMvc.perform(post("/feedback")
+                        .with(trainerJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(feedbackCreateJson(EVENT_ID, MEMBER_ID, "x")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getFeedbackDetailsWithWrongRoleReturns403() throws Exception {
+        mockMvc.perform(get("/feedback/{id}", FEEDBACK_ID)
+                        .with(trainerJwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateFeedbackDetailsWithWrongRoleReturns403() throws Exception {
+        mockMvc.perform(patch("/feedback/{id}", FEEDBACK_ID)
+                        .with(trainerJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"feedback\":\"x\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteFeedbackWithWrongRoleReturns403() throws Exception {
+        mockMvc.perform(delete("/feedback/{id}", FEEDBACK_ID)
+                        .with(trainerJwt()))
+                .andExpect(status().isForbidden());
     }
 }
