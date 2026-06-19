@@ -2,11 +2,14 @@ package tum.devoops.memberservice.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import tum.devoops.memberservice.converter.MemberConverter;
+import tum.devoops.memberservice.entity.MemberEntity;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;
+import tum.devoops.memberservice.repository.MemberRepository;
 
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,46 +20,110 @@ public class MemberService {
     @Autowired
     KeycloakService keycloakService;
 
+    @Autowired
+    MemberRepository memberRepository;
+
     public List<MemberSummary> getAllMembers() {
-        return List.of();
+        List<MemberEntity> members = memberRepository.findAll();
+        List<MemberSummary> memberSummaries = new ArrayList<>();
+
+        for (MemberEntity memberEntity : members) {
+            memberSummaries.add(MemberConverter.convertMemberEntityToMemberSummary(memberEntity));
+        }
+
+        return memberSummaries;
     }
 
-    public Optional<MemberSummary> getMemberById(UUID id) {
-        return Optional.empty();
+    public Optional<MemberSummary> getMemberSummaryById(UUID id) {
+        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
+
+        if (optionalMemberEntity.isEmpty()) {
+            return Optional.empty();
+        }
+
+        MemberEntity memberEntity = optionalMemberEntity.get();
+        MemberSummary memberSummary = MemberConverter.convertMemberEntityToMemberSummary(memberEntity);
+
+        return Optional.of(memberSummary);
     }
 
-    public Optional<Member> getMemberDetailsById(UUID id) {
-        return Optional.empty();
+    public Optional<Member> getMemberById(UUID id) {
+        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
+
+        if (optionalMemberEntity.isEmpty()) {
+            return Optional.empty();
+        }
+
+        MemberEntity memberEntity = optionalMemberEntity.get();
+        Member member = MemberConverter.convertMemberEntityToMember(memberEntity);
+
+        return Optional.of(member);
     }
 
-    private Member createMemberFromDTO(MemberCreate memberCreate, UUID id) {
-        return new Member(
-                id,
-                memberCreate.getFirstName(),
-                memberCreate.getLastName(),
-                memberCreate.getEmail(),
-                memberCreate.getBirthday(),
-                memberCreate.getPhoneNumber(),
-                memberCreate.getAddress(),
-                LocalDate.now(),
-                memberCreate.getInformation()
-        );
+    public Optional<Member> createMember(MemberCreate memberCreate, String bearerToken) {
+        // If a member with this email already exists
+        if (memberRepository.findByEmail(memberCreate.getEmail()).isPresent()) {
+            return Optional.empty();
+        }
+
+        UUID id;
+        try {
+            id = keycloakService.createUser(memberCreate, bearerToken);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+
+        MemberEntity memberEntity = MemberConverter.convertMemberCreateToMemberEntity(memberCreate, id);
+        memberEntity = memberRepository.save(memberEntity);
+
+        Member member = MemberConverter.convertMemberEntityToMember(memberEntity);
+
+        return Optional.of(member);
     }
 
-    public Member createMember(MemberCreate memberCreate, String bearerToken) throws IllegalAccessException {
-        UUID id = keycloakService.createUser(memberCreate, bearerToken);
-        // TODO Store member in database
-        return createMemberFromDTO(memberCreate, id);
+    public Optional<Member> updateMember(Member member, String bearerToken) {
+
+        Optional<MemberEntity> memberEntityWithEmail = memberRepository.findByEmail(member.getEmail());
+
+        if (memberEntityWithEmail.isPresent()) {
+            // If a member other than the passed member has the email
+            if (!memberEntityWithEmail.get().getId().equals(member.getId())) {
+                return Optional.empty();
+            }
+        }
+
+        try {
+            keycloakService.updateUser(member, bearerToken);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+
+        MemberEntity memberEntity = MemberConverter.convertMemberToMemberEntity(member);
+        MemberEntity updatedMemberEntity = memberRepository.save(memberEntity);
+        Member updatedMember = MemberConverter.convertMemberEntityToMember(updatedMemberEntity);
+
+        return Optional.of(updatedMember);
     }
 
-    public Optional<Member> updateMember(Member member) {
-        // TODO Update email in keycloak
-        return Optional.empty();
-    }
+    public boolean deleteMember(UUID id, String bearerToken) {
 
-    public boolean deleteMember(UUID id) {
-        // TODO Additionally delete user in keycloak
-        return false;
+        try {
+            keycloakService.deleteUser(id, bearerToken);
+        }
+        catch (Exception e) {
+            return false;
+        }
+
+        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
+
+        if(optionalMemberEntity.isEmpty()) {
+            return false;
+        }
+
+        MemberEntity memberEntity = optionalMemberEntity.get();
+        memberRepository.delete(memberEntity);
+
+        return true;
     }
 
 }
