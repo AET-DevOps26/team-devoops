@@ -23,11 +23,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MemberController.class)
 @Import(SecurityConfig.class)
@@ -422,7 +427,8 @@ public class MemberControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a member that is not himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed
+    // to update a member that is not himself (401 forbidden)
     @Test
     void updateMemberNotAllowedForUndefinedRoleOtherId() throws Exception {
         UUID randomId = UUID.randomUUID();
@@ -437,7 +443,8 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to update a member that is himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed
+    // to update a member that is himself (401 forbidden)
     @Test
     void updateMemberNotAllowedForUndefinedRoleSameId() throws Exception {
         mockMvc.perform(put(String.format("/%s", member.getId()))
@@ -570,7 +577,8 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to delete a member that is not himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed
+    // to delete a member that is not himself (401 forbidden)
     @Test
     void deleteMemberNotAllowedForUndefinedRoleOtherId() throws Exception {
         UUID randomId = UUID.randomUUID();
@@ -583,7 +591,8 @@ public class MemberControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed to delete a member that is himself (401 forbidden)
+    // Verifies that a user with an undefined role other than "admin" and "member" is not allowed
+    // to delete a member that is himself (401 forbidden)
     @Test
     void deleteMemberNotAllowedForUndefinedRoleSameId() throws Exception {
         mockMvc.perform(delete(String.format("/%s", member.getId()))
