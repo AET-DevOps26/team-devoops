@@ -56,7 +56,8 @@ public class KeycloakService {
 
     public void updateUser(Member member, String bearerToken) throws HttpClientErrorException{
 
-        UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(), member.getLastName(), member.getEmail() ,true);
+        UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(),
+                member.getLastName(), member.getEmail(), true);
 
         try {
             restClient.put()

@@ -50,7 +50,7 @@ public class MemberEntity {
 
     @Override
     public boolean equals(Object o) {
-        if(!(o instanceof MemberEntity)) {
+        if (!(o instanceof MemberEntity)) {
             return false;
         }
         MemberEntity other = (MemberEntity) o;

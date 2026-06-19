@@ -5,14 +5,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberSummary;
 import tum.devoops.memberservice.service.MemberService;
 
-import javax.swing.text.html.Option;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
@@ -44,7 +48,8 @@ public class MemberController {
      * This endpoint searches the primary database and returns the corresponding member to an ID.
      * </p>
      * @param id The unique {@link UUID} of the member.
-     * @return ResponseEntity containing a MemberSummary and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
+     * @return ResponseEntity containing a MemberSummary and HTTP 200. If the member is not found an empty
+     *         ResponseEntity with HTTP 404 is returned.
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/{id}")
@@ -54,8 +59,7 @@ public class MemberController {
         if (memberOptional.isPresent()) {
             MemberSummary member = memberOptional.get();
             return ResponseEntity.ok(member);
-        }
-        else {
+        } else {
             return ResponseEntity.notFound().build();
         }
     }
@@ -66,7 +70,8 @@ public class MemberController {
      * This endpoint searches the primary database and returns the corresponding member to an ID.
      * </p>
      * @param id The unique {@link UUID} of the member.
-     * @return ResponseEntity containing a Member and HTTP 200. If the member is not found an empty ResponseEntity with HTTP 404 is returned.
+     * @return ResponseEntity containing a Member and HTTP 200. If the member is not found an empty
+     *         ResponseEntity with HTTP 404 is returned.
      */
     @PreAuthorize("hasAnyRole('member', 'admin')")
     @GetMapping("/{id}/details")
@@ -76,8 +81,7 @@ public class MemberController {
         if (memberOptional.isPresent()) {
             Member member = memberOptional.get();
             return ResponseEntity.ok(member);
-        }
-        else {
+        } else {
             return ResponseEntity.notFound().build();
         }
     }
@@ -143,8 +147,7 @@ public class MemberController {
 
         if (isDeleted) {
             return ResponseEntity.noContent().build();
-        }
-        else {
+        } else {
             return  ResponseEntity.notFound().build();
         }
     }

@@ -109,14 +109,13 @@ public class MemberService {
 
         try {
             keycloakService.deleteUser(id, bearerToken);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
 
         Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
 
-        if(optionalMemberEntity.isEmpty()) {
+        if (optionalMemberEntity.isEmpty()) {
             return false;
         }
 
