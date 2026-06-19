@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,24 +30,16 @@ import tum.devoops.feedbackservice.repository.TrainerRepository;
 @Service
 public class FeedbackService {
 
-    private final FeedbackRepository feedbackRepository;
-    private final EventRepository eventRepository;
-    private final MemberRepository memberRepository;
-    private final TrainerRepository trainerRepository;
-    private final TraineeRepository traineeRepository;
-
-    public FeedbackService(
-            FeedbackRepository feedbackRepository,
-            EventRepository eventRepository,
-            MemberRepository memberRepository,
-            TrainerRepository trainerRepository,
-            TraineeRepository traineeRepository) {
-        this.feedbackRepository = feedbackRepository;
-        this.eventRepository = eventRepository;
-        this.memberRepository = memberRepository;
-        this.trainerRepository = trainerRepository;
-        this.traineeRepository = traineeRepository;
-    }
+    @Autowired
+    private FeedbackRepository feedbackRepository;
+    @Autowired
+    private EventRepository eventRepository;
+    @Autowired
+    private MemberRepository memberRepository;
+    @Autowired
+    private TrainerRepository trainerRepository;
+    @Autowired
+    private TraineeRepository traineeRepository;
 
     @Transactional(readOnly = true)
     public List<FeedbackSummary> getAllFeedback(UUID requesterId, boolean isAdmin) {
