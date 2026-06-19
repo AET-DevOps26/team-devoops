@@ -47,4 +47,18 @@ public class MemberEntity {
 
     @Column(name = "information", nullable = true, columnDefinition = "TEXT")
     private String information;
+
+    @Override
+    public boolean equals(Object o) {
+        if(!(o instanceof MemberEntity)) {
+            return false;
+        }
+        MemberEntity other = (MemberEntity) o;
+
+        return id.equals(other.getId()) && firstName.equals(other.getFirstName())
+                && lastName.equals(other.getLastName()) && email.equals(other.getEmail())
+                && birthday.equals(other.getBirthday()) && phoneNumber.equals(other.getPhoneNumber())
+                && address.equals(other.getAddress()) && joiningDate.equals(other.getJoiningDate())
+                && information.equals(other.getInformation());
+    }
 }
