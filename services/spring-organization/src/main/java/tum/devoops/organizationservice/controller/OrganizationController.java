@@ -16,7 +16,9 @@ import tum.devoops.organizationservice.api.OrganizationApi;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.SportCreate;
 import tum.devoops.organizationservice.model.SportPartialUpdate;
+import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @RestController
 @PreAuthorize("hasAnyRole('admin', 'member')")
@@ -24,6 +26,19 @@ public class OrganizationController implements OrganizationApi {
 
     @Autowired
     private OrganizationSportService sportService;
+
+    @Autowired
+    private OrganizationTeamService teamService;
+
+    @Override
+    public ResponseEntity<List<Team>> getAllTeams() {
+        return ResponseEntity.ok(teamService.getAllTeams());
+    }
+
+    @Override
+    public ResponseEntity<Team> getTeam(UUID teamId) {
+        return ResponseEntity.ok(teamService.getTeam(teamId));
+    }
 
     @Override
     public ResponseEntity<List<Sport>> getAllSports() {
