@@ -34,6 +34,7 @@ import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=" +
@@ -49,6 +50,9 @@ class OrganizationControllerTest {
 
     @MockitoBean
     private OrganizationSportService sportService;
+
+    @MockitoBean
+    private OrganizationTeamService teamService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;

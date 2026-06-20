@@ -7,6 +7,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 /**
  * Context-load smoke test.
@@ -26,6 +27,9 @@ class OrganizationServiceApplicationTests {
 
     @MockitoBean
     private OrganizationSportService sportService;
+
+    @MockitoBean
+    private OrganizationTeamService teamService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
