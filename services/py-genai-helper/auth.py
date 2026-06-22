@@ -2,10 +2,7 @@ import os
 from functools import wraps
 
 import jwt
-import requests
 from flask import request
-
-_jwks_cache: dict | None = None
 
 KEYCLOAK_ISSUER_URL = os.environ.get(
     "KEYCLOAK_ISSUER_URL",
@@ -18,23 +15,12 @@ _JWKS_URL = os.environ.get(
     f"{KEYCLOAK_ISSUER_URL}/protocol/openid-connect/certs",
 )
 
-
-def _fetch_jwks() -> dict:
-    response = requests.get(_JWKS_URL, timeout=5)
-    response.raise_for_status()
-    return response.json()
+# PyJWKClient handles caching internally (cache_jwk_set=True, lifespan=300s).
+_jwks_client = jwt.PyJWKClient(_JWKS_URL, cache_jwk_set=True, lifespan=300)
 
 
 def _get_signing_key(token: str) -> jwt.PyJWK:
-    global _jwks_cache
-    if _jwks_cache is None:
-        _jwks_cache = _fetch_jwks()
-    try:
-        return jwt.PyJWKClient(_JWKS_URL, jwks_data=_jwks_cache).get_signing_key_from_jwt(token)
-    except jwt.exceptions.PyJWKClientError:
-        # Key not found in cache — Keycloak may have rotated keys; refresh once.
-        _jwks_cache = _fetch_jwks()
-        return jwt.PyJWKClient(_JWKS_URL, jwks_data=_jwks_cache).get_signing_key_from_jwt(token)
+    return _jwks_client.get_signing_key_from_jwt(token)
 
 
 def require_auth(f):
