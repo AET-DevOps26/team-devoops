@@ -16,7 +16,11 @@ import tum.devoops.organizationservice.api.OrganizationApi;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.SportCreate;
 import tum.devoops.organizationservice.model.SportPartialUpdate;
+import tum.devoops.organizationservice.model.Team;
+import tum.devoops.organizationservice.model.TeamCreate;
+import tum.devoops.organizationservice.model.TeamPartialUpdate;
 import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @RestController
 @PreAuthorize("hasAnyRole('admin', 'member')")
@@ -24,6 +28,44 @@ public class OrganizationController implements OrganizationApi {
 
     @Autowired
     private OrganizationSportService sportService;
+
+    @Autowired
+    private OrganizationTeamService teamService;
+
+    @Override
+    public ResponseEntity<List<Team>> getAllTeams() {
+        return ResponseEntity.ok(teamService.getAllTeams());
+    }
+
+    @Override
+    public ResponseEntity<Team> getTeam(UUID teamId) {
+        return ResponseEntity.ok(teamService.getTeam(teamId));
+    }
+
+    @Override
+    public ResponseEntity<Team> createTeam(TeamCreate teamCreate) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UUID requesterId = extractRequesterId(auth);
+        boolean isAdmin = extractIsAdmin(auth);
+        return ResponseEntity.status(HttpStatus.CREATED).body(teamService.createTeam(teamCreate, requesterId, isAdmin));
+    }
+
+    @Override
+    public ResponseEntity<Team> updateTeam(UUID teamId, TeamPartialUpdate teamPartialUpdate) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UUID requesterId = extractRequesterId(auth);
+        boolean isAdmin = extractIsAdmin(auth);
+        return ResponseEntity.ok(teamService.updateTeam(teamId, teamPartialUpdate, requesterId, isAdmin));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteTeam(UUID teamId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UUID requesterId = extractRequesterId(auth);
+        boolean isAdmin = extractIsAdmin(auth);
+        teamService.deleteTeam(teamId, requesterId, isAdmin);
+        return ResponseEntity.noContent().build();
+    }
 
     @Override
     public ResponseEntity<List<Sport>> getAllSports() {

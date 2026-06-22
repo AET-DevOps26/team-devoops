@@ -33,7 +33,9 @@ import tum.devoops.organizationservice.exception.ConflictException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
 import tum.devoops.organizationservice.model.Sport;
+import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=" +
@@ -51,10 +53,14 @@ class OrganizationControllerTest {
     private OrganizationSportService sportService;
 
     @MockitoBean
+    private OrganizationTeamService teamService;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     private static final UUID ADMIN_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID MEMBER_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    private static final UUID TEAM_ID = UUID.fromString("00000000-0000-0000-0000-000000000010");
 
     private RequestPostProcessor adminJwt() {
         return jwt()
@@ -70,6 +76,10 @@ class OrganizationControllerTest {
 
     private Sport sport(String name) {
         return new Sport(name, "A test sport", LocalDate.of(2024, 1, 1), List.of());
+    }
+
+    private Team team(UUID id, String sport) {
+        return new Team(id, "Team Alpha", null, LocalDate.of(2024, 1, 1), null, sport, List.of(), List.of());
     }
 
     // --- getAllSports ---
@@ -306,6 +316,276 @@ class OrganizationControllerTest {
     @Test
     void deleteSport_returns401_whenUnauthenticated() throws Exception {
         mockMvc.perform(delete("/organization/sports/soccer"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // --- getAllTeams ---
+
+    @Test
+    void getAllTeams_returns200_withList_whenMemberAuthenticated() throws Exception {
+        when(teamService.getAllTeams()).thenReturn(List.of(team(TEAM_ID, "soccer"), team(UUID.randomUUID(), "tennis")));
+
+        mockMvc.perform(get("/organization/teams").with(memberJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].name").value("Team Alpha"));
+    }
+
+    @Test
+    void getAllTeams_returns200_withEmptyList() throws Exception {
+        when(teamService.getAllTeams()).thenReturn(List.of());
+
+        mockMvc.perform(get("/organization/teams").with(memberJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getAllTeams_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/organization/teams"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAllTeams_returns403_whenNoOrgRole() throws Exception {
+        mockMvc.perform(get("/organization/teams")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_trainer"))))
+                .andExpect(status().isForbidden());
+    }
+
+    // --- getTeam ---
+
+    @Test
+    void getTeam_returns200_withTeam_whenFound() throws Exception {
+        when(teamService.getTeam(TEAM_ID)).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(get("/organization/teams/" + TEAM_ID).with(memberJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Team Alpha"));
+    }
+
+    @Test
+    void getTeam_returns404_whenNotFound() throws Exception {
+        when(teamService.getTeam(TEAM_ID)).thenThrow(new NotFoundException("Team not found: " + TEAM_ID));
+
+        mockMvc.perform(get("/organization/teams/" + TEAM_ID).with(memberJwt()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getTeam_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/organization/teams/" + TEAM_ID))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // --- createTeam ---
+
+    @Test
+    void createTeam_returns201_withTeam_whenAdmin() throws Exception {
+        when(teamService.createTeam(any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(post("/organization/teams")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Team Alpha"));
+    }
+
+    @Test
+    void createTeam_returns201_withTeam_whenMember() throws Exception {
+        when(teamService.createTeam(any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(post("/organization/teams")
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void createTeam_passesRequesterIdAndIsAdminTrue_fromAdminJwt() throws Exception {
+        when(teamService.createTeam(any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(post("/organization/teams")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isCreated());
+
+        verify(teamService).createTeam(any(), eq(ADMIN_ID), eq(true));
+    }
+
+    @Test
+    void createTeam_passesRequesterIdAndIsAdminFalse_fromMemberJwt() throws Exception {
+        when(teamService.createTeam(any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(post("/organization/teams")
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isCreated());
+
+        verify(teamService).createTeam(any(), eq(MEMBER_ID), eq(false));
+    }
+
+    @Test
+    void createTeam_returns400_whenNameMissing() throws Exception {
+        mockMvc.perform(post("/organization/teams")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sport\":\"soccer\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createTeam_returns403_whenServiceThrowsForbidden() throws Exception {
+        when(teamService.createTeam(any(), any(), anyBoolean()))
+                .thenThrow(new ForbiddenException("Access denied"));
+
+        mockMvc.perform(post("/organization/teams")
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createTeam_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(post("/organization/teams")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Team Alpha\",\"sport\":\"soccer\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // --- updateTeam ---
+
+    @Test
+    void updateTeam_returns200_whenAdmin() throws Exception {
+        when(teamService.updateTeam(eq(TEAM_ID), any(), eq(ADMIN_ID), eq(true)))
+                .thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Updated\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Team Alpha"));
+    }
+
+    @Test
+    void updateTeam_returns200_whenMember() throws Exception {
+        when(teamService.updateTeam(eq(TEAM_ID), any(), eq(MEMBER_ID), eq(false)))
+                .thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateTeam_passesRequesterIdAndIsAdminTrue_fromAdminJwt() throws Exception {
+        when(teamService.updateTeam(any(), any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        verify(teamService).updateTeam(eq(TEAM_ID), any(), eq(ADMIN_ID), eq(true));
+    }
+
+    @Test
+    void updateTeam_passesRequesterIdAndIsAdminFalse_fromMemberJwt() throws Exception {
+        when(teamService.updateTeam(any(), any(), any(), anyBoolean())).thenReturn(team(TEAM_ID, "soccer"));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        verify(teamService).updateTeam(eq(TEAM_ID), any(), eq(MEMBER_ID), eq(false));
+    }
+
+    @Test
+    void updateTeam_returns404_whenNotFound() throws Exception {
+        when(teamService.updateTeam(eq(TEAM_ID), any(), any(), anyBoolean()))
+                .thenThrow(new NotFoundException("Team not found: " + TEAM_ID));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateTeam_returns403_whenForbidden() throws Exception {
+        when(teamService.updateTeam(eq(TEAM_ID), any(), any(), anyBoolean()))
+                .thenThrow(new ForbiddenException("Access denied"));
+
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateTeam_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(patch("/organization/teams/" + TEAM_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // --- deleteTeam ---
+
+    @Test
+    void deleteTeam_returns204_whenAdmin() throws Exception {
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID).with(adminJwt()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteTeam_returns204_whenMember() throws Exception {
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID).with(memberJwt()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteTeam_passesRequesterIdAndIsAdminTrue_fromAdminJwt() throws Exception {
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID).with(adminJwt()))
+                .andExpect(status().isNoContent());
+
+        verify(teamService).deleteTeam(eq(TEAM_ID), eq(ADMIN_ID), eq(true));
+    }
+
+    @Test
+    void deleteTeam_returns404_whenNotFound() throws Exception {
+        doThrow(new NotFoundException("Team not found: " + TEAM_ID))
+                .when(teamService).deleteTeam(eq(TEAM_ID), any(), anyBoolean());
+
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID).with(memberJwt()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteTeam_returns403_whenForbidden() throws Exception {
+        doThrow(new ForbiddenException("Access denied"))
+                .when(teamService).deleteTeam(eq(TEAM_ID), any(), anyBoolean());
+
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID).with(memberJwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteTeam_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(delete("/organization/teams/" + TEAM_ID))
                 .andExpect(status().isUnauthorized());
     }
 }
