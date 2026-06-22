@@ -51,6 +51,7 @@ public interface FeedbackApi {
 
     /**
      * POST /feedback : Create feedback
+     * Creates a new feedback entry for a member. - Trainers: can create feedback for their trainees. - Admins: can create feedback for any member. 
      *
      * @param feedbackCreate The request body for creating new feedback. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -63,6 +64,7 @@ public interface FeedbackApi {
     @Operation(
         operationId = "createFeedback",
         summary = "Create feedback",
+        description = "Creates a new feedback entry for a member. - Trainers: can create feedback for their trainees. - Admins: can create feedback for any member. ",
         tags = { "feedback" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -139,6 +141,7 @@ public interface FeedbackApi {
 
     /**
      * DELETE /feedback/{feedback_id} : Delete feedback
+     * Deletes a specific feedback entry. - Creators: can delete feedback they submitted. - Admins: can delete any feedback. 
      *
      * @param feedbackId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -150,6 +153,7 @@ public interface FeedbackApi {
     @Operation(
         operationId = "deleteFeedback",
         summary = "Delete feedback",
+        description = "Deletes a specific feedback entry. - Creators: can delete feedback they submitted. - Admins: can delete any feedback. ",
         tags = { "feedback" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -210,6 +214,7 @@ public interface FeedbackApi {
 
     /**
      * GET /feedback : Get all feedback
+     * Returns a list of all feedback entries. - Creators: can see feedback they submitted. - Members: can see feedback about themselves. - Admins: can see all feedback. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -219,6 +224,7 @@ public interface FeedbackApi {
     @Operation(
         operationId = "getAllFeedback",
         summary = "Get all feedback",
+        description = "Returns a list of all feedback entries. - Creators: can see feedback they submitted. - Members: can see feedback about themselves. - Admins: can see all feedback. ",
         tags = { "feedback" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -278,6 +284,7 @@ public interface FeedbackApi {
 
     /**
      * GET /feedback/{feedback_id} : Get feedback details
+     * Returns the details of a specific feedback entry. - Creators: can view feedback they submitted. - Members: can view feedback about themselves. - Admins: can view any feedback. 
      *
      * @param feedbackId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -289,6 +296,7 @@ public interface FeedbackApi {
     @Operation(
         operationId = "getFeedbackDetails",
         summary = "Get feedback details",
+        description = "Returns the details of a specific feedback entry. - Creators: can view feedback they submitted. - Members: can view feedback about themselves. - Admins: can view any feedback. ",
         tags = { "feedback" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -356,6 +364,7 @@ public interface FeedbackApi {
 
     /**
      * PATCH /feedback/{feedback_id} : Update feedback details
+     * Partially updates a specific feedback entry. - Creators: can update feedback they submitted. - Admins: can update any feedback. 
      *
      * @param feedbackId  (required)
      * @param feedbackPartialUpdate The request body for partially updating a specific feedback. (required)
@@ -369,6 +378,7 @@ public interface FeedbackApi {
     @Operation(
         operationId = "updateFeedbackDetails",
         summary = "Update feedback details",
+        description = "Partially updates a specific feedback entry. - Creators: can update feedback they submitted. - Admins: can update any feedback. ",
         tags = { "feedback" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {

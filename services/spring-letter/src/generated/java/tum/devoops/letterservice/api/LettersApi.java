@@ -46,6 +46,7 @@ public interface LettersApi {
 
     /**
      * POST /letters/pdf : Get pdf
+     * Generates and returns a PDF document from the provided HTML template. - Trainers: can generate PDFs related to their team. - Directors: can generate PDFs related to their sport. - Admins: can generate PDFs related to any member. 
      *
      * @param body The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -57,6 +58,7 @@ public interface LettersApi {
     @Operation(
         operationId = "getPdf",
         summary = "Get pdf",
+        description = "Generates and returns a PDF document from the provided HTML template. - Trainers: can generate PDFs related to their team. - Directors: can generate PDFs related to their sport. - Admins: can generate PDFs related to any member. ",
         tags = { "letters" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -125,6 +127,7 @@ public interface LettersApi {
 
     /**
      * POST /letters/mail : Send mail
+     * Sends an email based on the provided HTML template. - Trainers: can send mail to members of their team. - Directors: can send mail to members related to their sport. - Admins: can send mail to any member. 
      *
      * @param body The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -136,6 +139,7 @@ public interface LettersApi {
     @Operation(
         operationId = "sendMail",
         summary = "Send mail",
+        description = "Sends an email based on the provided HTML template. - Trainers: can send mail to members of their team. - Directors: can send mail to members related to their sport. - Admins: can send mail to any member. ",
         tags = { "letters" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),

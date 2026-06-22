@@ -53,7 +53,7 @@ public interface OrganizationApi {
 
     /**
      * POST /organization/sports : Create sport
-     * Creates a new sport in the organization. Only admins are allowed to create new sports.
+     * Creates a new sport in the organization. - Admins: can create sports. 
      *
      * @param sportCreate The request body for creating a new sport. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -66,7 +66,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "createSport",
         summary = "Create sport",
-        description = "Creates a new sport in the organization. Only admins are allowed to create new sports.",
+        description = "Creates a new sport in the organization. - Admins: can create sports. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -143,6 +143,7 @@ public interface OrganizationApi {
 
     /**
      * POST /organization/teams : Create team
+     * Creates a new team in the organization. - Directors: can create teams for their own sport. - Admins: can create teams for any sport. 
      *
      * @param teamCreate The request body for creating a new team. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -155,6 +156,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "createTeam",
         summary = "Create team",
+        description = "Creates a new team in the organization. - Directors: can create teams for their own sport. - Admins: can create teams for any sport. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -231,6 +233,7 @@ public interface OrganizationApi {
 
     /**
      * DELETE /organization/sports/{sport_name} : Delete sport
+     * Deletes a sport from the organization. - Admins: can delete sports. 
      *
      * @param sportName  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -242,6 +245,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "deleteSport",
         summary = "Delete sport",
+        description = "Deletes a sport from the organization. - Admins: can delete sports. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -302,6 +306,7 @@ public interface OrganizationApi {
 
     /**
      * DELETE /organization/teams/{team_id} : Delete team
+     * Deletes a team from the organization. - Directors: can delete teams in their sport. - Admins: can delete any team. 
      *
      * @param teamId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -313,6 +318,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "deleteTeam",
         summary = "Delete team",
+        description = "Deletes a team from the organization. - Directors: can delete teams in their sport. - Admins: can delete any team. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -373,7 +379,7 @@ public interface OrganizationApi {
 
     /**
      * GET /organization/sports : Get all sports
-     * Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.
+     * Returns a list of all sports registered in the organization. - All authenticated users: can access this endpoint. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -383,7 +389,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "getAllSports",
         summary = "Get all sports",
-        description = "Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.",
+        description = "Returns a list of all sports registered in the organization. - All authenticated users: can access this endpoint. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -443,6 +449,7 @@ public interface OrganizationApi {
 
     /**
      * GET /organization/teams : Get all teams
+     * Returns a list of all teams in the organization. - All authenticated users: can access this endpoint. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -452,6 +459,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "getAllTeams",
         summary = "Get all teams",
+        description = "Returns a list of all teams in the organization. - All authenticated users: can access this endpoint. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -511,6 +519,7 @@ public interface OrganizationApi {
 
     /**
      * GET /organization/sports/{sport_name} : Get sport
+     * Returns the details of a specific sport. - All authenticated users: can access this endpoint. 
      *
      * @param sportName  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -522,6 +531,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "getSport",
         summary = "Get sport",
+        description = "Returns the details of a specific sport. - All authenticated users: can access this endpoint. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -589,6 +599,7 @@ public interface OrganizationApi {
 
     /**
      * GET /organization/teams/{team_id} : Get team
+     * Returns the details of a specific team. - All authenticated users: can access this endpoint. 
      *
      * @param teamId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -600,6 +611,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "getTeam",
         summary = "Get team",
+        description = "Returns the details of a specific team. - All authenticated users: can access this endpoint. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -667,6 +679,7 @@ public interface OrganizationApi {
 
     /**
      * PATCH /organization/sports/{sport_name} : Update sport
+     * Partially updates an existing sport&#39;s details. - Directors: can update all fields except directors. - Admins: can update all fields. 
      *
      * @param sportName  (required)
      * @param sportPartialUpdate The request body for partially updating a sport. (required)
@@ -680,6 +693,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "updateSport",
         summary = "Update sport",
+        description = "Partially updates an existing sport's details. - Directors: can update all fields except directors. - Admins: can update all fields. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -757,6 +771,7 @@ public interface OrganizationApi {
 
     /**
      * PATCH /organization/teams/{team_id} : Update team
+     * Partially updates a team&#39;s details. - Trainers: can update all fields except sport and trainers. - Directors: can update all fields except sport. - Admins: can update all fields. 
      *
      * @param teamId  (required)
      * @param teamPartialUpdate The request body for partially updating a team. (required)
@@ -770,6 +785,7 @@ public interface OrganizationApi {
     @Operation(
         operationId = "updateTeam",
         summary = "Update team",
+        description = "Partially updates a team's details. - Trainers: can update all fields except sport and trainers. - Directors: can update all fields except sport. - Admins: can update all fields. ",
         tags = { "organization" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {

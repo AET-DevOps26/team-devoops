@@ -51,6 +51,7 @@ public interface EventsApi {
 
     /**
      * POST /events : Create event
+     * Creates a new event. - Directors: can create events for their sport. - Trainers: can create events for their team. - Admins: can create any event. 
      *
      * @param eventCreate The request body for creating a new event. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -63,6 +64,7 @@ public interface EventsApi {
     @Operation(
         operationId = "createEvent",
         summary = "Create event",
+        description = "Creates a new event. - Directors: can create events for their sport. - Trainers: can create events for their team. - Admins: can create any event. ",
         tags = { "events" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -139,6 +141,7 @@ public interface EventsApi {
 
     /**
      * DELETE /events/{event_id} : Delete event
+     * Deletes a specific event. - Creators: can delete events they created. - Directors: can delete events linked to their sport. - Admins: can delete any event. 
      *
      * @param eventId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -150,6 +153,7 @@ public interface EventsApi {
     @Operation(
         operationId = "deleteEvent",
         summary = "Delete event",
+        description = "Deletes a specific event. - Creators: can delete events they created. - Directors: can delete events linked to their sport. - Admins: can delete any event. ",
         tags = { "events" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -210,6 +214,7 @@ public interface EventsApi {
 
     /**
      * GET /events : Get all events
+     * Returns a list of all events. - All authenticated users: can see events linked to their team or sport, or events where they are an attendee. - Creators: can see all events they created. - Admins: can see all events. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -219,6 +224,7 @@ public interface EventsApi {
     @Operation(
         operationId = "getAllEvents",
         summary = "Get all events",
+        description = "Returns a list of all events. - All authenticated users: can see events linked to their team or sport, or events where they are an attendee. - Creators: can see all events they created. - Admins: can see all events. ",
         tags = { "events" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -278,6 +284,7 @@ public interface EventsApi {
 
     /**
      * GET /events/{event_id} : Get event details
+     * Returns the details of a specific event. - All authenticated users: can access events linked to their team or sport, or events where they are an attendee. - Creators: can view events they created. - Admins: can view any event. 
      *
      * @param eventId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -289,6 +296,7 @@ public interface EventsApi {
     @Operation(
         operationId = "getEventDetails",
         summary = "Get event details",
+        description = "Returns the details of a specific event. - All authenticated users: can access events linked to their team or sport, or events where they are an attendee. - Creators: can view events they created. - Admins: can view any event. ",
         tags = { "events" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -356,6 +364,7 @@ public interface EventsApi {
 
     /**
      * PATCH /events/{event_id} : Update event details
+     * Partially updates the details of a specific event. - Creators: can update events they created. - Directors: can update events linked to their sport. - Admins: can update any event. 
      *
      * @param eventId  (required)
      * @param eventPartialUpdate The request body for partially updating an event. (required)
@@ -369,6 +378,7 @@ public interface EventsApi {
     @Operation(
         operationId = "updateEventDetails",
         summary = "Update event details",
+        description = "Partially updates the details of a specific event. - Creators: can update events they created. - Directors: can update events linked to their sport. - Admins: can update any event. ",
         tags = { "events" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
