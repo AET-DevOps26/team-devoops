@@ -13,13 +13,15 @@ export interface paths {
         };
         /**
          * Get all sports
-         * @description Returns a list of all sports registered in the organization. If the caller is not an admin, only sports that the caller is a member of will be returned.
+         * @description Returns a list of all sports registered in the organization.
+         *     - All authenticated users: can access this endpoint.
          */
         get: operations["getAllSports"];
         put?: never;
         /**
          * Create sport
-         * @description Creates a new sport in the organization. Only admins are allowed to create new sports.
+         * @description Creates a new sport in the organization.
+         *     - Admins: can create sports.
          */
         post: operations["createSport"];
         delete?: never;
@@ -35,15 +37,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get sport */
+        /**
+         * Get sport
+         * @description Returns the details of a specific sport.
+         *     - All authenticated users: can access this endpoint.
+         */
         get: operations["getSport"];
         put?: never;
         post?: never;
-        /** Delete sport */
+        /**
+         * Delete sport
+         * @description Deletes a sport from the organization.
+         *     - Admins: can delete sports.
+         */
         delete: operations["deleteSport"];
         options?: never;
         head?: never;
-        /** Update sport */
+        /**
+         * Update sport
+         * @description Partially updates an existing sport's details.
+         *     - Directors: can update all fields except directors.
+         *     - Admins: can update all fields.
+         */
         patch: operations["updateSport"];
         trace?: never;
     };
@@ -54,10 +69,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all teams */
+        /**
+         * Get all teams
+         * @description Returns a list of all teams in the organization.
+         *     - All authenticated users: can access this endpoint.
+         */
         get: operations["getAllTeams"];
         put?: never;
-        /** Create team */
+        /**
+         * Create team
+         * @description Creates a new team in the organization.
+         *     - Directors: can create teams for their own sport.
+         *     - Admins: can create teams for any sport.
+         */
         post: operations["createTeam"];
         delete?: never;
         options?: never;
@@ -72,15 +96,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get team */
+        /**
+         * Get team
+         * @description Returns the details of a specific team.
+         *     - All authenticated users: can access this endpoint.
+         */
         get: operations["getTeam"];
         put?: never;
         post?: never;
-        /** Delete team */
+        /**
+         * Delete team
+         * @description Deletes a team from the organization.
+         *     - Directors: can delete teams in their sport.
+         *     - Admins: can delete any team.
+         */
         delete: operations["deleteTeam"];
         options?: never;
         head?: never;
-        /** Update team */
+        /**
+         * Update team
+         * @description Partially updates a team's details.
+         *     - Trainers: can update all fields except sport and trainers.
+         *     - Directors: can update all fields except sport.
+         *     - Admins: can update all fields.
+         */
         patch: operations["updateTeam"];
         trace?: never;
     };
@@ -91,10 +130,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all members */
+        /**
+         * Get all members
+         * @description Returns a list of all members in the organization.
+         *     - All authenticated users: can access this endpoint.
+         */
         get: operations["getAllMembers"];
         put?: never;
-        /** Create member */
+        /**
+         * Create member
+         * @description Creates a new member in the organization. Includes a password field for setting initial credentials.
+         *     - Admins: can create members.
+         */
         post: operations["createMember"];
         delete?: never;
         options?: never;
@@ -109,15 +156,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get member details */
+        /**
+         * Get member details
+         * @description Returns the full details of a specific member.
+         *     - Members themselves: can view their own details.
+         *     - Team members: can view details of others in the same team.
+         *     - Trainers: can view details of members in their team.
+         *     - Directors: can view details of members in their sport.
+         *     - Admins: can view any member's details.
+         */
         get: operations["getMemberDetails"];
         put?: never;
         post?: never;
-        /** Delete member */
+        /**
+         * Delete member
+         * @description Deletes a member from the organization.
+         *     - Admins: can delete members.
+         */
         delete: operations["deleteMember"];
         options?: never;
         head?: never;
-        /** Update member details */
+        /**
+         * Update member details
+         * @description Partially updates the details of a specific member.
+         *     - Members themselves: can update their own details.
+         *     - Admins: can update any member's details.
+         */
         patch: operations["updateMemberDetails"];
         trace?: never;
     };
@@ -128,10 +192,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all events */
+        /**
+         * Get all events
+         * @description Returns a list of all events.
+         *     - All authenticated users: can see events linked to their team or sport, or events where they are an attendee.
+         *     - Creators: can see all events they created.
+         *     - Admins: can see all events.
+         */
         get: operations["getAllEvents"];
         put?: never;
-        /** Create event */
+        /**
+         * Create event
+         * @description Creates a new event.
+         *     - Directors: can create events for their sport.
+         *     - Trainers: can create events for their team.
+         *     - Admins: can create any event.
+         */
         post: operations["createEvent"];
         delete?: never;
         options?: never;
@@ -146,15 +222,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get event details */
+        /**
+         * Get event details
+         * @description Returns the details of a specific event.
+         *     - All authenticated users: can access events linked to their team or sport, or events where they are an attendee.
+         *     - Creators: can view events they created.
+         *     - Admins: can view any event.
+         */
         get: operations["getEventDetails"];
         put?: never;
         post?: never;
-        /** Delete event */
+        /**
+         * Delete event
+         * @description Deletes a specific event.
+         *     - Creators: can delete events they created.
+         *     - Directors: can delete events linked to their sport.
+         *     - Admins: can delete any event.
+         */
         delete: operations["deleteEvent"];
         options?: never;
         head?: never;
-        /** Update event details */
+        /**
+         * Update event details
+         * @description Partially updates the details of a specific event.
+         *     - Creators: can update events they created.
+         *     - Directors: can update events linked to their sport.
+         *     - Admins: can update any event.
+         */
         patch: operations["updateEventDetails"];
         trace?: never;
     };
@@ -165,10 +259,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all feedback */
+        /**
+         * Get all feedback
+         * @description Returns a list of all feedback entries.
+         *     - Creators: can see feedback they submitted.
+         *     - Members: can see feedback about themselves.
+         *     - Admins: can see all feedback.
+         */
         get: operations["getAllFeedback"];
         put?: never;
-        /** Create feedback */
+        /**
+         * Create feedback
+         * @description Creates a new feedback entry for a member.
+         *     - Trainers: can create feedback for their trainees.
+         *     - Admins: can create feedback for any member.
+         */
         post: operations["createFeedback"];
         delete?: never;
         options?: never;
@@ -183,15 +288,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get feedback details */
+        /**
+         * Get feedback details
+         * @description Returns the details of a specific feedback entry.
+         *     - Creators: can view feedback they submitted.
+         *     - Members: can view feedback about themselves.
+         *     - Admins: can view any feedback.
+         */
         get: operations["getFeedbackDetails"];
         put?: never;
         post?: never;
-        /** Delete feedback */
+        /**
+         * Delete feedback
+         * @description Deletes a specific feedback entry.
+         *     - Creators: can delete feedback they submitted.
+         *     - Admins: can delete any feedback.
+         */
         delete: operations["deleteFeedback"];
         options?: never;
         head?: never;
-        /** Update feedback details */
+        /**
+         * Update feedback details
+         * @description Partially updates a specific feedback entry.
+         *     - Creators: can update feedback they submitted.
+         *     - Admins: can update any feedback.
+         */
         patch: operations["updateFeedbackDetails"];
         trace?: never;
     };
@@ -202,7 +323,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all balances */
+        /**
+         * Get all balances
+         * @description Returns a list of all member balances.
+         *     - Directors: can view balances of members in their sport.
+         *     - Admins: can view all balances.
+         */
         get: operations["getAllBalances"];
         put?: never;
         post?: never;
@@ -219,7 +345,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get member balance */
+        /**
+         * Get member balance
+         * @description Returns the balance of a specific member.
+         *     - Members themselves: can view their own balance.
+         *     - Directors: can view balances of members in their sport.
+         *     - Admins: can view any member's balance.
+         */
         get: operations["getMemberBalance"];
         put?: never;
         post?: never;
@@ -236,10 +368,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all transactions */
+        /**
+         * Get all transactions
+         * @description Returns a list of all transactions. Users only see transactions where they are the member or the creator.
+         *     - Members: can see transactions they are part of.
+         *     - Creators: can see transactions they created.
+         *     - Directors: can see transactions for members in their sport.
+         *     - Admins: can see all transactions.
+         */
         get: operations["getAllTransactions"];
         put?: never;
-        /** Create transaction */
+        /**
+         * Create transaction
+         * @description Creates a new financial transaction for a member.
+         *     - Directors: can create transactions for members in their sport.
+         *     - Admins: can create transactions for any member.
+         */
         post: operations["createTransaction"];
         delete?: never;
         options?: never;
@@ -254,15 +398,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get transaction */
+        /**
+         * Get transaction
+         * @description Returns the details of a specific transaction.
+         *     - Members: can view transactions they are part of.
+         *     - Creators: can view transactions they created.
+         *     - Directors: can view transactions for members in their sport.
+         *     - Admins: can view any transaction.
+         */
         get: operations["getTransaction"];
         put?: never;
         post?: never;
-        /** Delete transaction */
+        /**
+         * Delete transaction
+         * @description Deletes a specific transaction.
+         *     - Creators: can delete transactions they created.
+         *     - Admins: can delete any transaction.
+         */
         delete: operations["deleteTransaction"];
         options?: never;
         head?: never;
-        /** Update transaction */
+        /**
+         * Update transaction
+         * @description Partially updates a specific transaction. The member field can only be changed by admins.
+         *     - Creators: can update transactions they created (except the member field).
+         *     - Admins: can update any transaction including the member field.
+         */
         patch: operations["updateTransaction"];
         trace?: never;
     };
@@ -275,7 +436,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Send mail */
+        /**
+         * Send mail
+         * @description Sends an email based on the provided HTML template.
+         *     - Trainers: can send mail to members of their team.
+         *     - Directors: can send mail to members related to their sport.
+         *     - Admins: can send mail to any member.
+         */
         post: operations["sendMail"];
         delete?: never;
         options?: never;
@@ -292,7 +459,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get pdf */
+        /**
+         * Get pdf
+         * @description Generates and returns a PDF document from the provided HTML template.
+         *     - Trainers: can generate PDFs related to their team.
+         *     - Directors: can generate PDFs related to their sport.
+         *     - Admins: can generate PDFs related to any member.
+         */
         post: operations["getPdf"];
         delete?: never;
         options?: never;
@@ -307,7 +480,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Generate report */
+        /**
+         * Generate report
+         * @description Generates an AI-based report for a member. Members can only generate reports for themselves.
+         *     - All authenticated users: can generate a report for themselves.
+         *     - Trainers: can generate reports for members of their team.
+         *     - Admin: can generate a report for any member.
+         */
         get: operations["generateReport"];
         put?: never;
         post?: never;
@@ -418,6 +597,8 @@ export interface components {
             first_name: string;
             last_name: string;
             email: string;
+            /** Format: password */
+            password: string;
             /** Format: date */
             birthday?: string;
             phone_number?: string;

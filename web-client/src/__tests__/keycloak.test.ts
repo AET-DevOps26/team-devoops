@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { InternalAxiosRequestConfig } from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
 // Shared mock state — must be declared before vi.mock so the factory can close over it.
 const mock = {
   token: 'mock-token' as string | undefined,
+  tokenParsed: { exp: Math.floor(Date.now() / 1000) + 10 } as { exp?: number } | undefined,
   updateToken: vi.fn<(n: number) => Promise<boolean>>(),
   login: vi.fn<() => Promise<void>>(),
 }
@@ -14,7 +15,7 @@ vi.mock('keycloak-js', () => ({
   default: vi.fn(() => mock),
 }))
 
-const { createApiClient } = await import('@/lib/keycloak')
+const { createApiClient, resetKeycloakRefreshStateForTests } = await import('@/lib/keycloak')
 
 /** Minimal axios adapter that captures the final request config. */
 function captureAdapter(captured: { config?: InternalAxiosRequestConfig }) {
@@ -24,10 +25,22 @@ function captureAdapter(captured: { config?: InternalAxiosRequestConfig }) {
   }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe('createApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetKeycloakRefreshStateForTests()
     mock.token = 'mock-token'
+    mock.tokenParsed = { exp: Math.floor(Date.now() / 1000) + 10 }
     mock.updateToken.mockResolvedValue(true)
     mock.login.mockResolvedValue(undefined)
   })
@@ -42,6 +55,34 @@ describe('createApiClient', () => {
     expect(mock.updateToken).toHaveBeenCalledWith(30)
   })
 
+  it('skips updateToken() when the token is not close to expiring', async () => {
+    mock.tokenParsed = { exp: Math.floor(Date.now() / 1000) + 120 }
+    const client = createApiClient('/api/test')
+    const captured: { config?: InternalAxiosRequestConfig } = {}
+    client.defaults.adapter = captureAdapter(captured)
+
+    await client.get('/something')
+
+    expect(mock.updateToken).not.toHaveBeenCalled()
+  })
+
+  it('deduplicates concurrent refreshes for near-expiry requests', async () => {
+    const refresh = deferred<boolean>()
+    mock.updateToken.mockReturnValue(refresh.promise)
+    const client = createApiClient('/api/test')
+    client.defaults.adapter = captureAdapter({})
+
+    const firstRequest = client.get('/first')
+    const secondRequest = client.get('/second')
+    await Promise.resolve()
+
+    expect(mock.updateToken).toHaveBeenCalledTimes(1)
+
+    refresh.resolve(true)
+
+    await Promise.all([firstRequest, secondRequest])
+  })
+
   it('sets Authorization: Bearer header when token is present', async () => {
     const client = createApiClient('/api/test')
     const captured: { config?: InternalAxiosRequestConfig } = {}
@@ -52,7 +93,7 @@ describe('createApiClient', () => {
     expect(captured.config?.headers?.Authorization).toBe('Bearer mock-token')
   })
 
-  it('calls login() when updateToken rejects', async () => {
+  it('does not call login() when updateToken rejects', async () => {
     mock.updateToken.mockRejectedValue(new Error('session expired'))
     const client = createApiClient('/api/test')
     const captured: { config?: InternalAxiosRequestConfig } = {}
@@ -60,7 +101,7 @@ describe('createApiClient', () => {
 
     await client.get('/something')
 
-    expect(mock.login).toHaveBeenCalled()
+    expect(mock.login).not.toHaveBeenCalled()
   })
 
   it('does not set Authorization header when token is undefined', async () => {
@@ -72,5 +113,21 @@ describe('createApiClient', () => {
     await client.get('/something')
 
     expect(captured.config?.headers?.Authorization).toBeUndefined()
+  })
+
+  it('calls login() when the API responds with 401', async () => {
+    const client = createApiClient('/api/test')
+    client.defaults.adapter = async (config) => {
+      const error = new Error('Unauthorized') as AxiosError
+      error.config = config
+      error.response = { data: {}, status: 401, statusText: 'Unauthorized', headers: {}, config }
+      throw error
+    }
+
+    await expect(client.get('/something')).rejects.toMatchObject({
+      response: { status: 401 },
+    })
+
+    expect(mock.login).toHaveBeenCalledTimes(1)
   })
 })

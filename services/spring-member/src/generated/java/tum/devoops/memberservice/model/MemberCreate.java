@@ -30,6 +30,8 @@ public class MemberCreate {
 
   private String email;
 
+  private String password;
+
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
   private @Nullable LocalDate birthday;
 
@@ -46,10 +48,11 @@ public class MemberCreate {
   /**
    * Constructor with only required parameters
    */
-  public MemberCreate(String firstName, String lastName, String email) {
+  public MemberCreate(String firstName, String lastName, String email, String password) {
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
+    this.password = password;
   }
 
   public MemberCreate firstName(String firstName) {
@@ -110,6 +113,26 @@ public class MemberCreate {
 
   public void setEmail(String email) {
     this.email = email;
+  }
+
+  public MemberCreate password(String password) {
+    this.password = password;
+    return this;
+  }
+
+  /**
+   * Get password
+   * @return password
+   */
+  @NotNull 
+  @Schema(name = "password", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("password")
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
   }
 
   public MemberCreate birthday(@Nullable LocalDate birthday) {
@@ -204,6 +227,7 @@ public class MemberCreate {
     return Objects.equals(this.firstName, memberCreate.firstName) &&
         Objects.equals(this.lastName, memberCreate.lastName) &&
         Objects.equals(this.email, memberCreate.email) &&
+        Objects.equals(this.password, memberCreate.password) &&
         Objects.equals(this.birthday, memberCreate.birthday) &&
         Objects.equals(this.phoneNumber, memberCreate.phoneNumber) &&
         Objects.equals(this.address, memberCreate.address) &&
@@ -212,7 +236,7 @@ public class MemberCreate {
 
   @Override
   public int hashCode() {
-    return Objects.hash(firstName, lastName, email, birthday, phoneNumber, address, information);
+    return Objects.hash(firstName, lastName, email, password, birthday, phoneNumber, address, information);
   }
 
   @Override
@@ -222,6 +246,7 @@ public class MemberCreate {
     sb.append("    firstName: ").append(toIndentedString(firstName)).append("\n");
     sb.append("    lastName: ").append(toIndentedString(lastName)).append("\n");
     sb.append("    email: ").append(toIndentedString(email)).append("\n");
+    sb.append("    password: ").append("*").append("\n");
     sb.append("    birthday: ").append(toIndentedString(birthday)).append("\n");
     sb.append("    phoneNumber: ").append(toIndentedString(phoneNumber)).append("\n");
     sb.append("    address: ").append(toIndentedString(address)).append("\n");

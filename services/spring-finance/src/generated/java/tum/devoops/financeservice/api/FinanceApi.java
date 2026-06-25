@@ -51,6 +51,7 @@ public interface FinanceApi {
 
     /**
      * POST /finance/transactions : Create transaction
+     * Creates a new financial transaction for a member. - Directors: can create transactions for members in their sport. - Admins: can create transactions for any member. 
      *
      * @param transactionCreate The request body for creating a new transaction. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -63,6 +64,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "createTransaction",
         summary = "Create transaction",
+        description = "Creates a new financial transaction for a member. - Directors: can create transactions for members in their sport. - Admins: can create transactions for any member. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -139,6 +141,7 @@ public interface FinanceApi {
 
     /**
      * DELETE /finance/transactions/{transaction_id} : Delete transaction
+     * Deletes a specific transaction. - Creators: can delete transactions they created. - Admins: can delete any transaction. 
      *
      * @param transactionId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -150,6 +153,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "deleteTransaction",
         summary = "Delete transaction",
+        description = "Deletes a specific transaction. - Creators: can delete transactions they created. - Admins: can delete any transaction. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -210,6 +214,7 @@ public interface FinanceApi {
 
     /**
      * GET /finance/balances : Get all balances
+     * Returns a list of all member balances. - Directors: can view balances of members in their sport. - Admins: can view all balances. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -219,6 +224,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "getAllBalances",
         summary = "Get all balances",
+        description = "Returns a list of all member balances. - Directors: can view balances of members in their sport. - Admins: can view all balances. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -278,6 +284,7 @@ public interface FinanceApi {
 
     /**
      * GET /finance/transactions : Get all transactions
+     * Returns a list of all transactions. Users only see transactions where they are the member or the creator. - Members: can see transactions they are part of. - Creators: can see transactions they created. - Directors: can see transactions for members in their sport. - Admins: can see all transactions. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -287,6 +294,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "getAllTransactions",
         summary = "Get all transactions",
+        description = "Returns a list of all transactions. Users only see transactions where they are the member or the creator. - Members: can see transactions they are part of. - Creators: can see transactions they created. - Directors: can see transactions for members in their sport. - Admins: can see all transactions. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -346,6 +354,7 @@ public interface FinanceApi {
 
     /**
      * GET /finance/balances/{member_id} : Get member balance
+     * Returns the balance of a specific member. - Members themselves: can view their own balance. - Directors: can view balances of members in their sport. - Admins: can view any member&#39;s balance. 
      *
      * @param memberId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -357,6 +366,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "getMemberBalance",
         summary = "Get member balance",
+        description = "Returns the balance of a specific member. - Members themselves: can view their own balance. - Directors: can view balances of members in their sport. - Admins: can view any member's balance. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -424,6 +434,7 @@ public interface FinanceApi {
 
     /**
      * GET /finance/transactions/{transaction_id} : Get transaction
+     * Returns the details of a specific transaction. - Members: can view transactions they are part of. - Creators: can view transactions they created. - Directors: can view transactions for members in their sport. - Admins: can view any transaction. 
      *
      * @param transactionId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -435,6 +446,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "getTransaction",
         summary = "Get transaction",
+        description = "Returns the details of a specific transaction. - Members: can view transactions they are part of. - Creators: can view transactions they created. - Directors: can view transactions for members in their sport. - Admins: can view any transaction. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -502,6 +514,7 @@ public interface FinanceApi {
 
     /**
      * PATCH /finance/transactions/{transaction_id} : Update transaction
+     * Partially updates a specific transaction. The member field can only be changed by admins. - Creators: can update transactions they created (except the member field). - Admins: can update any transaction including the member field. 
      *
      * @param transactionId  (required)
      * @param transactionPartialUpdate The request body for partially updating a transaction. (required)
@@ -515,6 +528,7 @@ public interface FinanceApi {
     @Operation(
         operationId = "updateTransaction",
         summary = "Update transaction",
+        description = "Partially updates a specific transaction. The member field can only be changed by admins. - Creators: can update transactions they created (except the member field). - Admins: can update any transaction including the member field. ",
         tags = { "finance" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {

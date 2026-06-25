@@ -29,3 +29,8 @@ export type Transaction = S['Transaction']
 export type TransactionCreate = S['TransactionCreate']
 export type TransactionPartialUpdate = S['TransactionPartialUpdate']
 export type Balance = S['Balance']
+
+export interface AuthUser {
+  name: string
+  email: string
+}

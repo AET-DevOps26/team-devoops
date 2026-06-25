@@ -51,6 +51,7 @@ public interface MembersApi {
 
     /**
      * POST /members : Create member
+     * Creates a new member in the organization. Includes a password field for setting initial credentials. - Admins: can create members. 
      *
      * @param memberCreate The request body for creating a new member. (required)
      * @return The request was successful, and a new resource was created. (status code 201)
@@ -63,6 +64,7 @@ public interface MembersApi {
     @Operation(
         operationId = "createMember",
         summary = "Create member",
+        description = "Creates a new member in the organization. Includes a password field for setting initial credentials. - Admins: can create members. ",
         tags = { "members" },
         responses = {
             @ApiResponse(responseCode = "201", description = "The request was successful, and a new resource was created.", content = {
@@ -139,6 +141,7 @@ public interface MembersApi {
 
     /**
      * DELETE /members/{member_id} : Delete member
+     * Deletes a member from the organization. - Admins: can delete members. 
      *
      * @param memberId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
@@ -150,6 +153,7 @@ public interface MembersApi {
     @Operation(
         operationId = "deleteMember",
         summary = "Delete member",
+        description = "Deletes a member from the organization. - Admins: can delete members. ",
         tags = { "members" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -210,6 +214,7 @@ public interface MembersApi {
 
     /**
      * GET /members : Get all members
+     * Returns a list of all members in the organization. - All authenticated users: can access this endpoint. 
      *
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -219,6 +224,7 @@ public interface MembersApi {
     @Operation(
         operationId = "getAllMembers",
         summary = "Get all members",
+        description = "Returns a list of all members in the organization. - All authenticated users: can access this endpoint. ",
         tags = { "members" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -278,6 +284,7 @@ public interface MembersApi {
 
     /**
      * GET /members/{member_id} : Get member details
+     * Returns the full details of a specific member. - Members themselves: can view their own details. - Team members: can view details of others in the same team. - Trainers: can view details of members in their team. - Directors: can view details of members in their sport. - Admins: can view any member&#39;s details. 
      *
      * @param memberId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
@@ -289,6 +296,7 @@ public interface MembersApi {
     @Operation(
         operationId = "getMemberDetails",
         summary = "Get member details",
+        description = "Returns the full details of a specific member. - Members themselves: can view their own details. - Team members: can view details of others in the same team. - Trainers: can view details of members in their team. - Directors: can view details of members in their sport. - Admins: can view any member's details. ",
         tags = { "members" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -356,6 +364,7 @@ public interface MembersApi {
 
     /**
      * PATCH /members/{member_id} : Update member details
+     * Partially updates the details of a specific member. - Members themselves: can update their own details. - Admins: can update any member&#39;s details. 
      *
      * @param memberId  (required)
      * @param memberPartialUpdate The request body for partially updating a member. (required)
@@ -369,6 +378,7 @@ public interface MembersApi {
     @Operation(
         operationId = "updateMemberDetails",
         summary = "Update member details",
+        description = "Partially updates the details of a specific member. - Members themselves: can update their own details. - Admins: can update any member's details. ",
         tags = { "members" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {

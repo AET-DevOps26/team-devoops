@@ -2,7 +2,12 @@ package tum.devoops.organizationservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import tum.devoops.organizationservice.service.OrganizationSportService;
+import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 /**
  * Context-load smoke test.
@@ -19,6 +24,15 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=none"
 })
 class OrganizationServiceApplicationTests {
+
+    @MockitoBean
+    private OrganizationSportService sportService;
+
+    @MockitoBean
+    private OrganizationTeamService teamService;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void contextLoads() {
