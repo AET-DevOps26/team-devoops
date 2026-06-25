@@ -3,6 +3,8 @@ package tum.devoops.memberservice.entity;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import java.util.Objects;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -50,15 +52,22 @@ public class MemberEntity {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof MemberEntity)) {
+        if (!(o instanceof MemberEntity other)) {
             return false;
         }
-        MemberEntity other = (MemberEntity) o;
+        return Objects.equals(id, other.id)
+                && Objects.equals(firstName, other.firstName)
+                && Objects.equals(lastName, other.lastName)
+                && Objects.equals(email, other.email)
+                && Objects.equals(birthday, other.birthday)
+                && Objects.equals(phoneNumber, other.phoneNumber)
+                && Objects.equals(address, other.address)
+                && Objects.equals(joiningDate, other.joiningDate)
+                && Objects.equals(information, other.information);
+    }
 
-        return id.equals(other.getId()) && firstName.equals(other.getFirstName())
-                && lastName.equals(other.getLastName()) && email.equals(other.getEmail())
-                && birthday.equals(other.getBirthday()) && phoneNumber.equals(other.getPhoneNumber())
-                && address.equals(other.getAddress()) && joiningDate.equals(other.getJoiningDate())
-                && information.equals(other.getInformation());
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, firstName, lastName, email, birthday, phoneNumber, address, joiningDate, information);
     }
 }

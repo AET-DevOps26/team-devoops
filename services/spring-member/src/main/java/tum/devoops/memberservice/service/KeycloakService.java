@@ -10,6 +10,7 @@ import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,7 +27,12 @@ public class KeycloakService {
     public UUID createUser(MemberCreate member, String bearerToken) throws Exception {
         String username = member.getEmail() != null ? member.getEmail() : (member.getFirstName() + member.getLastName()).toLowerCase();
 
-        UserRepresentation body = new UserRepresentation(username, member.getFirstName(), member.getLastName(), member.getEmail(), true);
+        List<Credential> credentials = member.getPassword() != null
+                ? List.of(new Credential("password", member.getPassword(), false))
+                : List.of();
+
+        UserRepresentation body = new UserRepresentation(
+                username, member.getFirstName(), member.getLastName(), member.getEmail(), true, credentials);
 
         ResponseEntity<Void> response;
 
@@ -54,10 +60,10 @@ public class KeycloakService {
         return UUID.fromString(path.substring(path.lastIndexOf("/") + 1));
     }
 
-    public void updateUser(Member member, String bearerToken) throws HttpClientErrorException{
+    public void updateUser(Member member, String bearerToken) throws HttpClientErrorException {
 
         UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(),
-                member.getLastName(), member.getEmail(), true);
+                member.getLastName(), member.getEmail(), true, List.of());
 
         try {
             restClient.put()
@@ -74,7 +80,7 @@ public class KeycloakService {
         }
     }
 
-    public void deleteUser(UUID keycloakId, String bearerToken) throws HttpClientErrorException, SecurityException{
+    public void deleteUser(UUID keycloakId, String bearerToken) throws HttpClientErrorException, SecurityException {
         try {
             restClient.delete()
                     .uri("/admin/realms/{realm}/users/{id}", realm, keycloakId)
@@ -91,7 +97,11 @@ public class KeycloakService {
     private record UserRepresentation(
             String username,
             String firstName,
-            String lastName, String
-            email, boolean enabled
+            String lastName,
+            String email,
+            boolean enabled,
+            List<Credential> credentials
     ) {}
+
+    private record Credential(String type, String value, boolean temporary) {}
 }

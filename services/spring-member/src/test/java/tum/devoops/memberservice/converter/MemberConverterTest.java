@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import tum.devoops.memberservice.entity.MemberEntity;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
+import tum.devoops.memberservice.model.MemberPartialUpdate;
 import tum.devoops.memberservice.model.MemberSummary;
 
 import java.time.LocalDate;
@@ -56,6 +57,7 @@ class MemberConverterTest {
         memberCreate.setFirstName("firstName");
         memberCreate.setLastName("lastName");
         memberCreate.setEmail("email@email.com");
+        memberCreate.setPassword("password123");
         memberCreate.setBirthday(birthday);
         memberCreate.setPhoneNumber("phoneNumber");
         memberCreate.setAddress("address");
@@ -76,22 +78,6 @@ class MemberConverterTest {
         assertEquals(memberEntity.getAddress(), result.getAddress());
         assertEquals(memberEntity.getJoiningDate(), result.getJoiningDate());
         assertEquals(memberEntity.getInformation(), result.getInformation());
-    }
-
-    // Verifies that every field of a Member is mapped onto the resulting MemberEntity
-    @Test
-    void convertMemberToMemberEntityMapsAllFields() {
-        MemberEntity result = MemberConverter.convertMemberToMemberEntity(member);
-
-        assertEquals(member.getId(), result.getId());
-        assertEquals(member.getFirstName(), result.getFirstName());
-        assertEquals(member.getLastName(), result.getLastName());
-        assertEquals(member.getEmail(), result.getEmail());
-        assertEquals(member.getBirthday(), result.getBirthday());
-        assertEquals(member.getPhoneNumber(), result.getPhoneNumber());
-        assertEquals(member.getAddress(), result.getAddress());
-        assertEquals(member.getJoiningDate(), result.getJoiningDate());
-        assertEquals(member.getInformation(), result.getInformation());
     }
 
     // Verifies that the provided id is used, the MemberCreate fields are copied and joiningDate is set to today
@@ -147,5 +133,32 @@ class MemberConverterTest {
         assertNull(result.getAddress());
         assertNull(result.getJoiningDate());
         assertNull(result.getInformation());
+    }
+
+    // Verifies that non-null fields in a partial update overwrite the entity's existing values
+    @Test
+    void applyPartialUpdateOverwritesNonNullFields() {
+        MemberPartialUpdate update = new MemberPartialUpdate();
+        update.setFirstName("newFirst");
+        update.setEmail("new@email.com");
+
+        MemberConverter.applyPartialUpdate(memberEntity, update);
+
+        assertEquals("newFirst", memberEntity.getFirstName());
+        assertEquals("new@email.com", memberEntity.getEmail());
+    }
+
+    // Verifies that null fields in a partial update leave the entity's existing values unchanged
+    @Test
+    void applyPartialUpdateSkipsNullFields() {
+        MemberPartialUpdate update = new MemberPartialUpdate();
+        update.setFirstName("newFirst");
+        // lastName, email, etc. are null — should not be touched
+
+        MemberConverter.applyPartialUpdate(memberEntity, update);
+
+        assertEquals("lastName", memberEntity.getLastName());
+        assertEquals("email@email.com", memberEntity.getEmail());
+        assertEquals("phoneNumber", memberEntity.getPhoneNumber());
     }
 }

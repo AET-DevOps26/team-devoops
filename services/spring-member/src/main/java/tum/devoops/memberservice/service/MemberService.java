@@ -6,10 +6,10 @@ import tum.devoops.memberservice.converter.MemberConverter;
 import tum.devoops.memberservice.entity.MemberEntity;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
+import tum.devoops.memberservice.model.MemberPartialUpdate;
 import tum.devoops.memberservice.model.MemberSummary;
 import tum.devoops.memberservice.repository.MemberRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,46 +24,24 @@ public class MemberService {
     MemberRepository memberRepository;
 
     public List<MemberSummary> getAllMembers() {
-        List<MemberEntity> members = memberRepository.findAll();
-        List<MemberSummary> memberSummaries = new ArrayList<>();
-
-        for (MemberEntity memberEntity : members) {
-            memberSummaries.add(MemberConverter.convertMemberEntityToMemberSummary(memberEntity));
-        }
-
-        return memberSummaries;
+        return memberRepository.findAll().stream()
+                .map(MemberConverter::convertMemberEntityToMemberSummary)
+                .toList();
     }
 
     public Optional<MemberSummary> getMemberSummaryById(UUID id) {
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
-
-        if (optionalMemberEntity.isEmpty()) {
-            return Optional.empty();
-        }
-
-        MemberEntity memberEntity = optionalMemberEntity.get();
-        MemberSummary memberSummary = MemberConverter.convertMemberEntityToMemberSummary(memberEntity);
-
-        return Optional.of(memberSummary);
+        return memberRepository.findById(id)
+                .map(MemberConverter::convertMemberEntityToMemberSummary);
     }
 
     public Optional<Member> getMemberById(UUID id) {
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
-
-        if (optionalMemberEntity.isEmpty()) {
-            return Optional.empty();
-        }
-
-        MemberEntity memberEntity = optionalMemberEntity.get();
-        Member member = MemberConverter.convertMemberEntityToMember(memberEntity);
-
-        return Optional.of(member);
+        return memberRepository.findById(id)
+                .map(MemberConverter::convertMemberEntityToMember);
     }
 
     public Optional<Member> createMember(MemberCreate memberCreate, String bearerToken) {
-        // If a member with this email already exists
         if (memberRepository.findByEmail(memberCreate.getEmail()).isPresent()) {
-            return Optional.empty();
+            throw new IllegalStateException("Email already in use by another member");
         }
 
         UUID id;
@@ -76,36 +54,42 @@ public class MemberService {
         MemberEntity memberEntity = MemberConverter.convertMemberCreateToMemberEntity(memberCreate, id);
         memberEntity = memberRepository.save(memberEntity);
 
-        Member member = MemberConverter.convertMemberEntityToMember(memberEntity);
-
-        return Optional.of(member);
+        return Optional.of(MemberConverter.convertMemberEntityToMember(memberEntity));
     }
 
-    public Optional<Member> updateMember(Member member, String bearerToken) {
-
-        Optional<MemberEntity> memberEntityWithEmail = memberRepository.findByEmail(member.getEmail());
-
-        if (memberEntityWithEmail.isPresent()) {
-            // If a member other than the passed member has the email
-            if (!memberEntityWithEmail.get().getId().equals(member.getId())) {
-                return Optional.empty();
-            }
+    public Optional<Member> updateMember(UUID memberId, MemberPartialUpdate update, String bearerToken) {
+        Optional<MemberEntity> optionalEntity = memberRepository.findById(memberId);
+        if (optionalEntity.isEmpty()) {
+            return Optional.empty();
         }
 
+        MemberEntity entity = optionalEntity.get();
+
+        if (update.getEmail() != null) {
+            memberRepository.findByEmail(update.getEmail())
+                    .filter(existing -> !existing.getId().equals(memberId))
+                    .ifPresent(e -> {
+                        throw new IllegalStateException("Email already in use by another member");
+                    });
+        }
+
+        MemberConverter.applyPartialUpdate(entity, update);
+
         try {
-            keycloakService.updateUser(member, bearerToken);
+            keycloakService.updateUser(MemberConverter.convertMemberEntityToMember(entity), bearerToken);
         } catch (Exception e) {
             return Optional.empty();
         }
 
-        MemberEntity memberEntity = MemberConverter.convertMemberToMemberEntity(member);
-        MemberEntity updatedMemberEntity = memberRepository.save(memberEntity);
-        Member updatedMember = MemberConverter.convertMemberEntityToMember(updatedMemberEntity);
-
-        return Optional.of(updatedMember);
+        MemberEntity saved = memberRepository.save(entity);
+        return Optional.of(MemberConverter.convertMemberEntityToMember(saved));
     }
 
     public boolean deleteMember(UUID id, String bearerToken) {
+        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
+        if (optionalMemberEntity.isEmpty()) {
+            return false;
+        }
 
         try {
             keycloakService.deleteUser(id, bearerToken);
@@ -113,16 +97,7 @@ public class MemberService {
             return false;
         }
 
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
-
-        if (optionalMemberEntity.isEmpty()) {
-            return false;
-        }
-
-        MemberEntity memberEntity = optionalMemberEntity.get();
-        memberRepository.delete(memberEntity);
-
+        memberRepository.delete(optionalMemberEntity.get());
         return true;
     }
-
 }

@@ -46,6 +46,7 @@ class KeycloakServiceTest {
         memberCreate.setFirstName("firstName");
         memberCreate.setLastName("lastName");
         memberCreate.setEmail("email@email.com");
+        memberCreate.setPassword("password123");
 
         member = new Member(
                 id,
