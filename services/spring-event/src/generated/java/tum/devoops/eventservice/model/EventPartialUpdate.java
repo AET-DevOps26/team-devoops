@@ -38,13 +38,13 @@ public class EventPartialUpdate {
   private @Nullable OffsetDateTime endTime;
 
   @Valid
-  private List<String> attendees = new ArrayList<>();
+  private @Nullable List<String> attendees;
 
   @Valid
-  private List<String> sportsLinked = new ArrayList<>();
+  private @Nullable List<String> sportsLinked;
 
   @Valid
-  private List<String> teamsLinked = new ArrayList<>();
+  private @Nullable List<String> teamsLinked;
 
   public EventPartialUpdate name(@Nullable String name) {
     this.name = name;
@@ -146,7 +146,7 @@ public class EventPartialUpdate {
   
   @Schema(name = "attendees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("attendees")
-  public List<String> getAttendees() {
+  public @Nullable List<String> getAttendees() {
     return attendees;
   }
 
@@ -174,7 +174,7 @@ public class EventPartialUpdate {
   
   @Schema(name = "sports_linked", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sports_linked")
-  public List<String> getSportsLinked() {
+  public @Nullable List<String> getSportsLinked() {
     return sportsLinked;
   }
 
@@ -202,7 +202,7 @@ public class EventPartialUpdate {
   
   @Schema(name = "teams_linked", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("teams_linked")
-  public List<String> getTeamsLinked() {
+  public @Nullable List<String> getTeamsLinked() {
     return teamsLinked;
   }
 

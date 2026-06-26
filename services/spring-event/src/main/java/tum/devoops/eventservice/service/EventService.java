@@ -1,9 +1,8 @@
 package tum.devoops.eventservice.service;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -46,17 +45,22 @@ public class EventService {
         if (isAdmin) {
             entities = eventRepository.findAll();
         } else {
-            Map<UUID, EventEntity> byId = new LinkedHashMap<>();
-            for (EventEntity entity : eventRepository.findAllByCreatorId(requesterId)) {
-                byId.putIfAbsent(entity.getId(), entity);
-            }
-            for (AttendanceEntity attendance : attendanceRepository.findAllById_MemberId(requesterId)) {
-                UUID eventId = attendance.getId().getEventId();
-                if (!byId.containsKey(eventId)) {
-                    eventRepository.findById(eventId).ifPresent(e -> byId.put(eventId, e));
-                }
-            }
-            entities = new ArrayList<>(byId.values());
+            List<EventEntity> created = eventRepository.findAllByCreatorId(requesterId);
+            Set<UUID> createdIds = created.stream()
+                    .map(EventEntity::getId)
+                    .collect(Collectors.toSet());
+
+            List<UUID> attendedIds = attendanceRepository.findAllById_MemberId(requesterId).stream()
+                    .map(a -> a.getId().getEventId())
+                    .filter(id -> !createdIds.contains(id))
+                    .collect(Collectors.toList());
+
+            List<EventEntity> attended = attendedIds.isEmpty()
+                    ? List.of()
+                    : eventRepository.findAllById(attendedIds);
+
+            entities = new ArrayList<>(created);
+            entities.addAll(attended);
         }
         return entities.stream().map(EventConverter::toSummary).collect(Collectors.toList());
     }
@@ -111,6 +115,25 @@ public class EventService {
             entity.setEndTime(body.getEndTime().toInstant());
         }
 
+        if ((body.getStartTime() != null || body.getEndTime() != null)
+                && !entity.getEndTime().isAfter(entity.getStartTime())) {
+            throw new BadRequestException("Event end time must be after start time");
+        }
+
+        // null means the field was omitted (no change); non-null (including empty) means replace
+        if (body.getAttendees() != null) {
+            attendanceRepository.deleteAllById_EventId(eventId);
+            attendanceRepository.saveAll(buildAttendanceEntities(eventId, body.getAttendees()));
+        }
+        if (body.getSportsLinked() != null) {
+            sportEventRepository.deleteAllById_EventId(eventId);
+            sportEventRepository.saveAll(buildSportEntities(eventId, body.getSportsLinked()));
+        }
+        if (body.getTeamsLinked() != null) {
+            teamEventRepository.deleteAllById_EventId(eventId);
+            teamEventRepository.saveAll(buildTeamEntities(eventId, body.getTeamsLinked()));
+        }
+
         return toEvent(eventRepository.save(entity));
     }
 
@@ -128,27 +151,47 @@ public class EventService {
 
     private void persistLinks(UUID eventId, List<String> attendees, List<String> sports, List<String> teams) {
         if (attendees != null) {
-            for (String attendee : attendees) {
-                UUID memberId = parseUuid(attendee, "attendees");
-                attendanceRepository.save(new AttendanceEntity(new AttendanceEntity.Id(eventId, memberId)));
-            }
+            attendanceRepository.saveAll(buildAttendanceEntities(eventId, attendees));
         }
         if (sports != null) {
-            for (String sport : sports) {
-                sportEventRepository.save(new SportEventEntity(new SportEventEntity.Id(eventId, sport)));
-            }
+            sportEventRepository.saveAll(buildSportEntities(eventId, sports));
         }
         if (teams != null) {
-            for (String team : teams) {
-                UUID teamId = parseUuid(team, "teams_linked");
-                teamEventRepository.save(new TeamEventEntity(new TeamEventEntity.Id(eventId, teamId)));
-            }
+            teamEventRepository.saveAll(buildTeamEntities(eventId, teams));
         }
     }
 
+    private List<AttendanceEntity> buildAttendanceEntities(UUID eventId, List<String> attendees) {
+        List<AttendanceEntity> result = new ArrayList<>();
+        for (String attendee : attendees) {
+            UUID memberId = parseUuid(attendee, "attendees");
+            result.add(new AttendanceEntity(new AttendanceEntity.Id(eventId, memberId)));
+        }
+        return result;
+    }
+
+    private List<SportEventEntity> buildSportEntities(UUID eventId, List<String> sports) {
+        List<SportEventEntity> result = new ArrayList<>();
+        for (String sport : sports) {
+            if (sport == null) {
+                throw new BadRequestException("'sports_linked' contains a null entry");
+            }
+            result.add(new SportEventEntity(new SportEventEntity.Id(eventId, sport)));
+        }
+        return result;
+    }
+
+    private List<TeamEventEntity> buildTeamEntities(UUID eventId, List<String> teams) {
+        List<TeamEventEntity> result = new ArrayList<>();
+        for (String team : teams) {
+            UUID teamId = parseUuid(team, "teams_linked");
+            result.add(new TeamEventEntity(new TeamEventEntity.Id(eventId, teamId)));
+        }
+        return result;
+    }
+
     private boolean isAttendee(UUID eventId, UUID requesterId) {
-        return attendanceRepository.findAllById_EventId(eventId).stream()
-                .anyMatch(a -> requesterId.equals(a.getId().getMemberId()));
+        return attendanceRepository.existsById(new AttendanceEntity.Id(eventId, requesterId));
     }
 
     private EventEntity findEventOrThrow(UUID eventId) {
@@ -157,6 +200,9 @@ public class EventService {
     }
 
     private UUID parseUuid(String value, String fieldName) {
+        if (value == null) {
+            throw new BadRequestException("'" + fieldName + "' contains a null entry");
+        }
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException ex) {
