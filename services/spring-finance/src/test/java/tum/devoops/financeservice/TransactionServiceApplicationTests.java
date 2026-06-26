@@ -2,7 +2,13 @@ package tum.devoops.financeservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
+import tum.devoops.financeservice.repository.DirectorRepository;
+import tum.devoops.financeservice.repository.MemberRepository;
+import tum.devoops.financeservice.repository.TeamRepository;
+import tum.devoops.financeservice.repository.TrainerRepository;
+import tum.devoops.financeservice.repository.TransactionRepository;
 
 /**
  * Context-load smoke test.
@@ -19,6 +25,12 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=none"
 })
 class TransactionServiceApplicationTests {
+
+    @MockBean TransactionRepository transactionRepository;
+    @MockBean MemberRepository memberRepository;
+    @MockBean DirectorRepository directorRepository;
+    @MockBean TeamRepository teamRepository;
+    @MockBean TrainerRepository trainerRepository;
 
     @Test
     void contextLoads() {

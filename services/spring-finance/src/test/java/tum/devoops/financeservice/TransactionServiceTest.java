@@ -106,9 +106,10 @@ class TransactionServiceTest {
     @Test
     void createTransaction_asTrainerOfMembersTeam_returnsCreatedTransaction() {
         memberExists();
+        TeamEntity team = mockTeam(TEAM_ID);
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
         when(trainerRepository.findTeamIdByMemberId(REQUESTER_ID)).thenReturn(List.of(TEAM_ID));
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(mockTeam(TEAM_ID)));
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
         when(teamRepository.findTraineesByTeamId(TEAM_ID)).thenReturn(List.of(trainee(MEMBER_ID)));
         when(transactionRepository.save(any())).thenReturn(savedEntity());
 
@@ -151,9 +152,10 @@ class TransactionServiceTest {
     void createTransaction_trainerButMemberOnDifferentTeam_throwsForbidden() {
         memberExists();
         UUID otherMemberId = UUID.randomUUID();
+        TeamEntity team = mockTeam(TEAM_ID);
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
         when(trainerRepository.findTeamIdByMemberId(REQUESTER_ID)).thenReturn(List.of(TEAM_ID));
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(mockTeam(TEAM_ID)));
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
         when(teamRepository.findTraineesByTeamId(TEAM_ID)).thenReturn(List.of(trainee(otherMemberId)));
 
         assertThrows(ForbiddenException.class,
@@ -177,9 +179,11 @@ class TransactionServiceTest {
         UUID otherTeamId = UUID.fromString("00000000-0000-0000-0000-000000000004");
         UUID otherMemberId = UUID.randomUUID();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
+        TeamEntity team1 = mockTeam(TEAM_ID);
+        TeamEntity team2 = mockTeam(otherTeamId);
         when(trainerRepository.findTeamIdByMemberId(REQUESTER_ID)).thenReturn(List.of(TEAM_ID, otherTeamId));
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(mockTeam(TEAM_ID)));
-        when(teamRepository.findById(otherTeamId)).thenReturn(Optional.of(mockTeam(otherTeamId)));
+        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team1));
+        when(teamRepository.findById(otherTeamId)).thenReturn(Optional.of(team2));
         when(teamRepository.findTraineesByTeamId(TEAM_ID)).thenReturn(List.of(trainee(otherMemberId)));
         when(teamRepository.findTraineesByTeamId(otherTeamId)).thenReturn(List.of(trainee(MEMBER_ID)));
         when(transactionRepository.save(any())).thenReturn(savedEntity());
