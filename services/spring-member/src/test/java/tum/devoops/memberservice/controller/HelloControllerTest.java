@@ -1,4 +1,4 @@
-package tum.devoops.memberservice;
+package tum.devoops.memberservice.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
