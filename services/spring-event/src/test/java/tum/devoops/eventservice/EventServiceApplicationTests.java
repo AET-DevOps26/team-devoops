@@ -2,7 +2,11 @@ package tum.devoops.eventservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import tum.devoops.eventservice.service.EventService;
 
 /**
  * Context-load smoke test.
@@ -19,6 +23,12 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=none"
 })
 class EventServiceApplicationTests {
+
+    @MockitoBean
+    private EventService eventService;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void contextLoads() {

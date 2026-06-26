@@ -1,4 +1,4 @@
-package tum.devoops.eventservice;
+package tum.devoops.eventservice.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
