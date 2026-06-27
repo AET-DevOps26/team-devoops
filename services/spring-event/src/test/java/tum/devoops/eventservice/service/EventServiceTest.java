@@ -35,8 +35,11 @@ import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
 import tum.devoops.eventservice.repository.AttendanceRepository;
 import tum.devoops.eventservice.repository.EventRepository;
+import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
+import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
+import tum.devoops.eventservice.repository.TeamRepository;
 
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
@@ -49,6 +52,12 @@ class EventServiceTest {
     private SportEventRepository sportEventRepository;
     @Mock
     private TeamEventRepository teamEventRepository;
+    @Mock
+    private MemberRepository memberRepository;
+    @Mock
+    private SportRepository sportRepository;
+    @Mock
+    private TeamRepository teamRepository;
 
     @InjectMocks
     private EventService service;
@@ -162,7 +171,7 @@ class EventServiceTest {
 
         Event result = service.createEvent(body, REQUESTER_ID, true);
 
-        assertThat(result.getCreator()).isEqualTo(REQUESTER_ID.toString());
+        assertThat(result.getCreator().getId()).isEqualTo(REQUESTER_ID);
 
         ArgumentCaptor<List<AttendanceEntity>> attendees = listCaptor();
         verify(attendanceRepository).saveAll(attendees.capture());

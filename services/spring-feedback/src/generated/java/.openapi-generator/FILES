@@ -6,3 +6,4 @@ tum/devoops/feedbackservice/model/Feedback.java
 tum/devoops/feedbackservice/model/FeedbackCreate.java
 tum/devoops/feedbackservice/model/FeedbackPartialUpdate.java
 tum/devoops/feedbackservice/model/FeedbackSummary.java
+tum/devoops/feedbackservice/model/Reference.java

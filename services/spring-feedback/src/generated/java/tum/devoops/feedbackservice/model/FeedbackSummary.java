@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.feedbackservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -27,11 +28,11 @@ public class FeedbackSummary {
 
   private UUID id;
 
-  private String event;
+  private Reference event;
 
-  private String member;
+  private Reference member;
 
-  private String creator;
+  private Reference creator;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;
@@ -43,7 +44,7 @@ public class FeedbackSummary {
   /**
    * Constructor with only required parameters
    */
-  public FeedbackSummary(UUID id, String event, String member, String creator, OffsetDateTime createdAt) {
+  public FeedbackSummary(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt) {
     this.id = id;
     this.event = event;
     this.member = member;
@@ -71,7 +72,7 @@ public class FeedbackSummary {
     this.id = id;
   }
 
-  public FeedbackSummary event(String event) {
+  public FeedbackSummary event(Reference event) {
     this.event = event;
     return this;
   }
@@ -80,18 +81,18 @@ public class FeedbackSummary {
    * Get event
    * @return event
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "event", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("event")
-  public String getEvent() {
+  public Reference getEvent() {
     return event;
   }
 
-  public void setEvent(String event) {
+  public void setEvent(Reference event) {
     this.event = event;
   }
 
-  public FeedbackSummary member(String member) {
+  public FeedbackSummary member(Reference member) {
     this.member = member;
     return this;
   }
@@ -100,18 +101,18 @@ public class FeedbackSummary {
    * Get member
    * @return member
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("member")
-  public String getMember() {
+  public Reference getMember() {
     return member;
   }
 
-  public void setMember(String member) {
+  public void setMember(Reference member) {
     this.member = member;
   }
 
-  public FeedbackSummary creator(String creator) {
+  public FeedbackSummary creator(Reference creator) {
     this.creator = creator;
     return this;
   }
@@ -120,14 +121,14 @@ public class FeedbackSummary {
    * Get creator
    * @return creator
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "creator", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("creator")
-  public String getCreator() {
+  public Reference getCreator() {
     return creator;
   }
 
-  public void setCreator(String creator) {
+  public void setCreator(Reference creator) {
     this.creator = creator;
   }
 

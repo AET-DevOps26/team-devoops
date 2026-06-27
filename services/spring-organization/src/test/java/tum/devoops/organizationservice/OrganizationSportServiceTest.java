@@ -19,12 +19,14 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.organizationservice.entity.DirectorEntity;
+import tum.devoops.organizationservice.entity.MemberEntity;
 import tum.devoops.organizationservice.entity.SportEntity;
 import tum.devoops.organizationservice.entity.TeamEntity;
 import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ConflictException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.SportCreate;
 import tum.devoops.organizationservice.model.SportPartialUpdate;
@@ -76,6 +78,14 @@ class OrganizationSportServiceTest {
         return new DirectorEntity(new DirectorEntity.Id(sportId, memberId));
     }
 
+    private MemberEntity memberNamed(UUID id, String first, String last) {
+        MemberEntity m = new MemberEntity();
+        m.setId(id);
+        m.setFirstName(first);
+        m.setLastName(last);
+        return m;
+    }
+
     private TeamEntity teamEntity(UUID id, UUID sportId) {
         TeamEntity team = new TeamEntity();
         team.setId(id);
@@ -96,13 +106,17 @@ class OrganizationSportServiceTest {
     void getAllSports_returnsMappedList_whenSportsExist() {
         SportEntity entity = sportEntity(SPORT_ID, "soccer", List.of(directorEntity(SPORT_ID, MEMBER_ID)));
         when(sportRepository.findAll()).thenReturn(List.of(entity));
+        when(memberRepository.findAllById(any()))
+                .thenReturn(List.of(memberNamed(MEMBER_ID, "Dana", "Director")));
 
         List<Sport> result = service.getAllSports();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(SPORT_ID);
         assertThat(result.get(0).getName()).isEqualTo("soccer");
-        assertThat(result.get(0).getDirectors()).containsExactly(MEMBER_ID.toString());
+        assertThat(result.get(0).getDirectors()).extracting(Reference::getId).containsExactly(MEMBER_ID);
+        assertThat(result.get(0).getDirectors())
+                .extracting(Reference::getName).containsExactly("Dana Director");
     }
 
     // --- getSport ---
@@ -186,7 +200,7 @@ class OrganizationSportServiceTest {
         verify(memberRoleSyncService).scheduleSync(argThat(ids -> ids.contains(MEMBER_ID)));
         assertThat(result.getId()).isEqualTo(SPORT_ID);
         assertThat(result.getName()).isEqualTo("soccer");
-        assertThat(result.getDirectors()).containsExactly(MEMBER_ID.toString());
+        assertThat(result.getDirectors()).extracting(Reference::getId).containsExactly(MEMBER_ID);
     }
 
     @Test

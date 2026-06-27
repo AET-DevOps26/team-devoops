@@ -1,8 +1,11 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -18,6 +21,7 @@ import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ConflictException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.SportCreate;
 import tum.devoops.organizationservice.model.SportPartialUpdate;
@@ -174,10 +178,22 @@ public class OrganizationSportService {
     }
 
     private Sport toSport(SportEntity entity) {
-        List<String> directors = entity.getDirectors().stream()
-                .map(d -> d.getId().getMemberId().toString())
+        List<UUID> directorIds = entity.getDirectors().stream()
+                .map(d -> d.getId().getMemberId())
                 .collect(Collectors.toList());
         return new Sport(entity.getId(), entity.getName(), entity.getDescription(),
-                entity.getCreatedAt(), directors);
+                entity.getCreatedAt(), memberReferences(directorIds));
+    }
+
+    private List<Reference> memberReferences(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> names.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        return memberIds.stream()
+                .map(id -> new Reference(id, names.get(id)))
+                .collect(Collectors.toList());
     }
 }

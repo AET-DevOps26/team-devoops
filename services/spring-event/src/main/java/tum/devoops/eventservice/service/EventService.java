@@ -1,7 +1,10 @@
 package tum.devoops.eventservice.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,8 +27,11 @@ import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
 import tum.devoops.eventservice.repository.AttendanceRepository;
 import tum.devoops.eventservice.repository.EventRepository;
+import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
+import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
+import tum.devoops.eventservice.repository.TeamRepository;
 
 @Service
 public class EventService {
@@ -38,6 +44,12 @@ public class EventService {
     private SportEventRepository sportEventRepository;
     @Autowired
     private TeamEventRepository teamEventRepository;
+    @Autowired
+    private MemberRepository memberRepository;
+    @Autowired
+    private SportRepository sportRepository;
+    @Autowired
+    private TeamRepository teamRepository;
 
     @Transactional(readOnly = true)
     public List<EventSummary> getAllEvents(UUID requesterId, boolean isAdmin) {
@@ -213,11 +225,27 @@ public class EventService {
 
     private Event toEvent(EventEntity entity) {
         UUID eventId = entity.getId();
-        return EventConverter.toEvent(
-                entity,
-                attendanceRepository.findAllById_EventId(eventId),
-                sportEventRepository.findAllById_EventId(eventId),
-                teamEventRepository.findAllById_EventId(eventId)
-        );
+        List<AttendanceEntity> attendances = attendanceRepository.findAllById_EventId(eventId);
+        List<SportEventEntity> sports = sportEventRepository.findAllById_EventId(eventId);
+        List<TeamEventEntity> teams = teamEventRepository.findAllById_EventId(eventId);
+
+        Set<UUID> memberIds = new HashSet<>();
+        memberIds.add(entity.getCreatorId());
+        attendances.forEach(a -> memberIds.add(a.getId().getMemberId()));
+        List<UUID> sportIds = sports.stream()
+                .map(s -> s.getId().getSportId()).collect(Collectors.toList());
+        List<UUID> teamIds = teams.stream()
+                .map(t -> t.getId().getTeamId()).collect(Collectors.toList());
+
+        Map<UUID, String> memberNames = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> memberNames.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        Map<UUID, String> sportNames = new HashMap<>();
+        sportRepository.findAllById(sportIds).forEach(s -> sportNames.put(s.getId(), s.getName()));
+        Map<UUID, String> teamNames = new HashMap<>();
+        teamRepository.findAllById(teamIds).forEach(t -> teamNames.put(t.getId(), t.getName()));
+
+        return EventConverter.toEvent(entity, attendances, sports, teams,
+                memberNames, sportNames, teamNames);
     }
 }

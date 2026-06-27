@@ -19,12 +19,15 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.organizationservice.entity.DirectorEntity;
+import tum.devoops.organizationservice.entity.MemberEntity;
+import tum.devoops.organizationservice.entity.SportEntity;
 import tum.devoops.organizationservice.entity.TeamEntity;
 import tum.devoops.organizationservice.entity.TraineeEntity;
 import tum.devoops.organizationservice.entity.TrainerEntity;
 import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.model.TeamCreate;
 import tum.devoops.organizationservice.model.TeamPartialUpdate;
@@ -92,6 +95,21 @@ class OrganizationTeamServiceTest {
         return new DirectorEntity(new DirectorEntity.Id(sportId, memberId));
     }
 
+    private MemberEntity memberNamed(UUID id, String first, String last) {
+        MemberEntity m = new MemberEntity();
+        m.setId(id);
+        m.setFirstName(first);
+        m.setLastName(last);
+        return m;
+    }
+
+    private SportEntity sportNamed(UUID id, String name) {
+        SportEntity s = new SportEntity();
+        s.setId(id);
+        s.setName(name);
+        return s;
+    }
+
     // --- getAllTeams ---
 
     @Test
@@ -107,15 +125,24 @@ class OrganizationTeamServiceTest {
                 List.of(trainerEntity(TEAM_ID, TRAINER_ID)),
                 List.of(traineeEntity(TEAM_ID, TRAINEE_ID)));
         when(teamRepository.findAll()).thenReturn(List.of(entity));
+        when(sportRepository.findById(SPORT_ID)).thenReturn(Optional.of(sportNamed(SPORT_ID, "Soccer")));
+        when(memberRepository.findAllById(any())).thenReturn(List.of(
+                memberNamed(TRAINER_ID, "Tina", "Trainer"),
+                memberNamed(TRAINEE_ID, "Tom", "Trainee")));
 
         List<Team> result = service.getAllTeams();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(TEAM_ID);
         assertThat(result.get(0).getName()).isEqualTo("Team Alpha");
-        assertThat(result.get(0).getSport()).isEqualTo(SPORT_ID);
-        assertThat(result.get(0).getTrainers()).containsExactly(TRAINER_ID.toString());
-        assertThat(result.get(0).getTrainees()).containsExactly(TRAINEE_ID.toString());
+        assertThat(result.get(0).getSport().getId()).isEqualTo(SPORT_ID);
+        assertThat(result.get(0).getSport().getName()).isEqualTo("Soccer");
+        assertThat(result.get(0).getTrainers())
+                .extracting(Reference::getId).containsExactly(TRAINER_ID);
+        assertThat(result.get(0).getTrainers())
+                .extracting(Reference::getName).containsExactly("Tina Trainer");
+        assertThat(result.get(0).getTrainees())
+                .extracting(Reference::getId).containsExactly(TRAINEE_ID);
     }
 
     // --- getTeam ---
@@ -131,7 +158,7 @@ class OrganizationTeamServiceTest {
         assertThat(result.getName()).isEqualTo("Team Alpha");
         assertThat(result.getDescription()).isEqualTo("A test team");
         assertThat(result.getAddress()).isEqualTo("123 Main St");
-        assertThat(result.getSport()).isEqualTo(SPORT_ID);
+        assertThat(result.getSport().getId()).isEqualTo(SPORT_ID);
         assertThat(result.getCreatedAt()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
@@ -240,8 +267,8 @@ class OrganizationTeamServiceTest {
         verify(traineeRepository).saveAll(any());
         verify(memberRoleSyncService).scheduleSync(
                 argThat(ids -> ids.contains(TRAINER_ID) && ids.contains(TRAINEE_ID)));
-        assertThat(result.getTrainers()).containsExactly(TRAINER_ID.toString());
-        assertThat(result.getTrainees()).containsExactly(TRAINEE_ID.toString());
+        assertThat(result.getTrainers()).extracting(Reference::getId).containsExactly(TRAINER_ID);
+        assertThat(result.getTrainees()).extracting(Reference::getId).containsExactly(TRAINEE_ID);
     }
 
     @Test
@@ -411,7 +438,7 @@ class OrganizationTeamServiceTest {
 
         assertThat(team.getSportId()).isEqualTo(OTHER_SPORT_ID);
         verify(teamRepository).save(team);
-        assertThat(result.getSport()).isEqualTo(OTHER_SPORT_ID);
+        assertThat(result.getSport().getId()).isEqualTo(OTHER_SPORT_ID);
     }
 
     @Test

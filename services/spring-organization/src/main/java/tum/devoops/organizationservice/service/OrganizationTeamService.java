@@ -1,8 +1,11 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -11,12 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tum.devoops.organizationservice.entity.SportEntity;
 import tum.devoops.organizationservice.entity.TeamEntity;
 import tum.devoops.organizationservice.entity.TraineeEntity;
 import tum.devoops.organizationservice.entity.TrainerEntity;
 import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.model.TeamCreate;
 import tum.devoops.organizationservice.model.TeamPartialUpdate;
@@ -214,11 +219,11 @@ public class OrganizationTeamService {
     }
 
     private Team toTeam(TeamEntity entity) {
-        List<String> trainers = entity.getTrainers().stream()
-                .map(t -> t.getId().getMemberId().toString())
+        List<UUID> trainerIds = entity.getTrainers().stream()
+                .map(t -> t.getId().getMemberId())
                 .collect(Collectors.toList());
-        List<String> trainees = entity.getTrainees().stream()
-                .map(t -> t.getId().getMemberId().toString())
+        List<UUID> traineeIds = entity.getTrainees().stream()
+                .map(t -> t.getId().getMemberId())
                 .collect(Collectors.toList());
         return new Team(
                 entity.getId(),
@@ -226,9 +231,26 @@ public class OrganizationTeamService {
                 entity.getDescription(),
                 entity.getCreatedAt(),
                 entity.getAddress(),
-                entity.getSportId(),
-                trainers,
-                trainees
+                sportReference(entity.getSportId()),
+                memberReferences(trainerIds),
+                memberReferences(traineeIds)
         );
+    }
+
+    private Reference sportReference(UUID sportId) {
+        String name = sportRepository.findById(sportId).map(SportEntity::getName).orElse(null);
+        return new Reference(sportId, name);
+    }
+
+    private List<Reference> memberReferences(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> names.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        return memberIds.stream()
+                .map(id -> new Reference(id, names.get(id)))
+                .collect(Collectors.toList());
     }
 }

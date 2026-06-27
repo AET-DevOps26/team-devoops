@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tum.devoops.feedbackservice.entity.EventEntity;
 import tum.devoops.feedbackservice.entity.FeedbackEntity;
 import tum.devoops.feedbackservice.exception.BadRequestException;
 import tum.devoops.feedbackservice.exception.ForbiddenException;
@@ -21,6 +22,7 @@ import tum.devoops.feedbackservice.model.Feedback;
 import tum.devoops.feedbackservice.model.FeedbackCreate;
 import tum.devoops.feedbackservice.model.FeedbackPartialUpdate;
 import tum.devoops.feedbackservice.model.FeedbackSummary;
+import tum.devoops.feedbackservice.model.Reference;
 import tum.devoops.feedbackservice.repository.EventRepository;
 import tum.devoops.feedbackservice.repository.FeedbackRepository;
 import tum.devoops.feedbackservice.repository.MemberRepository;
@@ -169,9 +171,9 @@ public class FeedbackService {
     private Feedback toFeedback(FeedbackEntity entity) {
         return new Feedback(
                 entity.getId(),
-                entity.getEventId().toString(),
-                entity.getMemberId().toString(),
-                entity.getCreatorId().toString(),
+                eventReference(entity.getEventId()),
+                memberReference(entity.getMemberId()),
+                memberReference(entity.getCreatorId()),
                 entity.getCreatedAt().atOffset(ZoneOffset.UTC),
                 entity.getFeedback()
         );
@@ -180,10 +182,21 @@ public class FeedbackService {
     private FeedbackSummary toFeedbackSummary(FeedbackEntity entity) {
         return new FeedbackSummary(
                 entity.getId(),
-                entity.getEventId().toString(),
-                entity.getMemberId().toString(),
-                entity.getCreatorId().toString(),
+                eventReference(entity.getEventId()),
+                memberReference(entity.getMemberId()),
+                memberReference(entity.getCreatorId()),
                 entity.getCreatedAt().atOffset(ZoneOffset.UTC)
         );
+    }
+
+    private Reference eventReference(UUID eventId) {
+        String name = eventRepository.findById(eventId).map(EventEntity::getName).orElse(null);
+        return new Reference(eventId, name);
+    }
+
+    private Reference memberReference(UUID memberId) {
+        String name = memberRepository.findById(memberId)
+                .map(m -> m.getFirstName() + " " + m.getLastName()).orElse(null);
+        return new Reference(memberId, name);
     }
 }

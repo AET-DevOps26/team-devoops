@@ -1225,6 +1225,18 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
       required:
         - message
+    Reference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - id
+        - name
+      description: A lightweight reference to another entity — its id plus a display name.
     Sport:
       type: object
       properties:
@@ -1241,7 +1253,7 @@ components:
         directors:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1292,17 +1304,15 @@ components:
         address:
           type: string
         sport:
-          type: string
-          format: uuid
-          description: ID of the sport this team belongs to.
+          $ref: "#/components/schemas/Reference"
         trainers:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
         trainees:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1480,20 +1490,19 @@ components:
         attendees:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
         sports_linked:
           type: array
           items:
-            type: string
-            format: uuid
-          description: IDs of the sports associated with this event.
+            $ref: "#/components/schemas/Reference"
+          description: Sports associated with this event.
         teams_linked:
           type: array
           items:
-            type: string
-          description: IDs of the teams associated with this event.
+            $ref: "#/components/schemas/Reference"
+          description: Teams associated with this event.
         creator:
-          type: string
+          $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1590,11 +1599,11 @@ components:
           type: string
           format: uuid
         event:
-          type: string
+          $ref: "#/components/schemas/Reference"
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
@@ -1615,11 +1624,11 @@ components:
           type: string
           format: uuid
         event:
-          type: string
+          $ref: "#/components/schemas/Reference"
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
@@ -1662,9 +1671,9 @@ components:
           type: string
           format: uuid
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          $ref: "#/components/schemas/Reference"
         amount_cents:
           type: integer
         created_at:
@@ -1716,7 +1725,7 @@ components:
       type: object
       properties:
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         balance_cents:
           type: integer
       required:

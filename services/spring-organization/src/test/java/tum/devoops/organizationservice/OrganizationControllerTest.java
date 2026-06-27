@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import tum.devoops.organizationservice.exception.ConflictException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.service.MemberRoleSyncService;
@@ -84,7 +85,8 @@ class OrganizationControllerTest {
     }
 
     private Team team(UUID id, UUID sport) {
-        return new Team(id, "Team Alpha", null, LocalDate.of(2024, 1, 1), null, sport, List.of(), List.of());
+        return new Team(id, "Team Alpha", null, LocalDate.of(2024, 1, 1), null,
+                new Reference(sport, "Soccer"), List.of(), List.of());
     }
 
     // --- getAllSports ---

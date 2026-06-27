@@ -507,6 +507,12 @@ export interface components {
             message: string;
             errors?: components["schemas"]["ErrorResponse"][];
         };
+        /** @description A lightweight reference to another entity — its id plus a display name. */
+        Reference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         /** @description The object representation of a Sport within the organization. */
         Sport: {
             /** Format: uuid */
@@ -515,7 +521,7 @@ export interface components {
             description: string;
             /** Format: date */
             created_at: string;
-            directors: string[];
+            directors: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for creating a new Sport. */
         SportCreate: {
@@ -538,13 +544,9 @@ export interface components {
             /** Format: date */
             created_at: string;
             address: string;
-            /**
-             * Format: uuid
-             * @description ID of the sport this team belongs to.
-             */
-            sport: string;
-            trainers: string[];
-            trainees: string[];
+            sport: components["schemas"]["Reference"];
+            trainers: components["schemas"]["Reference"][];
+            trainees: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for creating a new Team. */
         TeamCreate: {
@@ -629,12 +631,12 @@ export interface components {
             start_time: string;
             /** Format: date-time */
             end_time: string;
-            attendees?: string[];
-            /** @description IDs of the sports associated with this event. */
-            sports_linked?: string[];
-            /** @description IDs of the teams associated with this event. */
-            teams_linked?: string[];
-            creator: string;
+            attendees?: components["schemas"]["Reference"][];
+            /** @description Sports associated with this event. */
+            sports_linked?: components["schemas"]["Reference"][];
+            /** @description Teams associated with this event. */
+            teams_linked?: components["schemas"]["Reference"][];
+            creator: components["schemas"]["Reference"];
         };
         /** @description A simplified representation of a Event, typically used in list views. */
         EventSummary: {
@@ -676,9 +678,9 @@ export interface components {
         Feedback: {
             /** Format: uuid */
             id: string;
-            event: string;
-            member: string;
-            creator: string;
+            event: components["schemas"]["Reference"];
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"];
             /** Format: date-time */
             created_at: string;
             feedback: string;
@@ -687,9 +689,9 @@ export interface components {
         FeedbackSummary: {
             /** Format: uuid */
             id: string;
-            event: string;
-            member: string;
-            creator: string;
+            event: components["schemas"]["Reference"];
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"];
             /** Format: date-time */
             created_at: string;
         };
@@ -709,8 +711,8 @@ export interface components {
         Transaction: {
             /** Format: uuid */
             id: string;
-            member: string;
-            creator: string;
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"];
             amount_cents: number;
             /** Format: date-time */
             created_at: string;
@@ -733,7 +735,7 @@ export interface components {
         };
         /** @description The object representation of a Member's Balance, which includes the total balance in cents. */
         Balance: {
-            member: string;
+            member: components["schemas"]["Reference"];
             balance_cents: number;
         };
     };

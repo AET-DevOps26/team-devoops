@@ -103,8 +103,8 @@ class FeedbackServiceTest {
         List<FeedbackSummary> result = service.getAllFeedback(REQUESTER_ID, false);
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(FeedbackSummary::getCreator)
-                .contains(REQUESTER_ID.toString(), ANOTHER_ID.toString());
+        assertThat(result).extracting(s -> s.getCreator().getId())
+                .contains(REQUESTER_ID, ANOTHER_ID);
     }
 
     @Test
@@ -140,7 +140,7 @@ class FeedbackServiceTest {
         Feedback result = service.createFeedback(body, REQUESTER_ID, true);
 
         assertThat(result.getId()).isEqualTo(FEEDBACK_ID);
-        assertThat(result.getCreator()).isEqualTo(REQUESTER_ID.toString());
+        assertThat(result.getCreator().getId()).isEqualTo(REQUESTER_ID);
     }
 
     @Test
@@ -153,7 +153,7 @@ class FeedbackServiceTest {
 
         Feedback result = service.createFeedback(body, REQUESTER_ID, false);
 
-        assertThat(result.getMember()).isEqualTo(MEMBER_ID.toString());
+        assertThat(result.getMember().getId()).isEqualTo(MEMBER_ID);
     }
 
     @Test
@@ -237,7 +237,7 @@ class FeedbackServiceTest {
 
         Feedback result = service.getFeedbackDetails(FEEDBACK_ID, REQUESTER_ID, false);
 
-        assertThat(result.getCreator()).isEqualTo(REQUESTER_ID.toString());
+        assertThat(result.getCreator().getId()).isEqualTo(REQUESTER_ID);
     }
 
     @Test
@@ -247,7 +247,7 @@ class FeedbackServiceTest {
 
         Feedback result = service.getFeedbackDetails(FEEDBACK_ID, REQUESTER_ID, false);
 
-        assertThat(result.getMember()).isEqualTo(REQUESTER_ID.toString());
+        assertThat(result.getMember().getId()).isEqualTo(REQUESTER_ID);
     }
 
     @Test

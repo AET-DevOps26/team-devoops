@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.organizationservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -38,7 +39,7 @@ public class Sport {
   private LocalDate createdAt;
 
   @Valid
-  private List<String> directors;
+  private List<@Valid Reference> directors;
 
   public Sport() {
     super();
@@ -47,7 +48,7 @@ public class Sport {
   /**
    * Constructor with only required parameters
    */
-  public Sport(UUID id, String name, String description, LocalDate createdAt, List<String> directors) {
+  public Sport(UUID id, String name, String description, LocalDate createdAt, List<@Valid Reference> directors) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -135,12 +136,12 @@ public class Sport {
     this.createdAt = createdAt;
   }
 
-  public Sport directors(List<String> directors) {
+  public Sport directors(List<@Valid Reference> directors) {
     this.directors = directors;
     return this;
   }
 
-  public Sport addDirectorsItem(String directorsItem) {
+  public Sport addDirectorsItem(Reference directorsItem) {
     if (this.directors == null) {
       this.directors = new ArrayList<>();
     }
@@ -152,14 +153,14 @@ public class Sport {
    * Get directors
    * @return directors
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "directors", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("directors")
-  public List<String> getDirectors() {
+  public List<@Valid Reference> getDirectors() {
     return directors;
   }
 
-  public void setDirectors(List<String> directors) {
+  public void setDirectors(List<@Valid Reference> directors) {
     this.directors = directors;
   }
 

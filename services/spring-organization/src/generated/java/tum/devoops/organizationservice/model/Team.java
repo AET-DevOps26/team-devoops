@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.organizationservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -39,13 +40,13 @@ public class Team {
 
   private String address;
 
-  private UUID sport;
+  private Reference sport;
 
   @Valid
-  private List<String> trainers;
+  private List<@Valid Reference> trainers;
 
   @Valid
-  private List<String> trainees;
+  private List<@Valid Reference> trainees;
 
   public Team() {
     super();
@@ -54,7 +55,7 @@ public class Team {
   /**
    * Constructor with only required parameters
    */
-  public Team(UUID id, String name, String description, LocalDate createdAt, String address, UUID sport, List<String> trainers, List<String> trainees) {
+  public Team(UUID id, String name, String description, LocalDate createdAt, String address, Reference sport, List<@Valid Reference> trainers, List<@Valid Reference> trainees) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -165,32 +166,32 @@ public class Team {
     this.address = address;
   }
 
-  public Team sport(UUID sport) {
+  public Team sport(Reference sport) {
     this.sport = sport;
     return this;
   }
 
   /**
-   * ID of the sport this team belongs to.
+   * Get sport
    * @return sport
    */
   @NotNull @Valid 
-  @Schema(name = "sport", description = "ID of the sport this team belongs to.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "sport", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("sport")
-  public UUID getSport() {
+  public Reference getSport() {
     return sport;
   }
 
-  public void setSport(UUID sport) {
+  public void setSport(Reference sport) {
     this.sport = sport;
   }
 
-  public Team trainers(List<String> trainers) {
+  public Team trainers(List<@Valid Reference> trainers) {
     this.trainers = trainers;
     return this;
   }
 
-  public Team addTrainersItem(String trainersItem) {
+  public Team addTrainersItem(Reference trainersItem) {
     if (this.trainers == null) {
       this.trainers = new ArrayList<>();
     }
@@ -202,23 +203,23 @@ public class Team {
    * Get trainers
    * @return trainers
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "trainers", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("trainers")
-  public List<String> getTrainers() {
+  public List<@Valid Reference> getTrainers() {
     return trainers;
   }
 
-  public void setTrainers(List<String> trainers) {
+  public void setTrainers(List<@Valid Reference> trainers) {
     this.trainers = trainers;
   }
 
-  public Team trainees(List<String> trainees) {
+  public Team trainees(List<@Valid Reference> trainees) {
     this.trainees = trainees;
     return this;
   }
 
-  public Team addTraineesItem(String traineesItem) {
+  public Team addTraineesItem(Reference traineesItem) {
     if (this.trainees == null) {
       this.trainees = new ArrayList<>();
     }
@@ -230,14 +231,14 @@ public class Team {
    * Get trainees
    * @return trainees
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "trainees", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("trainees")
-  public List<String> getTrainees() {
+  public List<@Valid Reference> getTrainees() {
     return trainees;
   }
 
-  public void setTrainees(List<String> trainees) {
+  public void setTrainees(List<@Valid Reference> trainees) {
     this.trainees = trainees;
   }
 

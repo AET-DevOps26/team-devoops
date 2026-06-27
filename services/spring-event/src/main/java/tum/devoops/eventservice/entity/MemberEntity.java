@@ -1,4 +1,4 @@
-package tum.devoops.feedbackservice.entity;
+package tum.devoops.eventservice.entity;
 
 import java.util.UUID;
 
@@ -8,15 +8,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+/**
+ * Read-only shadow of {@code member.members} (owned by the member service), used to resolve member
+ * display names for reference objects in responses. This service never writes to it.
+ */
 @Entity
 @Table(schema = "member", name = "members")
-@Getter
-@NoArgsConstructor
+@Getter @Setter @NoArgsConstructor
 public class MemberEntity {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(name = "id")
     private UUID id;
 
     @Column(name = "first_name", insertable = false, updatable = false)

@@ -33,6 +33,7 @@ import tum.devoops.feedbackservice.exception.ForbiddenException;
 import tum.devoops.feedbackservice.exception.NotFoundException;
 import tum.devoops.feedbackservice.model.Feedback;
 import tum.devoops.feedbackservice.model.FeedbackSummary;
+import tum.devoops.feedbackservice.model.Reference;
 import tum.devoops.feedbackservice.service.FeedbackService;
 
 @WebMvcTest(FeedbackController.class)
@@ -51,13 +52,15 @@ class FeedbackControllerTest {
     private static final UUID MEMBER_ID = UUID.randomUUID();
 
     private Feedback sampleFeedback() {
-        return new Feedback(FEEDBACK_ID, EVENT_ID.toString(), MEMBER_ID.toString(),
-                REQUESTER_ID.toString(), OffsetDateTime.now(), "Great work!");
+        return new Feedback(FEEDBACK_ID, new Reference(EVENT_ID, "Training"),
+                new Reference(MEMBER_ID, "Mary Member"),
+                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now(), "Great work!");
     }
 
     private FeedbackSummary sampleSummary() {
-        return new FeedbackSummary(FEEDBACK_ID, EVENT_ID.toString(), MEMBER_ID.toString(),
-                REQUESTER_ID.toString(), OffsetDateTime.now());
+        return new FeedbackSummary(FEEDBACK_ID, new Reference(EVENT_ID, "Training"),
+                new Reference(MEMBER_ID, "Mary Member"),
+                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now());
     }
 
     private String feedbackCreateJson(UUID eventId, UUID memberId, String text) {

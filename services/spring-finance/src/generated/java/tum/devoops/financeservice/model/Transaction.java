@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.financeservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -27,9 +28,9 @@ public class Transaction {
 
   private UUID id;
 
-  private String member;
+  private Reference member;
 
-  private String creator;
+  private Reference creator;
 
   private Integer amountCents;
 
@@ -47,7 +48,7 @@ public class Transaction {
   /**
    * Constructor with only required parameters
    */
-  public Transaction(UUID id, String member, String creator, Integer amountCents, OffsetDateTime createdAt, String title, String description) {
+  public Transaction(UUID id, Reference member, Reference creator, Integer amountCents, OffsetDateTime createdAt, String title, String description) {
     this.id = id;
     this.member = member;
     this.creator = creator;
@@ -77,7 +78,7 @@ public class Transaction {
     this.id = id;
   }
 
-  public Transaction member(String member) {
+  public Transaction member(Reference member) {
     this.member = member;
     return this;
   }
@@ -86,18 +87,18 @@ public class Transaction {
    * Get member
    * @return member
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("member")
-  public String getMember() {
+  public Reference getMember() {
     return member;
   }
 
-  public void setMember(String member) {
+  public void setMember(Reference member) {
     this.member = member;
   }
 
-  public Transaction creator(String creator) {
+  public Transaction creator(Reference creator) {
     this.creator = creator;
     return this;
   }
@@ -106,14 +107,14 @@ public class Transaction {
    * Get creator
    * @return creator
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "creator", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("creator")
-  public String getCreator() {
+  public Reference getCreator() {
     return creator;
   }
 
-  public void setCreator(String creator) {
+  public void setCreator(Reference creator) {
     this.creator = creator;
   }
 

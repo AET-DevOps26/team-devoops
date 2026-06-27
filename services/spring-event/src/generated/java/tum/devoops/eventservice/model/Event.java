@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.eventservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -41,15 +42,15 @@ public class Event {
   private OffsetDateTime endTime;
 
   @Valid
-  private @Nullable List<String> attendees;
+  private @Nullable List<@Valid Reference> attendees;
 
   @Valid
-  private @Nullable List<UUID> sportsLinked;
+  private @Nullable List<@Valid Reference> sportsLinked;
 
   @Valid
-  private @Nullable List<String> teamsLinked;
+  private @Nullable List<@Valid Reference> teamsLinked;
 
-  private String creator;
+  private Reference creator;
 
   public Event() {
     super();
@@ -58,7 +59,7 @@ public class Event {
   /**
    * Constructor with only required parameters
    */
-  public Event(UUID id, String name, String description, OffsetDateTime startTime, OffsetDateTime endTime, String creator) {
+  public Event(UUID id, String name, String description, OffsetDateTime startTime, OffsetDateTime endTime, Reference creator) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -167,12 +168,12 @@ public class Event {
     this.endTime = endTime;
   }
 
-  public Event attendees(@Nullable List<String> attendees) {
+  public Event attendees(@Nullable List<@Valid Reference> attendees) {
     this.attendees = attendees;
     return this;
   }
 
-  public Event addAttendeesItem(String attendeesItem) {
+  public Event addAttendeesItem(Reference attendeesItem) {
     if (this.attendees == null) {
       this.attendees = new ArrayList<>();
     }
@@ -184,23 +185,23 @@ public class Event {
    * Get attendees
    * @return attendees
    */
-  
+  @Valid 
   @Schema(name = "attendees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("attendees")
-  public @Nullable List<String> getAttendees() {
+  public @Nullable List<@Valid Reference> getAttendees() {
     return attendees;
   }
 
-  public void setAttendees(@Nullable List<String> attendees) {
+  public void setAttendees(@Nullable List<@Valid Reference> attendees) {
     this.attendees = attendees;
   }
 
-  public Event sportsLinked(@Nullable List<UUID> sportsLinked) {
+  public Event sportsLinked(@Nullable List<@Valid Reference> sportsLinked) {
     this.sportsLinked = sportsLinked;
     return this;
   }
 
-  public Event addSportsLinkedItem(UUID sportsLinkedItem) {
+  public Event addSportsLinkedItem(Reference sportsLinkedItem) {
     if (this.sportsLinked == null) {
       this.sportsLinked = new ArrayList<>();
     }
@@ -209,26 +210,26 @@ public class Event {
   }
 
   /**
-   * IDs of the sports associated with this event.
+   * Sports associated with this event.
    * @return sportsLinked
    */
   @Valid 
-  @Schema(name = "sports_linked", description = "IDs of the sports associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Schema(name = "sports_linked", description = "Sports associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sports_linked")
-  public @Nullable List<UUID> getSportsLinked() {
+  public @Nullable List<@Valid Reference> getSportsLinked() {
     return sportsLinked;
   }
 
-  public void setSportsLinked(@Nullable List<UUID> sportsLinked) {
+  public void setSportsLinked(@Nullable List<@Valid Reference> sportsLinked) {
     this.sportsLinked = sportsLinked;
   }
 
-  public Event teamsLinked(@Nullable List<String> teamsLinked) {
+  public Event teamsLinked(@Nullable List<@Valid Reference> teamsLinked) {
     this.teamsLinked = teamsLinked;
     return this;
   }
 
-  public Event addTeamsLinkedItem(String teamsLinkedItem) {
+  public Event addTeamsLinkedItem(Reference teamsLinkedItem) {
     if (this.teamsLinked == null) {
       this.teamsLinked = new ArrayList<>();
     }
@@ -237,21 +238,21 @@ public class Event {
   }
 
   /**
-   * IDs of the teams associated with this event.
+   * Teams associated with this event.
    * @return teamsLinked
    */
-  
-  @Schema(name = "teams_linked", description = "IDs of the teams associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Valid 
+  @Schema(name = "teams_linked", description = "Teams associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("teams_linked")
-  public @Nullable List<String> getTeamsLinked() {
+  public @Nullable List<@Valid Reference> getTeamsLinked() {
     return teamsLinked;
   }
 
-  public void setTeamsLinked(@Nullable List<String> teamsLinked) {
+  public void setTeamsLinked(@Nullable List<@Valid Reference> teamsLinked) {
     this.teamsLinked = teamsLinked;
   }
 
-  public Event creator(String creator) {
+  public Event creator(Reference creator) {
     this.creator = creator;
     return this;
   }
@@ -260,14 +261,14 @@ public class Event {
    * Get creator
    * @return creator
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "creator", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("creator")
-  public String getCreator() {
+  public Reference getCreator() {
     return creator;
   }
 
-  public void setCreator(String creator) {
+  public void setCreator(Reference creator) {
     this.creator = creator;
   }
 
