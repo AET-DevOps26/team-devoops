@@ -68,13 +68,15 @@ export type Balance = Omit<S['Balance'], 'member'> & {
   member: MemberRef
 }
 
+// Role-scoped superset from GET /members/dashboard: sections by entitlement.
 export interface DashboardAggregate {
   member: MemberSummary
   events: EventSummary[]
   feedback: FeedbackSummary[]
   balance: Balance
-  transactions: Transaction[]
   report: string
+  sports: Sport[]
+  teams: Team[]
 }
 
 export type Role = 'member' | 'trainer' | 'director' | 'admin'
