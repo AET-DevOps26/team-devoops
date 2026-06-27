@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 
+import { mockOr } from '@/mocks/mockSwitch'
 import { lettersClient } from './client'
 import type { GeneratePdfRequest, SendMailRequest } from '../types'
 
@@ -10,7 +11,11 @@ export const lettersKeys = {
 export function useLettersHello() {
   return useQuery<string>({
     queryKey: lettersKeys.hello,
-    queryFn: () => lettersClient.get<string>('/hello').then(r => r.data),
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve('Letters service mock'),
+        () => lettersClient.get<string>('/hello').then(r => r.data),
+      ),
   })
 }
 

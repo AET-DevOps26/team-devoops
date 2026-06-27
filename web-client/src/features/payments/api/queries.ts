@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { getCurrentUser } from '@/features/auth/currentUser'
+import { balanceFixtures, transactionFixtures } from '@/mocks/fixtures'
+import { mockOr } from '@/mocks/mockSwitch'
+import { scopeBalances, scopeTransactions } from '@/mocks/scope'
 import { paymentsClient } from './client'
 import type { Balance, Transaction, TransactionCreate, TransactionPartialUpdate } from '../types'
 
@@ -21,29 +25,60 @@ export function usePaymentsHello() {
 export function useBalances() {
   return useQuery<Balance[]>({
     queryKey: paymentsKeys.balances,
-    queryFn: () => paymentsClient.get<Balance[]>('/balances').then(r => r.data),
+    staleTime: 30_000,
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve(scopeBalances(balanceFixtures, getCurrentUser())),
+        () => paymentsClient.get<Balance[]>('/balances').then(r => r.data),
+      ),
   })
 }
 
 export function useMemberBalance(memberId: string) {
   return useQuery<Balance>({
     queryKey: paymentsKeys.balance(memberId),
-    queryFn: () => paymentsClient.get<Balance>(`/balances/${memberId}`).then(r => r.data),
+    staleTime: 30_000,
+    queryFn: () =>
+      mockOr(
+        () => {
+          const found = balanceFixtures.find(balance => balance.member.id === memberId)
+          const scoped = found ? scopeBalances([found], getCurrentUser()) : []
+          if (!scoped[0]) throw new Error('Balance not found')
+          return Promise.resolve(scoped[0])
+        },
+        () => paymentsClient.get<Balance>(`/balances/${memberId}`).then(r => r.data),
+      ),
     enabled: !!memberId,
   })
 }
 
-export function useTransactions() {
+export function useTransactions(enabled = true) {
   return useQuery<Transaction[]>({
     queryKey: paymentsKeys.transactions,
-    queryFn: () => paymentsClient.get<Transaction[]>('/transactions').then(r => r.data),
+    staleTime: 30_000,
+    enabled,
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve(scopeTransactions(transactionFixtures, getCurrentUser())),
+        () => paymentsClient.get<Transaction[]>('/transactions').then(r => r.data),
+      ),
   })
 }
 
 export function useTransaction(id: string) {
   return useQuery<Transaction>({
     queryKey: paymentsKeys.transaction(id),
-    queryFn: () => paymentsClient.get<Transaction>(`/transactions/${id}`).then(r => r.data),
+    staleTime: 30_000,
+    queryFn: () =>
+      mockOr(
+        () => {
+          const found = transactionFixtures.find(transaction => transaction.id === id)
+          const scoped = found ? scopeTransactions([found], getCurrentUser()) : []
+          if (!scoped[0]) throw new Error('Transaction not found')
+          return Promise.resolve(scoped[0])
+        },
+        () => paymentsClient.get<Transaction>(`/transactions/${id}`).then(r => r.data),
+      ),
     enabled: !!id,
   })
 }

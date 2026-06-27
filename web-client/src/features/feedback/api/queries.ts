@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { getCurrentUser } from '@/features/auth/currentUser'
+import { feedbackDetailsById, feedbackSummaryFixtures } from '@/mocks/fixtures'
+import { mockOr } from '@/mocks/mockSwitch'
+import { scopeFeedback } from '@/mocks/scope'
 import { feedbackClient } from './client'
 import type { Feedback, FeedbackCreate, FeedbackPartialUpdate, FeedbackSummary } from '../types'
 
@@ -16,17 +20,32 @@ export function useFeedbackHello() {
   })
 }
 
-export function useFeedbackList() {
+export function useFeedbackList(enabled = true) {
   return useQuery<FeedbackSummary[]>({
     queryKey: feedbackKeys.all,
-    queryFn: () => feedbackClient.get<FeedbackSummary[]>('/').then(r => r.data),
+    staleTime: 30_000,
+    enabled,
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve(scopeFeedback(feedbackSummaryFixtures, getCurrentUser())),
+        () => feedbackClient.get<FeedbackSummary[]>('/').then(r => r.data),
+      ),
   })
 }
 
 export function useFeedback(id: string) {
   return useQuery<Feedback>({
     queryKey: feedbackKeys.detail(id),
-    queryFn: () => feedbackClient.get<Feedback>(`/${id}`).then(r => r.data),
+    queryFn: () =>
+      mockOr(
+        () => {
+          const found = feedbackDetailsById[id]
+          const scoped = found ? scopeFeedback([found], getCurrentUser()) : []
+          if (!scoped[0]) throw new Error('Feedback not found')
+          return Promise.resolve(scoped[0])
+        },
+        () => feedbackClient.get<Feedback>(`/${id}`).then(r => r.data),
+      ),
     enabled: !!id,
   })
 }
