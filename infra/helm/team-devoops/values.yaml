@@ -170,6 +170,14 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
       JAVA_TOOL_OPTIONS: "-Xmx300m -Xms64m"
+      # Keycloak Admin REST API for syncing membership client-roles (KeycloakRoleService).
+      # The org-role-sync service-account client is defined in files/realm-config.json.
+      # Override KEYCLOAK_ADMIN_CLIENT_SECRET via --set in CI/prod.
+      KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
+      KEYCLOAK_REALM: "devops"
+      KEYCLOAK_ADMIN_CLIENT_ID: "org-role-sync"
+      KEYCLOAK_ADMIN_CLIENT_SECRET: "org-role-sync-secret"
+      KEYCLOAK_ROLES_CLIENT: "devops-client"
   member-service:
     path: /api/v1/members
     port: 8080

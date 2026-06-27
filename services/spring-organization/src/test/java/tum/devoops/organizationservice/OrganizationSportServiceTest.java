@@ -35,6 +35,7 @@ import tum.devoops.organizationservice.repository.SportRepository;
 import tum.devoops.organizationservice.repository.TeamRepository;
 import tum.devoops.organizationservice.repository.TraineeRepository;
 import tum.devoops.organizationservice.repository.TrainerRepository;
+import tum.devoops.organizationservice.service.MemberRoleSyncService;
 import tum.devoops.organizationservice.service.OrganizationSportService;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,6 +53,8 @@ class OrganizationSportServiceTest {
     private TrainerRepository trainerRepository;
     @Mock
     private TraineeRepository traineeRepository;
+    @Mock
+    private MemberRoleSyncService memberRoleSyncService;
 
     @InjectMocks
     private OrganizationSportService service;
@@ -175,6 +178,7 @@ class OrganizationSportServiceTest {
 
         verify(sportRepository).save(any(SportEntity.class));
         verify(directorRepository).saveAll(any());
+        verify(memberRoleSyncService).scheduleSync(argThat(ids -> ids.contains(MEMBER_ID)));
         assertThat(result.getName()).isEqualTo("soccer");
         assertThat(result.getDirectors()).containsExactly(MEMBER_ID.toString());
     }

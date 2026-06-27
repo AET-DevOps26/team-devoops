@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -33,6 +34,7 @@ import tum.devoops.organizationservice.repository.SportRepository;
 import tum.devoops.organizationservice.repository.TeamRepository;
 import tum.devoops.organizationservice.repository.TraineeRepository;
 import tum.devoops.organizationservice.repository.TrainerRepository;
+import tum.devoops.organizationservice.service.MemberRoleSyncService;
 import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +52,8 @@ class OrganizationTeamServiceTest {
     private TrainerRepository trainerRepository;
     @Mock
     private TraineeRepository traineeRepository;
+    @Mock
+    private MemberRoleSyncService memberRoleSyncService;
 
     @InjectMocks
     private OrganizationTeamService service;
@@ -231,6 +235,8 @@ class OrganizationTeamServiceTest {
         verify(teamRepository).save(any(TeamEntity.class));
         verify(trainerRepository).saveAll(any());
         verify(traineeRepository).saveAll(any());
+        verify(memberRoleSyncService).scheduleSync(
+                argThat(ids -> ids.contains(TRAINER_ID) && ids.contains(TRAINEE_ID)));
         assertThat(result.getTrainers()).containsExactly(TRAINER_ID.toString());
         assertThat(result.getTrainees()).containsExactly(TRAINEE_ID.toString());
     }

@@ -1,7 +1,9 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,8 @@ public class OrganizationSportService {
     private TrainerRepository trainerRepository;
     @Autowired
     private TraineeRepository traineeRepository;
+    @Autowired
+    private MemberRoleSyncService memberRoleSyncService;
 
     @Transactional(readOnly = true)
     public List<Sport> getAllSports() {
@@ -69,6 +73,8 @@ public class OrganizationSportService {
 
         saveDirectors(body.getName(), directorIds);
 
+        memberRoleSyncService.scheduleSync(new HashSet<>(directorIds));
+
         return toSport(findSportOrThrow(body.getName()));
     }
 
@@ -84,6 +90,8 @@ public class OrganizationSportService {
 
         String effectiveName = (body.getName() != null) ? body.getName() : sportName;
         String effectiveDescription = (body.getDescription() != null) ? body.getDescription() : sport.getDescription();
+
+        Set<UUID> affected = new HashSet<>();
 
         if (!effectiveName.equals(sportName)) {
             if (sportRepository.existsById(effectiveName)) {
@@ -105,8 +113,13 @@ public class OrganizationSportService {
             directorRepository.deleteAllById_SportName(sportName);
 
             if (isAdmin && !body.getDirectors().isEmpty()) {
-                saveDirectors(effectiveName, resolveDirectorUuids(body.getDirectors()));
+                List<UUID> newDirectorIds = resolveDirectorUuids(body.getDirectors());
+                saveDirectors(effectiveName, newDirectorIds);
+                // Directors are replaced: the removed and the added members both change.
+                oldDirectors.forEach(d -> affected.add(d.getId().getMemberId()));
+                affected.addAll(newDirectorIds);
             } else {
+                // Pure rename: the same members keep a director row, so membership is unchanged.
                 List<DirectorEntity> migratedDirectors = oldDirectors.stream()
                         .map(d -> new DirectorEntity(
                                 new DirectorEntity.Id(effectiveName, d.getId().getMemberId())))
@@ -120,10 +133,16 @@ public class OrganizationSportService {
             sportRepository.save(sport);
 
             if (isAdmin && !body.getDirectors().isEmpty()) {
+                directorRepository.findAllById_SportName(sportName)
+                        .forEach(d -> affected.add(d.getId().getMemberId()));
                 directorRepository.deleteAllById_SportName(sportName);
-                saveDirectors(sportName, resolveDirectorUuids(body.getDirectors()));
+                List<UUID> newDirectorIds = resolveDirectorUuids(body.getDirectors());
+                saveDirectors(sportName, newDirectorIds);
+                affected.addAll(newDirectorIds);
             }
         }
+
+        memberRoleSyncService.scheduleSync(affected);
 
         return toSport(findSportOrThrow(effectiveName));
     }
@@ -132,8 +151,16 @@ public class OrganizationSportService {
     public void deleteSport(String sportName) {
         SportEntity sport = findSportOrThrow(sportName);
 
+        Set<UUID> affected = new HashSet<>();
+        directorRepository.findAllById_SportName(sportName)
+                .forEach(d -> affected.add(d.getId().getMemberId()));
+
         List<TeamEntity> teams = teamRepository.findAllBySportName(sportName);
         for (TeamEntity team : teams) {
+            trainerRepository.findAllById_TeamId(team.getId())
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
+            traineeRepository.findAllById_TeamId(team.getId())
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             traineeRepository.deleteAllById_TeamId(team.getId());
             trainerRepository.deleteAllById_TeamId(team.getId());
         }
@@ -141,6 +168,8 @@ public class OrganizationSportService {
 
         directorRepository.deleteAllById_SportName(sportName);
         sportRepository.delete(sport);
+
+        memberRoleSyncService.scheduleSync(affected);
     }
 
     private SportEntity findSportOrThrow(String sportName) {

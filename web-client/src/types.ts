@@ -33,4 +33,7 @@ export type Balance = S['Balance']
 export interface AuthUser {
   name: string
   email: string
+  // Membership roles from the Keycloak `member_roles` claim — a subset of
+  // 'Trainee' | 'Coach' | 'Director' | 'Admin'.
+  roles: string[]
 }

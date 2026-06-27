@@ -1,7 +1,9 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +42,8 @@ public class OrganizationTeamService {
     private TrainerRepository trainerRepository;
     @Autowired
     private TraineeRepository traineeRepository;
+    @Autowired
+    private MemberRoleSyncService memberRoleSyncService;
 
     @Transactional(readOnly = true)
     public List<Team> getAllTeams() {
@@ -78,6 +82,10 @@ public class OrganizationTeamService {
 
         saveTrainers(team.getId(), trainerIds);
         saveTrainees(team.getId(), traineeIds);
+
+        Set<UUID> affected = new HashSet<>(trainerIds);
+        affected.addAll(traineeIds);
+        memberRoleSyncService.scheduleSync(affected);
 
         return toTeam(findTeamOrThrow(team.getId()));
     }
@@ -119,16 +127,24 @@ public class OrganizationTeamService {
         }
         teamRepository.save(team);
 
+        Set<UUID> affected = new HashSet<>();
         if (!body.getTrainers().isEmpty()) {
             List<UUID> trainerIds = resolveAndValidateMemberUuids(body.getTrainers(), "trainer");
+            trainerRepository.findAllById_TeamId(teamId)
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             trainerRepository.deleteAllById_TeamId(teamId);
             saveTrainers(teamId, trainerIds);
+            affected.addAll(trainerIds);
         }
         if (!body.getTrainees().isEmpty()) {
             List<UUID> traineeIds = resolveAndValidateMemberUuids(body.getTrainees(), "trainee");
+            traineeRepository.findAllById_TeamId(teamId)
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             traineeRepository.deleteAllById_TeamId(teamId);
             saveTrainees(teamId, traineeIds);
+            affected.addAll(traineeIds);
         }
+        memberRoleSyncService.scheduleSync(affected);
 
         return toTeam(findTeamOrThrow(teamId));
     }
@@ -143,9 +159,17 @@ public class OrganizationTeamService {
             throw new ForbiddenException("Access denied");
         }
 
+        Set<UUID> affected = new HashSet<>();
+        trainerRepository.findAllById_TeamId(teamId)
+                .forEach(t -> affected.add(t.getId().getMemberId()));
+        traineeRepository.findAllById_TeamId(teamId)
+                .forEach(t -> affected.add(t.getId().getMemberId()));
+
         traineeRepository.deleteAllById_TeamId(teamId);
         trainerRepository.deleteAllById_TeamId(teamId);
         teamRepository.delete(team);
+
+        memberRoleSyncService.scheduleSync(affected);
     }
 
     private TeamEntity findTeamOrThrow(UUID teamId) {

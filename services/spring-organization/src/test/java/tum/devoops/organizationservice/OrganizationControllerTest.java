@@ -34,6 +34,7 @@ import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.Team;
+import tum.devoops.organizationservice.service.MemberRoleSyncService;
 import tum.devoops.organizationservice.service.OrganizationSportService;
 import tum.devoops.organizationservice.service.OrganizationTeamService;
 
@@ -54,6 +55,9 @@ class OrganizationControllerTest {
 
     @MockitoBean
     private OrganizationTeamService teamService;
+
+    @MockitoBean
+    private MemberRoleSyncService memberRoleSyncService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
