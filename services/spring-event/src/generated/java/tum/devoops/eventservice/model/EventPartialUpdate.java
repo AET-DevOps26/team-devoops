@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
@@ -41,7 +42,7 @@ public class EventPartialUpdate {
   private @Nullable List<String> attendees;
 
   @Valid
-  private @Nullable List<String> sportsLinked;
+  private @Nullable List<UUID> sportsLinked;
 
   @Valid
   private @Nullable List<String> teamsLinked;
@@ -126,7 +127,7 @@ public class EventPartialUpdate {
     this.endTime = endTime;
   }
 
-  public EventPartialUpdate attendees(List<String> attendees) {
+  public EventPartialUpdate attendees(@Nullable List<String> attendees) {
     this.attendees = attendees;
     return this;
   }
@@ -150,16 +151,16 @@ public class EventPartialUpdate {
     return attendees;
   }
 
-  public void setAttendees(List<String> attendees) {
+  public void setAttendees(@Nullable List<String> attendees) {
     this.attendees = attendees;
   }
 
-  public EventPartialUpdate sportsLinked(List<String> sportsLinked) {
+  public EventPartialUpdate sportsLinked(@Nullable List<UUID> sportsLinked) {
     this.sportsLinked = sportsLinked;
     return this;
   }
 
-  public EventPartialUpdate addSportsLinkedItem(String sportsLinkedItem) {
+  public EventPartialUpdate addSportsLinkedItem(UUID sportsLinkedItem) {
     if (this.sportsLinked == null) {
       this.sportsLinked = new ArrayList<>();
     }
@@ -168,21 +169,21 @@ public class EventPartialUpdate {
   }
 
   /**
-   * Get sportsLinked
+   * IDs of the sports associated with this event.
    * @return sportsLinked
    */
-  
-  @Schema(name = "sports_linked", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Valid 
+  @Schema(name = "sports_linked", description = "IDs of the sports associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sports_linked")
-  public @Nullable List<String> getSportsLinked() {
+  public @Nullable List<UUID> getSportsLinked() {
     return sportsLinked;
   }
 
-  public void setSportsLinked(List<String> sportsLinked) {
+  public void setSportsLinked(@Nullable List<UUID> sportsLinked) {
     this.sportsLinked = sportsLinked;
   }
 
-  public EventPartialUpdate teamsLinked(List<String> teamsLinked) {
+  public EventPartialUpdate teamsLinked(@Nullable List<String> teamsLinked) {
     this.teamsLinked = teamsLinked;
     return this;
   }
@@ -206,7 +207,7 @@ public class EventPartialUpdate {
     return teamsLinked;
   }
 
-  public void setTeamsLinked(List<String> teamsLinked) {
+  public void setTeamsLinked(@Nullable List<String> teamsLinked) {
     this.teamsLinked = teamsLinked;
   }
 

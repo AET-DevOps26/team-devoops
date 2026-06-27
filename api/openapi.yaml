@@ -70,7 +70,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SportCreate"
-  /organization/sports/{sport_name}:
+  /organization/sports/{sport_id}:
     patch:
       operationId: updateSport
       tags:
@@ -81,7 +81,7 @@ paths:
         - Directors: can update all fields except directors.
         - Admins: can update all fields.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -118,7 +118,7 @@ paths:
         Deletes a sport from the organization.
         - Admins: can delete sports.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "204":
           description: The request was successful, but there is no content to return in
@@ -142,7 +142,7 @@ paths:
         Returns the details of a specific sport.
         - All authenticated users: can access this endpoint.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -1164,12 +1164,13 @@ components:
       description: "Jwt Auth: Authenticated requests contain a valid Json Web Token
         (JWT) as part of the `Authorization: Bearer <JWT>` header."
   parameters:
-    sport_name:
-      name: sport_name
+    sport_id:
+      name: sport_id
       in: path
       required: true
       schema:
         type: string
+        format: uuid
     team_id:
       name: team_id
       in: path
@@ -1227,6 +1228,9 @@ components:
     Sport:
       type: object
       properties:
+        id:
+          type: string
+          format: uuid
         name:
           type: string
         description:
@@ -1239,6 +1243,7 @@ components:
           items:
             type: string
       required:
+        - id
         - name
         - description
         - created_at
@@ -1288,6 +1293,8 @@ components:
           type: string
         sport:
           type: string
+          format: uuid
+          description: ID of the sport this team belongs to.
         trainers:
           type: array
           items:
@@ -1317,6 +1324,8 @@ components:
           type: string
         sport:
           type: string
+          format: uuid
+          description: ID of the sport this team belongs to.
         trainers:
           type: array
           items:
@@ -1340,6 +1349,8 @@ components:
           type: string
         sport:
           type: string
+          format: uuid
+          description: ID of the sport this team belongs to.
         trainers:
           type: array
           items:
@@ -1474,7 +1485,8 @@ components:
           type: array
           items:
             type: string
-          description: Names of the sports associated with this event.
+            format: uuid
+          description: IDs of the sports associated with this event.
         teams_linked:
           type: array
           items:
@@ -1531,6 +1543,8 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          description: IDs of the sports associated with this event.
         teams_linked:
           type: array
           items:
@@ -1558,6 +1572,8 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          description: IDs of the sports associated with this event.
         teams_linked:
           type: array
           items:

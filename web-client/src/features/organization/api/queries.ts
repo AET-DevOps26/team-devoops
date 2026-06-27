@@ -13,7 +13,7 @@ import type {
 export const organizationKeys = {
   hello: ['organization', 'hello'] as const,
   sports: ['organization', 'sports'] as const,
-  sport: (name: string) => ['organization', 'sports', name] as const,
+  sport: (id: string) => ['organization', 'sports', id] as const,
   teams: ['organization', 'teams'] as const,
   team: (id: string) => ['organization', 'teams', id] as const,
 }
@@ -32,11 +32,11 @@ export function useSports() {
   })
 }
 
-export function useSport(name: string) {
+export function useSport(id: string) {
   return useQuery<Sport>({
-    queryKey: organizationKeys.sport(name),
-    queryFn: () => organizationClient.get<Sport>(`/sports/${name}`).then(r => r.data),
-    enabled: !!name,
+    queryKey: organizationKeys.sport(id),
+    queryFn: () => organizationClient.get<Sport>(`/sports/${id}`).then(r => r.data),
+    enabled: !!id,
   })
 }
 
@@ -52,11 +52,11 @@ export function useCreateSport() {
 export function useUpdateSport() {
   const qc = useQueryClient()
 
-  return useMutation<Sport, Error, { name: string } & SportPartialUpdate>({
-    mutationFn: ({ name, ...data }) => organizationClient.patch<Sport>(`/sports/${name}`, data).then(r => r.data),
-    onSuccess: (_, { name }) => {
+  return useMutation<Sport, Error, { id: string } & SportPartialUpdate>({
+    mutationFn: ({ id, ...data }) => organizationClient.patch<Sport>(`/sports/${id}`, data).then(r => r.data),
+    onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: organizationKeys.sports })
-      qc.invalidateQueries({ queryKey: organizationKeys.sport(name) })
+      qc.invalidateQueries({ queryKey: organizationKeys.sport(id) })
     },
   })
 }
@@ -65,10 +65,10 @@ export function useDeleteSport() {
   const qc = useQueryClient()
 
   return useMutation<void, Error, string>({
-    mutationFn: name => organizationClient.delete(`/sports/${name}`).then(() => undefined),
-    onSuccess: (_, name) => {
+    mutationFn: id => organizationClient.delete(`/sports/${id}`).then(() => undefined),
+    onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: organizationKeys.sports })
-      qc.removeQueries({ queryKey: organizationKeys.sport(name) })
+      qc.removeQueries({ queryKey: organizationKeys.sport(id) })
     },
   })
 }

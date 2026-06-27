@@ -103,7 +103,7 @@ public interface EventsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -331,7 +331,7 @@ public interface EventsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -418,7 +418,7 @@ public interface EventsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"sports_linked\", \"sports_linked\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
+                    String exampleString = "{ \"start_time\" : \"2000-01-23T04:56:07.000+00:00\", \"creator\" : \"creator\", \"attendees\" : [ \"attendees\", \"attendees\" ], \"name\" : \"name\", \"end_time\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sports_linked\" : [ \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" ], \"teams_linked\" : [ \"teams_linked\", \"teams_linked\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

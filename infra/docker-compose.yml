@@ -26,6 +26,7 @@ services:
   organization-service:
     build: ../services/spring-organization
     container_name: organization-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:
@@ -52,6 +53,7 @@ services:
   member-service:
     build: ../services/spring-member
     container_name: member-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:
@@ -78,6 +80,7 @@ services:
   event-service:
     build: ../services/spring-event
     container_name: event-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:
@@ -104,6 +107,7 @@ services:
   feedback-service:
     build: ../services/spring-feedback
     container_name: feedback-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:
@@ -130,6 +134,7 @@ services:
   finance-service:
     build: ../services/spring-finance
     container_name: finance-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:
@@ -156,6 +161,7 @@ services:
   letter-service:
     build: ../services/spring-letter
     container_name: letter-service
+    restart: on-failure
     expose:
       - 8080
     depends_on:

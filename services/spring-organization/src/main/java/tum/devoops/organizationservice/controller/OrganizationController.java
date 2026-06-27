@@ -79,22 +79,22 @@ public class OrganizationController implements OrganizationApi {
     }
 
     @Override
-    public ResponseEntity<Sport> getSport(String sportName) {
-        return ResponseEntity.ok(sportService.getSport(sportName));
+    public ResponseEntity<Sport> getSport(UUID sportId) {
+        return ResponseEntity.ok(sportService.getSport(sportId));
     }
 
     @Override
-    public ResponseEntity<Sport> updateSport(String sportName, SportPartialUpdate sportPartialUpdate) {
+    public ResponseEntity<Sport> updateSport(UUID sportId, SportPartialUpdate sportPartialUpdate) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UUID requesterId = extractRequesterId(auth);
         boolean isAdmin = extractIsAdmin(auth);
-        return ResponseEntity.ok(sportService.updateSport(sportName, sportPartialUpdate, requesterId, isAdmin));
+        return ResponseEntity.ok(sportService.updateSport(sportId, sportPartialUpdate, requesterId, isAdmin));
     }
 
     @Override
     @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<Void> deleteSport(String sportName) {
-        sportService.deleteSport(sportName);
+    public ResponseEntity<Void> deleteSport(UUID sportId) {
+        sportService.deleteSport(sportId);
         return ResponseEntity.noContent().build();
     }
 

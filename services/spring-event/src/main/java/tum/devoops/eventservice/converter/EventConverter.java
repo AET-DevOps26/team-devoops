@@ -38,7 +38,7 @@ public final class EventConverter {
                 .map(a -> a.getId().getMemberId().toString())
                 .collect(Collectors.toList()));
         event.setSportsLinked(sports.stream()
-                .map(s -> s.getId().getSportName())
+                .map(s -> s.getId().getSportId())
                 .collect(Collectors.toList()));
         event.setTeamsLinked(teams.stream()
                 .map(t -> t.getId().getTeamId().toString())

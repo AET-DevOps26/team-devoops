@@ -43,6 +43,7 @@ class MemberRoleSyncServiceTest {
 
     private static final UUID MEMBER = UUID.fromString("00000000-0000-0000-0000-000000000007");
     private static final UUID TEAM = UUID.fromString("00000000-0000-0000-0000-000000000010");
+    private static final UUID SPORT = UUID.fromString("00000000-0000-0000-0000-000000000020");
 
     private TrainerEntity trainer(UUID memberId) {
         return new TrainerEntity(new TrainerEntity.Id(TEAM, memberId));
@@ -53,7 +54,7 @@ class MemberRoleSyncServiceTest {
     }
 
     private DirectorEntity director(UUID memberId) {
-        return new DirectorEntity(new DirectorEntity.Id("soccer", memberId));
+        return new DirectorEntity(new DirectorEntity.Id(SPORT, memberId));
     }
 
     @Test

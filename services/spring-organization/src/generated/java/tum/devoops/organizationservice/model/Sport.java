@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
@@ -27,6 +28,8 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Sport {
 
+  private UUID id;
+
   private String name;
 
   private String description;
@@ -35,7 +38,7 @@ public class Sport {
   private LocalDate createdAt;
 
   @Valid
-  private List<String> directors = new ArrayList<>();
+  private List<String> directors;
 
   public Sport() {
     super();
@@ -44,11 +47,32 @@ public class Sport {
   /**
    * Constructor with only required parameters
    */
-  public Sport(String name, String description, LocalDate createdAt, List<String> directors) {
+  public Sport(UUID id, String name, String description, LocalDate createdAt, List<String> directors) {
+    this.id = id;
     this.name = name;
     this.description = description;
     this.createdAt = createdAt;
     this.directors = directors;
+  }
+
+  public Sport id(UUID id) {
+    this.id = id;
+    return this;
+  }
+
+  /**
+   * Get id
+   * @return id
+   */
+  @NotNull @Valid 
+  @Schema(name = "id", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("id")
+  public UUID getId() {
+    return id;
+  }
+
+  public void setId(UUID id) {
+    this.id = id;
   }
 
   public Sport name(String name) {
@@ -148,7 +172,8 @@ public class Sport {
       return false;
     }
     Sport sport = (Sport) o;
-    return Objects.equals(this.name, sport.name) &&
+    return Objects.equals(this.id, sport.id) &&
+        Objects.equals(this.name, sport.name) &&
         Objects.equals(this.description, sport.description) &&
         Objects.equals(this.createdAt, sport.createdAt) &&
         Objects.equals(this.directors, sport.directors);
@@ -156,13 +181,14 @@ public class Sport {
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, description, createdAt, directors);
+    return Objects.hash(id, name, description, createdAt, directors);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class Sport {\n");
+    sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");

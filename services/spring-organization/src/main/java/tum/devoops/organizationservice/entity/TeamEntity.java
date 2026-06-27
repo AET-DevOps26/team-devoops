@@ -38,9 +38,9 @@ public class TeamEntity {
     @Column(name = "address")
     private String address;
 
-    // FK to organization.sport(name). REFERENCES constraint added in V3 migration.
-    @Column(name = "sport_name", nullable = false)
-    private String sportName;
+    // FK to organization.sports(id).
+    @Column(name = "sport_id", nullable = false)
+    private UUID sportId;
 
     @OneToMany
     @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)

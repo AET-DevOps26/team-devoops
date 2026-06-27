@@ -30,7 +30,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organization/sports/{sport_name}": {
+    "/organization/sports/{sport_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -509,6 +509,8 @@ export interface components {
         };
         /** @description The object representation of a Sport within the organization. */
         Sport: {
+            /** Format: uuid */
+            id: string;
             name: string;
             description: string;
             /** Format: date */
@@ -536,6 +538,10 @@ export interface components {
             /** Format: date */
             created_at: string;
             address: string;
+            /**
+             * Format: uuid
+             * @description ID of the sport this team belongs to.
+             */
             sport: string;
             trainers: string[];
             trainees: string[];
@@ -545,6 +551,10 @@ export interface components {
             name: string;
             description?: string;
             address?: string;
+            /**
+             * Format: uuid
+             * @description ID of the sport this team belongs to.
+             */
             sport: string;
             trainers?: string[];
             trainees?: string[];
@@ -554,6 +564,10 @@ export interface components {
             name?: string;
             description?: string;
             address?: string;
+            /**
+             * Format: uuid
+             * @description ID of the sport this team belongs to.
+             */
             sport?: string;
             trainers?: string[];
             trainees?: string[];
@@ -616,7 +630,7 @@ export interface components {
             /** Format: date-time */
             end_time: string;
             attendees?: string[];
-            /** @description Names of the sports associated with this event. */
+            /** @description IDs of the sports associated with this event. */
             sports_linked?: string[];
             /** @description IDs of the teams associated with this event. */
             teams_linked?: string[];
@@ -641,6 +655,7 @@ export interface components {
             /** Format: date-time */
             end_time?: string;
             attendees?: string[];
+            /** @description IDs of the sports associated with this event. */
             sports_linked?: string[];
             teams_linked?: string[];
         };
@@ -653,6 +668,7 @@ export interface components {
             /** Format: date-time */
             end_time: string;
             attendees?: string[];
+            /** @description IDs of the sports associated with this event. */
             sports_linked?: string[];
             teams_linked?: string[];
         };
@@ -785,7 +801,7 @@ export interface components {
         };
     };
     parameters: {
-        sport_name: string;
+        sport_id: string;
         team_id: string;
         member_id: string;
         event_id: string;
@@ -856,7 +872,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };
@@ -882,7 +898,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };
@@ -906,7 +922,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };

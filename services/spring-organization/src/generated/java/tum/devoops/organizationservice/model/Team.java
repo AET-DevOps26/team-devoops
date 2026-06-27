@@ -39,13 +39,13 @@ public class Team {
 
   private String address;
 
-  private String sport;
+  private UUID sport;
 
   @Valid
-  private List<String> trainers = new ArrayList<>();
+  private List<String> trainers;
 
   @Valid
-  private List<String> trainees = new ArrayList<>();
+  private List<String> trainees;
 
   public Team() {
     super();
@@ -54,7 +54,7 @@ public class Team {
   /**
    * Constructor with only required parameters
    */
-  public Team(UUID id, String name, String description, LocalDate createdAt, String address, String sport, List<String> trainers, List<String> trainees) {
+  public Team(UUID id, String name, String description, LocalDate createdAt, String address, UUID sport, List<String> trainers, List<String> trainees) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -165,23 +165,23 @@ public class Team {
     this.address = address;
   }
 
-  public Team sport(String sport) {
+  public Team sport(UUID sport) {
     this.sport = sport;
     return this;
   }
 
   /**
-   * Get sport
+   * ID of the sport this team belongs to.
    * @return sport
    */
-  @NotNull 
-  @Schema(name = "sport", requiredMode = Schema.RequiredMode.REQUIRED)
+  @NotNull @Valid 
+  @Schema(name = "sport", description = "ID of the sport this team belongs to.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("sport")
-  public String getSport() {
+  public UUID getSport() {
     return sport;
   }
 
-  public void setSport(String sport) {
+  public void setSport(UUID sport) {
     this.sport = sport;
   }
 

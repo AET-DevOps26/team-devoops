@@ -120,7 +120,8 @@ public class EventService {
             throw new BadRequestException("Event end time must be after start time");
         }
 
-        // null means the field was omitted (no change); non-null (including empty) means replace
+        // null means the field was omitted (no change); a non-null list (including empty) replaces
+        // the existing links, so an empty list clears them.
         if (body.getAttendees() != null) {
             attendanceRepository.deleteAllById_EventId(eventId);
             attendanceRepository.saveAll(buildAttendanceEntities(eventId, body.getAttendees()));
@@ -149,7 +150,7 @@ public class EventService {
         eventRepository.delete(entity);
     }
 
-    private void persistLinks(UUID eventId, List<String> attendees, List<String> sports, List<String> teams) {
+    private void persistLinks(UUID eventId, List<String> attendees, List<UUID> sports, List<String> teams) {
         if (attendees != null) {
             attendanceRepository.saveAll(buildAttendanceEntities(eventId, attendees));
         }
@@ -170,9 +171,9 @@ public class EventService {
         return result;
     }
 
-    private List<SportEventEntity> buildSportEntities(UUID eventId, List<String> sports) {
+    private List<SportEventEntity> buildSportEntities(UUID eventId, List<UUID> sports) {
         List<SportEventEntity> result = new ArrayList<>();
-        for (String sport : sports) {
+        for (UUID sport : sports) {
             if (sport == null) {
                 throw new BadRequestException("'sports_linked' contains a null entry");
             }

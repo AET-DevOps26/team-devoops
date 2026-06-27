@@ -58,6 +58,7 @@ class EventServiceTest {
     private static final UUID EVENT_ID = UUID.randomUUID();
     private static final UUID MEMBER_ID = UUID.randomUUID();
     private static final UUID TEAM_ID = UUID.randomUUID();
+    private static final UUID SPORT_ID = UUID.randomUUID();
 
     private static final Instant START = Instant.parse("2026-01-01T10:00:00Z");
     private static final Instant END = Instant.parse("2026-01-01T12:00:00Z");
@@ -156,7 +157,7 @@ class EventServiceTest {
         when(eventRepository.save(any())).thenReturn(saved);
         EventCreate body = validCreate()
                 .attendees(List.of(MEMBER_ID.toString()))
-                .sportsLinked(List.of("football"))
+                .sportsLinked(List.of(SPORT_ID))
                 .teamsLinked(List.of(TEAM_ID.toString()));
 
         Event result = service.createEvent(body, REQUESTER_ID, true);
@@ -169,7 +170,7 @@ class EventServiceTest {
 
         ArgumentCaptor<List<SportEventEntity>> sports = listCaptor();
         verify(sportEventRepository).saveAll(sports.capture());
-        assertThat(sports.getValue()).extracting(s -> s.getId().getSportName()).containsExactly("football");
+        assertThat(sports.getValue()).extracting(s -> s.getId().getSportId()).containsExactly(SPORT_ID);
 
         ArgumentCaptor<List<TeamEventEntity>> teams = listCaptor();
         verify(teamEventRepository).saveAll(teams.capture());
@@ -304,6 +305,7 @@ class EventServiceTest {
 
     @Test
     void updateEventDetailsWithEmptyListClearsLinks() {
+        // An empty (non-null) list wipes the links; a null/omitted list would leave them untouched.
         EventEntity entity = eventEntity(EVENT_ID, REQUESTER_ID);
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(entity));
         when(eventRepository.save(any())).thenReturn(entity);
@@ -339,7 +341,7 @@ class EventServiceTest {
     void updateEventDetailsWithNullSportEntryThrowsBadRequest() {
         EventEntity entity = eventEntity(EVENT_ID, REQUESTER_ID);
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(entity));
-        List<String> sports = new ArrayList<>();
+        List<UUID> sports = new ArrayList<>();
         sports.add(null);
 
         assertThatThrownBy(() -> service.updateEventDetails(

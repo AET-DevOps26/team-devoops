@@ -41,13 +41,13 @@ public class Event {
   private OffsetDateTime endTime;
 
   @Valid
-  private List<String> attendees = new ArrayList<>();
+  private @Nullable List<String> attendees;
 
   @Valid
-  private List<String> sportsLinked = new ArrayList<>();
+  private @Nullable List<UUID> sportsLinked;
 
   @Valid
-  private List<String> teamsLinked = new ArrayList<>();
+  private @Nullable List<String> teamsLinked;
 
   private String creator;
 
@@ -167,7 +167,7 @@ public class Event {
     this.endTime = endTime;
   }
 
-  public Event attendees(List<String> attendees) {
+  public Event attendees(@Nullable List<String> attendees) {
     this.attendees = attendees;
     return this;
   }
@@ -187,20 +187,20 @@ public class Event {
   
   @Schema(name = "attendees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("attendees")
-  public List<String> getAttendees() {
+  public @Nullable List<String> getAttendees() {
     return attendees;
   }
 
-  public void setAttendees(List<String> attendees) {
+  public void setAttendees(@Nullable List<String> attendees) {
     this.attendees = attendees;
   }
 
-  public Event sportsLinked(List<String> sportsLinked) {
+  public Event sportsLinked(@Nullable List<UUID> sportsLinked) {
     this.sportsLinked = sportsLinked;
     return this;
   }
 
-  public Event addSportsLinkedItem(String sportsLinkedItem) {
+  public Event addSportsLinkedItem(UUID sportsLinkedItem) {
     if (this.sportsLinked == null) {
       this.sportsLinked = new ArrayList<>();
     }
@@ -209,21 +209,21 @@ public class Event {
   }
 
   /**
-   * Names of the sports associated with this event.
+   * IDs of the sports associated with this event.
    * @return sportsLinked
    */
-  
-  @Schema(name = "sports_linked", description = "Names of the sports associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Valid 
+  @Schema(name = "sports_linked", description = "IDs of the sports associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sports_linked")
-  public List<String> getSportsLinked() {
+  public @Nullable List<UUID> getSportsLinked() {
     return sportsLinked;
   }
 
-  public void setSportsLinked(List<String> sportsLinked) {
+  public void setSportsLinked(@Nullable List<UUID> sportsLinked) {
     this.sportsLinked = sportsLinked;
   }
 
-  public Event teamsLinked(List<String> teamsLinked) {
+  public Event teamsLinked(@Nullable List<String> teamsLinked) {
     this.teamsLinked = teamsLinked;
     return this;
   }
@@ -243,11 +243,11 @@ public class Event {
   
   @Schema(name = "teams_linked", description = "IDs of the teams associated with this event.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("teams_linked")
-  public List<String> getTeamsLinked() {
+  public @Nullable List<String> getTeamsLinked() {
     return teamsLinked;
   }
 
-  public void setTeamsLinked(List<String> teamsLinked) {
+  public void setTeamsLinked(@Nullable List<String> teamsLinked) {
     this.teamsLinked = teamsLinked;
   }
 

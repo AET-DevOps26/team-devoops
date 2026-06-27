@@ -19,9 +19,9 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class SportEventEntity {
 
-    // Composite PK: (event_id, sport_name).
-    // event_id references event.event(id).
-    // sport_name references organization.sport(name) — FK added in V3 migration.
+    // Composite PK: (event_id, sport_id).
+    // event_id references event.events(id).
+    // sport_id references organization.sports(id).
     @EmbeddedId
     private Id id;
 
@@ -31,7 +31,7 @@ public class SportEventEntity {
         @Column(name = "event_id", nullable = false)
         private UUID eventId;
 
-        @Column(name = "sport_name", nullable = false)
-        private String sportName;
+        @Column(name = "sport_id", nullable = false)
+        private UUID sportId;
     }
 }
