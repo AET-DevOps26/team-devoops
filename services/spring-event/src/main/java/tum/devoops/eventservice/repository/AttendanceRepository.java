@@ -1,5 +1,6 @@
 package tum.devoops.eventservice.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,6 +12,9 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, At
 
     // SELECT * FROM event.attendances WHERE event_id = ?
     List<AttendanceEntity> findAllById_EventId(UUID eventId);
+
+    // SELECT * FROM event.attendances WHERE event_id IN (?)
+    List<AttendanceEntity> findAllById_EventIdIn(Collection<UUID> eventIds);
 
     // SELECT * FROM event.attendances WHERE member_id = ?
     List<AttendanceEntity> findAllById_MemberId(UUID memberId);

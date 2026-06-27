@@ -647,6 +647,7 @@ export interface components {
             start_time: string;
             /** Format: date-time */
             end_time: string;
+            attendees?: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for partially updating an existing Event (PATCH operation). */
         EventPartialUpdate: {

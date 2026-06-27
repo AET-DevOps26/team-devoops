@@ -18,11 +18,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.eventservice.entity.AttendanceEntity;
+import tum.devoops.eventservice.entity.MemberEntity;
 import tum.devoops.eventservice.entity.EventEntity;
 import tum.devoops.eventservice.entity.SportEventEntity;
 import tum.devoops.eventservice.entity.TeamEventEntity;
@@ -33,6 +33,7 @@ import tum.devoops.eventservice.model.Event;
 import tum.devoops.eventservice.model.EventCreate;
 import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
+import tum.devoops.eventservice.model.Reference;
 import tum.devoops.eventservice.repository.AttendanceRepository;
 import tum.devoops.eventservice.repository.EventRepository;
 import tum.devoops.eventservice.repository.MemberRepository;
@@ -99,7 +100,7 @@ class EventServiceTest {
     // ─── getAllEvents ──────────────────────────────────────────────────────────
 
     @Test
-    void getAllEventsAsAdminReturnsAllAndIgnoresAttendance() {
+    void getAllEventsAsAdminReturnsAll() {
         EventEntity a = eventEntity(UUID.randomUUID(), REQUESTER_ID);
         EventEntity b = eventEntity(UUID.randomUUID(), OTHER_ID);
         when(eventRepository.findAll()).thenReturn(List.of(a, b));
@@ -107,7 +108,29 @@ class EventServiceTest {
         List<EventSummary> result = service.getAllEvents(REQUESTER_ID, true);
 
         assertThat(result).hasSize(2);
-        verifyNoInteractions(attendanceRepository);
+        // Admin doesn't consult attendance for the membership decision, only to populate attendees.
+        verify(attendanceRepository, never()).findAllById_MemberId(any());
+    }
+
+    @Test
+    void getAllEventsPopulatesAttendeesOnSummaries() {
+        EventEntity event = eventEntity(EVENT_ID, REQUESTER_ID);
+        when(eventRepository.findAll()).thenReturn(List.of(event));
+        when(attendanceRepository.findAllById_EventIdIn(any()))
+                .thenReturn(List.of(new AttendanceEntity(new AttendanceEntity.Id(EVENT_ID, MEMBER_ID))));
+        MemberEntity member = new MemberEntity();
+        member.setId(MEMBER_ID);
+        member.setFirstName("Mary");
+        member.setLastName("Member");
+        when(memberRepository.findAllById(any())).thenReturn(List.of(member));
+
+        List<EventSummary> result = service.getAllEvents(REQUESTER_ID, true);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAttendees())
+                .extracting(Reference::getId).containsExactly(MEMBER_ID);
+        assertThat(result.get(0).getAttendees())
+                .extracting(Reference::getName).containsExactly("Mary Member");
     }
 
     @Test

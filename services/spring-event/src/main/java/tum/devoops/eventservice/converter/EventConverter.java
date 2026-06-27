@@ -56,12 +56,18 @@ public final class EventConverter {
         return new Reference(id, names.get(id));
     }
 
-    public static EventSummary toSummary(EventEntity entity) {
-        return new EventSummary(
+    public static EventSummary toSummary(EventEntity entity,
+                                         List<AttendanceEntity> attendances,
+                                         Map<UUID, String> memberNames) {
+        EventSummary summary = new EventSummary(
                 entity.getId(),
                 entity.getName(),
                 entity.getStartTime().atOffset(ZoneOffset.UTC),
                 entity.getEndTime().atOffset(ZoneOffset.UTC)
         );
+        summary.setAttendees(attendances.stream()
+                .map(a -> reference(a.getId().getMemberId(), memberNames))
+                .collect(Collectors.toList()));
+        return summary;
     }
 }

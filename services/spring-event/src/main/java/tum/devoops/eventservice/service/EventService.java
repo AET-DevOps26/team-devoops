@@ -74,7 +74,22 @@ public class EventService {
             entities = new ArrayList<>(created);
             entities.addAll(attended);
         }
-        return entities.stream().map(EventConverter::toSummary).collect(Collectors.toList());
+
+        List<UUID> eventIds = entities.stream().map(EventEntity::getId).collect(Collectors.toList());
+        Map<UUID, List<AttendanceEntity>> attendancesByEvent = new HashMap<>();
+        Set<UUID> attendeeMemberIds = new HashSet<>();
+        for (AttendanceEntity a : attendanceRepository.findAllById_EventIdIn(eventIds)) {
+            attendancesByEvent.computeIfAbsent(a.getId().getEventId(), k -> new ArrayList<>()).add(a);
+            attendeeMemberIds.add(a.getId().getMemberId());
+        }
+        Map<UUID, String> memberNames = new HashMap<>();
+        memberRepository.findAllById(attendeeMemberIds)
+                .forEach(m -> memberNames.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+
+        return entities.stream()
+                .map(e -> EventConverter.toSummary(e,
+                        attendancesByEvent.getOrDefault(e.getId(), List.of()), memberNames))
+                .collect(Collectors.toList());
     }
 
     @Transactional
