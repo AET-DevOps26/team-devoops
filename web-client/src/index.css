@@ -70,7 +70,7 @@
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.768 0.233 130.85);
-  --primary-foreground: oklch(0.405 0.101 131.063);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.274 0.006 286.033);
@@ -227,9 +227,6 @@
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
     letter-spacing: -0.01em;
-    background-image:
-      radial-gradient(circle at top left, var(--gradient-spot-1), transparent 28%),
-      radial-gradient(circle at bottom right, var(--gradient-spot-2), transparent 32%);
   }
 
   #root {
