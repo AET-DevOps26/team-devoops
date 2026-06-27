@@ -54,17 +54,18 @@ class FeedbackControllerTest {
     private Feedback sampleFeedback() {
         return new Feedback(FEEDBACK_ID, new Reference(EVENT_ID, "Training"),
                 new Reference(MEMBER_ID, "Mary Member"),
-                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now(), "Great work!");
+                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now(), "Great work!", 8);
     }
 
     private FeedbackSummary sampleSummary() {
         return new FeedbackSummary(FEEDBACK_ID, new Reference(EVENT_ID, "Training"),
                 new Reference(MEMBER_ID, "Mary Member"),
-                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now());
+                new Reference(REQUESTER_ID, "Casey Creator"), OffsetDateTime.now(), 8);
     }
 
     private String feedbackCreateJson(UUID eventId, UUID memberId, String text) {
-        return "{\"event\":\"" + eventId + "\",\"member\":\"" + memberId + "\",\"feedback\":\"" + text + "\"}";
+        return "{\"event\":\"" + eventId + "\",\"member\":\"" + memberId
+                + "\",\"feedback\":\"" + text + "\",\"rating\":8}";
     }
 
     private static RequestPostProcessor memberJwt() {
@@ -133,7 +134,19 @@ class FeedbackControllerTest {
                 .andExpect(jsonPath("$.event").exists())
                 .andExpect(jsonPath("$.member").exists())
                 .andExpect(jsonPath("$.creator").exists())
-                .andExpect(jsonPath("$.feedback").exists());
+                .andExpect(jsonPath("$.feedback").exists())
+                .andExpect(jsonPath("$.rating").value(8));
+    }
+
+    @Test
+    void createFeedbackWithOutOfRangeRatingReturns400() throws Exception {
+        String json = "{\"event\":\"" + EVENT_ID + "\",\"member\":\"" + MEMBER_ID
+                + "\",\"feedback\":\"x\",\"rating\":11}";
+        mockMvc.perform(post("/feedback")
+                        .with(memberJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

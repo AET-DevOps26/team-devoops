@@ -1613,6 +1613,11 @@ components:
           format: date-time
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - id
         - event
@@ -1620,6 +1625,7 @@ components:
         - creator
         - created_at
         - feedback
+        - rating
       description: The object representation of Feedback, which is associated with a specific Event and Member.
     FeedbackSummary:
       type: object
@@ -1636,12 +1642,18 @@ components:
         created_at:
           type: string
           format: date-time
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - id
         - event
         - member
         - creator
         - created_at
+        - rating
       description: A simplified representation of a Feedback, typically used in list views.
     FeedbackPartialUpdate:
       type: object
@@ -1652,6 +1664,11 @@ components:
           type: string
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       description: Data transfer object for partially updating an existing Feedback
         (PATCH operation).
     FeedbackCreate:
@@ -1663,10 +1680,16 @@ components:
           type: string
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - event
         - member
         - feedback
+        - rating
       description: Data transfer object for creating a new Feedback.
     Transaction:
       type: object

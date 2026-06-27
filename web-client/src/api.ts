@@ -685,6 +685,8 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             feedback: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description A simplified representation of a Feedback, typically used in list views. */
         FeedbackSummary: {
@@ -695,18 +697,24 @@ export interface components {
             creator: components["schemas"]["Reference"];
             /** Format: date-time */
             created_at: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description Data transfer object for partially updating an existing Feedback (PATCH operation). */
         FeedbackPartialUpdate: {
             event?: string;
             member?: string;
             feedback?: string;
+            /** Format: int32 */
+            rating?: number;
         };
         /** @description Data transfer object for creating a new Feedback. */
         FeedbackCreate: {
             event: string;
             member: string;
             feedback: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps. */
         Transaction: {

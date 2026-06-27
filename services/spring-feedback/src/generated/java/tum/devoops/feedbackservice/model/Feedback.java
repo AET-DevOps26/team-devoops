@@ -39,6 +39,8 @@ public class Feedback {
 
   private String feedback;
 
+  private Integer rating;
+
   public Feedback() {
     super();
   }
@@ -46,13 +48,14 @@ public class Feedback {
   /**
    * Constructor with only required parameters
    */
-  public Feedback(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt, String feedback) {
+  public Feedback(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt, String feedback, Integer rating) {
     this.id = id;
     this.event = event;
     this.member = member;
     this.creator = creator;
     this.createdAt = createdAt;
     this.feedback = feedback;
+    this.rating = rating;
   }
 
   public Feedback id(UUID id) {
@@ -175,6 +178,28 @@ public class Feedback {
     this.feedback = feedback;
   }
 
+  public Feedback rating(Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @NotNull @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("rating")
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -189,12 +214,13 @@ public class Feedback {
         Objects.equals(this.member, feedback.member) &&
         Objects.equals(this.creator, feedback.creator) &&
         Objects.equals(this.createdAt, feedback.createdAt) &&
-        Objects.equals(this.feedback, feedback.feedback);
+        Objects.equals(this.feedback, feedback.feedback) &&
+        Objects.equals(this.rating, feedback.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, event, member, creator, createdAt, feedback);
+    return Objects.hash(id, event, member, creator, createdAt, feedback, rating);
   }
 
   @Override
@@ -207,6 +233,7 @@ public class Feedback {
     sb.append("    creator: ").append(toIndentedString(creator)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("    feedback: ").append(toIndentedString(feedback)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }

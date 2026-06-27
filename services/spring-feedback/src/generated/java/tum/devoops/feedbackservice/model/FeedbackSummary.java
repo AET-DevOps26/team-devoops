@@ -37,6 +37,8 @@ public class FeedbackSummary {
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;
 
+  private Integer rating;
+
   public FeedbackSummary() {
     super();
   }
@@ -44,12 +46,13 @@ public class FeedbackSummary {
   /**
    * Constructor with only required parameters
    */
-  public FeedbackSummary(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt) {
+  public FeedbackSummary(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt, Integer rating) {
     this.id = id;
     this.event = event;
     this.member = member;
     this.creator = creator;
     this.createdAt = createdAt;
+    this.rating = rating;
   }
 
   public FeedbackSummary id(UUID id) {
@@ -152,6 +155,28 @@ public class FeedbackSummary {
     this.createdAt = createdAt;
   }
 
+  public FeedbackSummary rating(Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @NotNull @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("rating")
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -165,12 +190,13 @@ public class FeedbackSummary {
         Objects.equals(this.event, feedbackSummary.event) &&
         Objects.equals(this.member, feedbackSummary.member) &&
         Objects.equals(this.creator, feedbackSummary.creator) &&
-        Objects.equals(this.createdAt, feedbackSummary.createdAt);
+        Objects.equals(this.createdAt, feedbackSummary.createdAt) &&
+        Objects.equals(this.rating, feedbackSummary.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, event, member, creator, createdAt);
+    return Objects.hash(id, event, member, creator, createdAt, rating);
   }
 
   @Override
@@ -182,6 +208,7 @@ public class FeedbackSummary {
     sb.append("    member: ").append(toIndentedString(member)).append("\n");
     sb.append("    creator: ").append(toIndentedString(creator)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }

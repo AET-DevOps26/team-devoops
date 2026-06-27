@@ -81,12 +81,15 @@ public class FeedbackService {
             assertTrainerOfMember(requesterId, memberId);
         }
 
+        assertRatingInRange(body.getRating());
+
         FeedbackEntity entity = new FeedbackEntity();
         entity.setEventId(eventId);
         entity.setMemberId(memberId);
         entity.setCreatorId(requesterId);
         entity.setCreatedAt(Instant.now());
         entity.setFeedback(body.getFeedback());
+        entity.setRating(body.getRating());
 
         return toFeedback(feedbackRepository.save(entity));
     }
@@ -126,6 +129,10 @@ public class FeedbackService {
         if (body.getFeedback() != null) {
             entity.setFeedback(body.getFeedback());
         }
+        if (body.getRating() != null) {
+            assertRatingInRange(body.getRating());
+            entity.setRating(body.getRating());
+        }
 
         return toFeedback(feedbackRepository.save(entity));
     }
@@ -157,6 +164,12 @@ public class FeedbackService {
                 .orElseThrow(() -> new NotFoundException("Feedback not found: " + feedbackId));
     }
 
+    private void assertRatingInRange(Integer rating) {
+        if (rating != null && (rating < 0 || rating > 10)) {
+            throw new BadRequestException("rating must be between 0 and 10");
+        }
+    }
+
     private UUID parseUuid(String value, String fieldName) {
         if (value == null) {
             throw new BadRequestException("Field '" + fieldName + "' is required");
@@ -175,7 +188,8 @@ public class FeedbackService {
                 memberReference(entity.getMemberId()),
                 memberReference(entity.getCreatorId()),
                 entity.getCreatedAt().atOffset(ZoneOffset.UTC),
-                entity.getFeedback()
+                entity.getFeedback(),
+                entity.getRating()
         );
     }
 
@@ -185,7 +199,8 @@ public class FeedbackService {
                 eventReference(entity.getEventId()),
                 memberReference(entity.getMemberId()),
                 memberReference(entity.getCreatorId()),
-                entity.getCreatedAt().atOffset(ZoneOffset.UTC)
+                entity.getCreatedAt().atOffset(ZoneOffset.UTC),
+                entity.getRating()
         );
     }
 

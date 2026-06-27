@@ -65,6 +65,7 @@ class FeedbackServiceTest {
         e.setCreatorId(creatorId);
         e.setCreatedAt(Instant.now());
         e.setFeedback("test feedback");
+        e.setRating(7);
         return e;
     }
 
@@ -135,7 +136,7 @@ class FeedbackServiceTest {
         stubExistingEventAndMember();
         FeedbackEntity saved = makeEntity(FEEDBACK_ID, EVENT_ID, MEMBER_ID, REQUESTER_ID);
         when(feedbackRepository.save(any())).thenReturn(saved);
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "Great work!");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "Great work!", 5);
 
         Feedback result = service.createFeedback(body, REQUESTER_ID, true);
 
@@ -149,7 +150,7 @@ class FeedbackServiceTest {
         stubTrainerOfMember();
         FeedbackEntity saved = makeEntity(FEEDBACK_ID, EVENT_ID, MEMBER_ID, REQUESTER_ID);
         when(feedbackRepository.save(any())).thenReturn(saved);
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "Keep it up!");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "Keep it up!", 5);
 
         Feedback result = service.createFeedback(body, REQUESTER_ID, false);
 
@@ -164,7 +165,7 @@ class FeedbackServiceTest {
                 .thenReturn(List.of(new TrainerEntity(new TrainerEntity.Id(TEAM_ID, REQUESTER_ID))));
         when(traineeRepository.findAllById_MemberId(MEMBER_ID))
                 .thenReturn(List.of(new TraineeEntity(new TraineeEntity.Id(otherTeam, MEMBER_ID))));
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x", 5);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, false))
                 .isInstanceOf(ForbiddenException.class);
@@ -175,7 +176,7 @@ class FeedbackServiceTest {
         stubExistingEventAndMember();
         when(trainerRepository.findAllById_MemberId(REQUESTER_ID)).thenReturn(List.of());
         when(traineeRepository.findAllById_MemberId(MEMBER_ID)).thenReturn(List.of());
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x", 5);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, false))
                 .isInstanceOf(ForbiddenException.class);
@@ -184,7 +185,7 @@ class FeedbackServiceTest {
     @Test
     void createFeedbackWithNonExistentEventThrowsBadRequest() {
         when(eventRepository.existsById(EVENT_ID)).thenReturn(false);
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x", 5);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, true))
                 .isInstanceOf(BadRequestException.class)
@@ -195,7 +196,7 @@ class FeedbackServiceTest {
     void createFeedbackWithNonExistentMemberThrowsBadRequest() {
         when(eventRepository.existsById(EVENT_ID)).thenReturn(true);
         when(memberRepository.existsById(MEMBER_ID)).thenReturn(false);
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "x", 5);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, true))
                 .isInstanceOf(BadRequestException.class)
@@ -204,7 +205,7 @@ class FeedbackServiceTest {
 
     @Test
     void createFeedbackWithInvalidEventUuidThrowsBadRequest() {
-        FeedbackCreate body = new FeedbackCreate("not-a-uuid", MEMBER_ID.toString(), "x");
+        FeedbackCreate body = new FeedbackCreate("not-a-uuid", MEMBER_ID.toString(), "x", 5);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, true))
                 .isInstanceOf(BadRequestException.class);
@@ -212,7 +213,29 @@ class FeedbackServiceTest {
 
     @Test
     void createFeedbackWithInvalidMemberUuidThrowsBadRequest() {
-        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), "not-a-uuid", "x");
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), "not-a-uuid", "x", 5);
+
+        assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, true))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void createFeedbackPersistsRating() {
+        stubExistingEventAndMember();
+        ArgumentCaptor<FeedbackEntity> captor = ArgumentCaptor.forClass(FeedbackEntity.class);
+        when(feedbackRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "ok", 9);
+
+        Feedback result = service.createFeedback(body, REQUESTER_ID, true);
+
+        assertThat(captor.getValue().getRating()).isEqualTo(9);
+        assertThat(result.getRating()).isEqualTo(9);
+    }
+
+    @Test
+    void createFeedbackWithOutOfRangeRatingThrowsBadRequest() {
+        stubExistingEventAndMember();
+        FeedbackCreate body = new FeedbackCreate(EVENT_ID.toString(), MEMBER_ID.toString(), "ok", 11);
 
         assertThatThrownBy(() -> service.createFeedback(body, REQUESTER_ID, true))
                 .isInstanceOf(BadRequestException.class);
@@ -324,6 +347,30 @@ class FeedbackServiceTest {
         assertThat(captor.getValue().getFeedback()).isEqualTo("test feedback");
         assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
         assertThat(captor.getValue().getMemberId()).isEqualTo(MEMBER_ID);
+        assertThat(captor.getValue().getRating()).isEqualTo(7);
+    }
+
+    @Test
+    void updateFeedbackDetailsSetsRating() {
+        FeedbackEntity e = makeEntity(FEEDBACK_ID, EVENT_ID, MEMBER_ID, REQUESTER_ID);
+        when(feedbackRepository.findById(FEEDBACK_ID)).thenReturn(Optional.of(e));
+        ArgumentCaptor<FeedbackEntity> captor = ArgumentCaptor.forClass(FeedbackEntity.class);
+        when(feedbackRepository.save(captor.capture())).thenReturn(e);
+
+        service.updateFeedbackDetails(
+                FEEDBACK_ID, new FeedbackPartialUpdate().rating(3), REQUESTER_ID, false);
+
+        assertThat(captor.getValue().getRating()).isEqualTo(3);
+    }
+
+    @Test
+    void updateFeedbackDetailsWithOutOfRangeRatingThrowsBadRequest() {
+        FeedbackEntity e = makeEntity(FEEDBACK_ID, EVENT_ID, MEMBER_ID, REQUESTER_ID);
+        when(feedbackRepository.findById(FEEDBACK_ID)).thenReturn(Optional.of(e));
+
+        assertThatThrownBy(() -> service.updateFeedbackDetails(
+                        FEEDBACK_ID, new FeedbackPartialUpdate().rating(-1), REQUESTER_ID, false))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

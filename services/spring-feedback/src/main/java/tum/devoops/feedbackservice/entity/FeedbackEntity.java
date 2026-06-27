@@ -42,4 +42,7 @@ public class FeedbackEntity {
 
     @Column(name = "feedback", nullable = false, columnDefinition = "TEXT")
     private String feedback;
+
+    @Column(name = "rating", nullable = false)
+    private Integer rating;
 }
