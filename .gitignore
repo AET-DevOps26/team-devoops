@@ -1,1 +1,4 @@
 settings.json
+AGENTS.md
+debug.log
+web-client/.env.development
