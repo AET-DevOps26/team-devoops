@@ -1,5 +1,6 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '@/app/layout/AppShell'
+import { DashboardPage } from '@/app/pages/DashboardPage'
 import { MembersPage } from '@/features/members'
 import { SportEventsPage } from '@/features/sport-events'
 import { PaymentsPage } from '@/features/payments'
@@ -14,7 +15,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <Navigate to="/members" replace /> },
+      { index: true, element: <DashboardPage /> },
       { path: 'members', element: <MembersPage /> },
       { path: 'sport-events', element: <SportEventsPage /> },
       { path: 'payments', element: <PaymentsPage /> },
