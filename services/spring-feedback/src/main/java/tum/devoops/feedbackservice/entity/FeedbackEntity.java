@@ -33,8 +33,8 @@ public class FeedbackEntity {
     private UUID memberId;
 
     // UUID of the member who wrote this feedback.
-    // FK to member.member(id) added in V3 migration.
-    @Column(name = "creator_id", nullable = false)
+    // FK to member.member(id); ON DELETE SET NULL, so this is cleared if the creator is deleted.
+    @Column(name = "creator_id")
     private UUID creatorId;
 
     @Column(name = "created_at", nullable = false)

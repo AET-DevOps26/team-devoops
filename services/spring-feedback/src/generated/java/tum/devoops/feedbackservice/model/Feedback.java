@@ -32,7 +32,7 @@ public class Feedback {
 
   private Reference member;
 
-  private Reference creator;
+  private Reference creator = null;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;

@@ -1701,7 +1701,10 @@ components:
             $ref: "#/components/schemas/Reference"
           description: Teams associated with this event.
         creator:
-          $ref: "#/components/schemas/Reference"
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1806,7 +1809,10 @@ components:
         member:
           $ref: "#/components/schemas/Reference"
         creator:
-          $ref: "#/components/schemas/Reference"
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
@@ -1837,7 +1843,10 @@ components:
         member:
           $ref: "#/components/schemas/Reference"
         creator:
-          $ref: "#/components/schemas/Reference"
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
@@ -1899,7 +1908,10 @@ components:
         member:
           $ref: "#/components/schemas/Reference"
         creator:
-          $ref: "#/components/schemas/Reference"
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         amount_cents:
           type: integer
         created_at:

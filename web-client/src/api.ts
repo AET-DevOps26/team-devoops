@@ -731,7 +731,7 @@ export interface components {
             sports_linked?: components["schemas"]["Reference"][];
             /** @description Teams associated with this event. */
             teams_linked?: components["schemas"]["Reference"][];
-            creator: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
         };
         /** @description A simplified representation of a Event, typically used in list views. */
         EventSummary: {
@@ -776,7 +776,7 @@ export interface components {
             id: string;
             event: components["schemas"]["Reference"];
             member: components["schemas"]["Reference"];
-            creator: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             /** Format: date-time */
             created_at: string;
             feedback: string;
@@ -789,7 +789,7 @@ export interface components {
             id: string;
             event: components["schemas"]["Reference"];
             member: components["schemas"]["Reference"];
-            creator: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             /** Format: date-time */
             created_at: string;
             /** Format: int32 */
@@ -816,7 +816,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             member: components["schemas"]["Reference"];
-            creator: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             amount_cents: number;
             /** Format: date-time */
             created_at: string;

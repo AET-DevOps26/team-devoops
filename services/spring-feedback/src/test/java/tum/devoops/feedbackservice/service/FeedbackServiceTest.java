@@ -264,6 +264,18 @@ class FeedbackServiceTest {
     }
 
     @Test
+    void getFeedbackDetailsWithNullCreatorReturnsNullCreator() {
+        // creator_id is SET NULL when the author member is deleted; the feedback survives.
+        FeedbackEntity e = makeEntity(FEEDBACK_ID, EVENT_ID, MEMBER_ID, null);
+        when(feedbackRepository.findById(FEEDBACK_ID)).thenReturn(Optional.of(e));
+
+        Feedback result = service.getFeedbackDetails(FEEDBACK_ID, REQUESTER_ID, true);
+
+        assertThat(result.getCreator()).isNull();
+        assertThat(result.getMember().getId()).isEqualTo(MEMBER_ID);
+    }
+
+    @Test
     void getFeedbackDetailsAsMemberSubjectSucceeds() {
         FeedbackEntity e = makeEntity(FEEDBACK_ID, EVENT_ID, REQUESTER_ID, ANOTHER_ID);
         when(feedbackRepository.findById(FEEDBACK_ID)).thenReturn(Optional.of(e));

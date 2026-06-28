@@ -39,8 +39,8 @@ public class EventEntity {
     private Instant endTime;
 
     // UUID of the member who created this event.
-    // FK to member.member(id) added in V3 migration.
-    @Column(name = "creator_id", nullable = false)
+    // FK to member.member(id); ON DELETE SET NULL, so this is cleared if the creator is deleted.
+    @Column(name = "creator_id")
     private UUID creatorId;
 
     @OneToMany

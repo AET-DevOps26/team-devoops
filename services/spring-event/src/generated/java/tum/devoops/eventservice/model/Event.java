@@ -50,7 +50,7 @@ public class Event {
   @Valid
   private @Nullable List<@Valid Reference> teamsLinked;
 
-  private Reference creator;
+  private Reference creator = null;
 
   public Event() {
     super();

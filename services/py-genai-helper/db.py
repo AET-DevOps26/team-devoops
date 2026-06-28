@@ -40,11 +40,11 @@ def get_engine():
 def init_db() -> None:
     """Create the report tables if they don't exist yet (idempotent).
 
-    The foreign keys into member.members / organization.teams use the default ON DELETE NO ACTION,
-    matching every other schema: a member/team cannot be deleted while a report references it. The
-    referenced tables must already exist, so a first boot that wins the race against the member /
-    organization services raises and the container retries (restart: on-failure), the same way the
-    Spring services' cross-schema FK migrations do.
+    The foreign keys into member.members / organization.teams use ON DELETE CASCADE, matching the rest
+    of the system: deleting a member/team removes their reports. The referenced tables must already
+    exist, so a first boot that wins the race against the member / organization services raises and the
+    container retries (restart: on-failure), the same way the Spring services' cross-schema FK
+    migrations do.
     """
     with get_engine().begin() as conn:
         conn.execute(
@@ -57,7 +57,7 @@ def init_db() -> None:
                     text       TEXT        NOT NULL,
                     CONSTRAINT pk_member_reports PRIMARY KEY (id),
                     CONSTRAINT fk_member_reports_member
-                        FOREIGN KEY (member_id) REFERENCES member.members (id)
+                        FOREIGN KEY (member_id) REFERENCES member.members (id) ON DELETE CASCADE
                 )
                 """
             )
@@ -72,7 +72,7 @@ def init_db() -> None:
                     text       TEXT        NOT NULL,
                     CONSTRAINT pk_team_reports PRIMARY KEY (id),
                     CONSTRAINT fk_team_reports_team
-                        FOREIGN KEY (team_id) REFERENCES organization.teams (id)
+                        FOREIGN KEY (team_id) REFERENCES organization.teams (id) ON DELETE CASCADE
                 )
                 """
             )

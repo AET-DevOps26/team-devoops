@@ -265,6 +265,16 @@ class EventServiceTest {
         assertThat(result.getId()).isEqualTo(EVENT_ID);
     }
 
+    @Test
+    void getEventDetailsWithNullCreatorReturnsNullCreator() {
+        // creator_id is SET NULL when the creator member is deleted; the event survives.
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(eventEntity(EVENT_ID, null)));
+
+        Event result = service.getEventDetails(EVENT_ID, REQUESTER_ID, true);
+
+        assertThat(result.getCreator()).isNull();
+    }
+
     // ─── updateEventDetails ──────────────────────────────────────────────────────
 
     @Test

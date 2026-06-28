@@ -30,7 +30,7 @@ public class Transaction {
 
   private Reference member;
 
-  private Reference creator;
+  private Reference creator = null;
 
   private Integer amountCents;
 

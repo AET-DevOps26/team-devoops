@@ -210,6 +210,11 @@ public class FeedbackService {
     }
 
     private Reference memberReference(UUID memberId) {
+        // memberId is null only for a creator whose member was deleted (ON DELETE SET NULL); the
+        // subject member is never null.
+        if (memberId == null) {
+            return null;
+        }
         String name = memberRepository.findById(memberId)
                 .map(m -> m.getFirstName() + " " + m.getLastName()).orElse(null);
         return new Reference(memberId, name);

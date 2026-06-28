@@ -53,7 +53,9 @@ public final class EventConverter {
     }
 
     private static Reference reference(UUID id, Map<UUID, String> names) {
-        return new Reference(id, names.get(id));
+        // id is null only for a creator whose member was deleted (ON DELETE SET NULL); attendee,
+        // sport and team ids are PK components and never null.
+        return id == null ? null : new Reference(id, names.get(id));
     }
 
     public static EventSummary toSummary(EventEntity entity,
