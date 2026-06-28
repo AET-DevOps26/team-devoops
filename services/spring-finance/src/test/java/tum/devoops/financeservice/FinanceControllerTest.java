@@ -27,8 +27,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(FinanceController.class)
 @Import(SecurityConfig.class)
@@ -65,7 +69,7 @@ class FinanceControllerTest {
     // ── POST /finance/transactions ─────────────────────────────────────────────
 
     @Test
-    void createTransaction_unauthenticated_returns401() throws Exception {
+    void createTransactionUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(post("/finance/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -74,7 +78,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void createTransaction_noMatchingRole_returns403() throws Exception {
+    void createTransactionNoMatchingRoleReturns403() throws Exception {
         mockMvc.perform(post("/finance/transactions")
                         .with(jwt().jwt(j -> j.subject(REQUESTER_ID.toString())))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -84,7 +88,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void createTransaction_asMember_returns201() throws Exception {
+    void createTransactionAsMemberReturns201() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.createTransaction(any(), eq(REQUESTER_ID), eq(false))).thenReturn(tx);
 
@@ -98,7 +102,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void createTransaction_asAdmin_returns201() throws Exception {
+    void createTransactionAsAdminReturns201() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.createTransaction(any(), eq(REQUESTER_ID), eq(true))).thenReturn(tx);
 
@@ -111,7 +115,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void createTransaction_missingBody_returns400() throws Exception {
+    void createTransactionMissingBodyReturns400() throws Exception {
         mockMvc.perform(post("/finance/transactions")
                         .with(memberJwt())
                         .contentType(MediaType.APPLICATION_JSON))
@@ -121,13 +125,13 @@ class FinanceControllerTest {
     // ── GET /finance/transactions ──────────────────────────────────────────────
 
     @Test
-    void getAllTransactions_unauthenticated_returns401() throws Exception {
+    void getAllTransactionsUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(get("/finance/transactions"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getAllTransactions_asMember_returns200() throws Exception {
+    void getAllTransactionsAsMemberReturns200() throws Exception {
         when(transactionService.getAllTransactions(REQUESTER_ID, false))
                 .thenReturn(List.of(sampleTransaction()));
 
@@ -138,7 +142,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void getAllTransactions_asAdmin_returns200() throws Exception {
+    void getAllTransactionsAsAdminReturns200() throws Exception {
         when(transactionService.getAllTransactions(REQUESTER_ID, true)).thenReturn(List.of());
 
         mockMvc.perform(get("/finance/transactions").with(adminJwt()))
@@ -149,13 +153,13 @@ class FinanceControllerTest {
     // ── GET /finance/transactions/{id} ────────────────────────────────────────
 
     @Test
-    void getTransaction_unauthenticated_returns401() throws Exception {
+    void getTransactionUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(get("/finance/transactions/{id}", TX_ID))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getTransaction_asMember_returns200() throws Exception {
+    void getTransactionAsMemberReturns200() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.getTransaction(TX_ID, REQUESTER_ID, false)).thenReturn(tx);
 
@@ -165,7 +169,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void getTransaction_asAdmin_returns200() throws Exception {
+    void getTransactionAsAdminReturns200() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.getTransaction(TX_ID, REQUESTER_ID, true)).thenReturn(tx);
 
@@ -176,13 +180,13 @@ class FinanceControllerTest {
     // ── DELETE /finance/transactions/{id} ─────────────────────────────────────
 
     @Test
-    void deleteTransaction_unauthenticated_returns401() throws Exception {
+    void deleteTransactionUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(delete("/finance/transactions/{id}", TX_ID))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void deleteTransaction_asMember_returns204() throws Exception {
+    void deleteTransactionAsMemberReturns204() throws Exception {
         doNothing().when(transactionService).deleteTransaction(TX_ID, REQUESTER_ID, false);
 
         mockMvc.perform(delete("/finance/transactions/{id}", TX_ID).with(memberJwt()))
@@ -190,7 +194,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void deleteTransaction_asAdmin_returns204() throws Exception {
+    void deleteTransactionAsAdminReturns204() throws Exception {
         doNothing().when(transactionService).deleteTransaction(TX_ID, REQUESTER_ID, true);
 
         mockMvc.perform(delete("/finance/transactions/{id}", TX_ID).with(adminJwt()))
@@ -200,7 +204,7 @@ class FinanceControllerTest {
     // ── PATCH /finance/transactions/{id} ──────────────────────────────────────
 
     @Test
-    void updateTransaction_unauthenticated_returns401() throws Exception {
+    void updateTransactionUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(patch("/finance/transactions/{id}", TX_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -208,7 +212,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void updateTransaction_asMember_returns200() throws Exception {
+    void updateTransactionAsMemberReturns200() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.updateTransaction(eq(TX_ID), any(), eq(REQUESTER_ID), eq(false)))
                 .thenReturn(tx);
@@ -222,7 +226,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void updateTransaction_asAdmin_returns200() throws Exception {
+    void updateTransactionAsAdminReturns200() throws Exception {
         Transaction tx = sampleTransaction();
         when(transactionService.updateTransaction(eq(TX_ID), any(), eq(REQUESTER_ID), eq(true)))
                 .thenReturn(tx);
@@ -237,13 +241,13 @@ class FinanceControllerTest {
     // ── GET /finance/balances ─────────────────────────────────────────────────
 
     @Test
-    void getAllBalances_unauthenticated_returns401() throws Exception {
+    void getAllBalancesUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(get("/finance/balances"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getAllBalances_asMember_returns200() throws Exception {
+    void getAllBalancesAsMemberReturns200() throws Exception {
         when(transactionService.getAllBalances(REQUESTER_ID, false))
                 .thenReturn(List.of(new Balance(MEMBER_ID.toString(), 200)));
 
@@ -253,7 +257,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void getAllBalances_asAdmin_returns200() throws Exception {
+    void getAllBalancesAsAdminReturns200() throws Exception {
         when(transactionService.getAllBalances(REQUESTER_ID, true)).thenReturn(List.of());
 
         mockMvc.perform(get("/finance/balances").with(adminJwt()))
@@ -264,13 +268,13 @@ class FinanceControllerTest {
     // ── GET /finance/balances/{member_id} ────────────────────────────────────
 
     @Test
-    void getMemberBalance_unauthenticated_returns401() throws Exception {
+    void getMemberBalanceUnauthenticatedReturns401() throws Exception {
         mockMvc.perform(get("/finance/balances/{memberId}", MEMBER_ID))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void getMemberBalance_asMember_returns200() throws Exception {
+    void getMemberBalanceAsMemberReturns200() throws Exception {
         Balance balance = new Balance(MEMBER_ID.toString(), 500);
         when(transactionService.getMemberBalance(MEMBER_ID, REQUESTER_ID, false)).thenReturn(balance);
 
@@ -280,7 +284,7 @@ class FinanceControllerTest {
     }
 
     @Test
-    void getMemberBalance_asAdmin_returns200() throws Exception {
+    void getMemberBalanceAsAdminReturns200() throws Exception {
         Balance balance = new Balance(MEMBER_ID.toString(), 300);
         when(transactionService.getMemberBalance(MEMBER_ID, REQUESTER_ID, true)).thenReturn(balance);
 

@@ -52,13 +52,13 @@ class TransactionServiceTest {
     // ── createTransaction: input validation ───────────────────────────────────
 
     @Test
-    void createTransaction_invalidMemberUuid_throwsBadRequest() {
+    void createTransactionInvalidMemberUuidThrowsBadRequest() {
         assertThrows(BadRequestException.class,
                 () -> service.createTransaction(new TransactionCreate("not-a-uuid", 500, "Test"), REQUESTER_ID, false));
     }
 
     @Test
-    void createTransaction_memberNotFound_throwsNotFoundException() {
+    void createTransactionMemberNotFoundThrowsNotFoundException() {
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class,
@@ -68,7 +68,7 @@ class TransactionServiceTest {
     // ── createTransaction: authorization ─────────────────────────────────────
 
     @Test
-    void createTransaction_neitherDirectorNorTrainerNorAdmin_throwsForbidden() {
+    void createTransactionNeitherDirectorNorTrainerNorAdminThrowsForbidden() {
         memberExists();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
         when(trainerRepository.findTeamIdByMemberId(REQUESTER_ID)).thenReturn(List.of());
@@ -78,7 +78,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_adminPassesAuthWithoutDirectorOrTrainerRole() {
+    void createTransactionAdminPassesAuthWithoutDirectorOrTrainerRole() {
         // isAdmin=true short-circuits the director/trainer checks entirely.
         memberExists();
         when(transactionRepository.save(any())).thenReturn(savedEntity());
@@ -91,7 +91,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_asDirectorOfMembersTeam_returnsCreatedTransaction() {
+    void createTransactionAsDirectorOfMembersTeamReturnsCreatedTransaction() {
         memberExists();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of("tennis"));
         when(teamRepository.findTraineesBySportName("tennis")).thenReturn(List.of(trainee(MEMBER_ID)));
@@ -104,7 +104,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_asTrainerOfMembersTeam_returnsCreatedTransaction() {
+    void createTransactionAsTrainerOfMembersTeamReturnsCreatedTransaction() {
         memberExists();
         TeamEntity team = mockTeam(TEAM_ID);
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
@@ -121,7 +121,7 @@ class TransactionServiceTest {
     // ── isDirectorOfMember edge cases ─────────────────────────────────────────
 
     @Test
-    void createTransaction_directorOfDifferentSport_throwsForbidden() {
+    void createTransactionDirectorOfDifferentSportThrowsForbidden() {
         memberExists();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of("football"));
         when(teamRepository.findTraineesBySportName("football")).thenReturn(List.of());
@@ -132,7 +132,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_directorOfMultipleSports_findsMemberInSecondSport() {
+    void createTransactionDirectorOfMultipleSportsFindsMemberInSecondSport() {
         memberExists();
         UUID otherMemberId = UUID.randomUUID();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of("football", "tennis"));
@@ -149,7 +149,7 @@ class TransactionServiceTest {
     // ── isTrainerOfMember edge cases ──────────────────────────────────────────
 
     @Test
-    void createTransaction_trainerButMemberOnDifferentTeam_throwsForbidden() {
+    void createTransactionTrainerButMemberOnDifferentTeamThrowsForbidden() {
         memberExists();
         UUID otherMemberId = UUID.randomUUID();
         TeamEntity team = mockTeam(TEAM_ID);
@@ -163,7 +163,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_trainerTeamNotInDatabase_throwsForbidden() {
+    void createTransactionTrainerTeamNotInDatabaseThrowsForbidden() {
         memberExists();
         when(directorRepository.findSportNamesByMemberId(REQUESTER_ID)).thenReturn(List.of());
         when(trainerRepository.findTeamIdByMemberId(REQUESTER_ID)).thenReturn(List.of(TEAM_ID));
@@ -174,7 +174,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void createTransaction_trainerOnMultipleTeams_findsMemberInSecondTeam() {
+    void createTransactionTrainerOnMultipleTeamsFindsMemberInSecondTeam() {
         memberExists();
         UUID otherTeamId = UUID.fromString("00000000-0000-0000-0000-000000000004");
         UUID otherMemberId = UUID.randomUUID();
