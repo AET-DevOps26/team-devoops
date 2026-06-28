@@ -130,9 +130,17 @@ public class TransactionService {
             entity.setMemberId(newMemberId);
         }
 
-        if (update.getAmountCents() != null) entity.setAmountCents(update.getAmountCents());
-        if (update.getTitle() != null) entity.setTitle(update.getTitle());
-        if (update.getDescription() != null) entity.setDescription(update.getDescription());
+        if (update.getAmountCents() != null) {
+            entity.setAmountCents(update.getAmountCents());
+        }
+
+        if (update.getTitle() != null) {
+            entity.setTitle(update.getTitle());
+        }
+
+        if (update.getDescription() != null) {
+            entity.setDescription(update.getDescription());
+        }
 
         return TransactionConverter.toTransaction(transactionRepository.save(entity));
     }
@@ -205,7 +213,9 @@ public class TransactionService {
             boolean found = teamRepository.findTraineesBySportName(sport).stream()
                     .map(t -> t.getId().getMemberId())
                     .anyMatch(memberId::equals);
-            if (found) return true;
+            if (found) {
+                return true;
+            }
         }
         return false;
     }
@@ -218,7 +228,9 @@ public class TransactionService {
                         .map(TraineeEntity::getId)
                         .map(TraineeEntity.Id::getMemberId)
                         .anyMatch(memberId::equals);
-                if (found) return true;
+                if (found) {
+                    return true;
+                }
             }
         }
         return false;
