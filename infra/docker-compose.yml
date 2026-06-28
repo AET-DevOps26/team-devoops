@@ -4,11 +4,18 @@ services:
   py-genai-helper:
     build: ../services/py-genai-helper/
     container_name: py-genai-helper
+    restart: on-failure
     env_file:
       - ../services/py-genai-helper/.env
+    depends_on:
+      app-database:
+        condition: service_healthy
     environment:
       - KEYCLOAK_ISSUER_URL=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
       - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
+      - SPRING_DATASOURCE_USERNAME=reports_user
+      - SPRING_DATASOURCE_PASSWORD=reports_password
     expose:
       - 5000
     labels:
@@ -22,6 +29,7 @@ services:
       - "traefik.http.services.py-genai-helper.loadbalancer.server.port=5000"
     networks:
       - proxy
+      - data
 
   organization-service:
     build: ../services/spring-organization
@@ -363,6 +371,7 @@ services:
       FEEDBACK_USER_PASSWORD: feedback_password
       FINANCE_USER_PASSWORD: finance_password
       LETTER_USER_PASSWORD: letter_password
+      REPORTS_USER_PASSWORD: reports_password
     volumes:
       - app_db_data:/var/lib/postgresql/data
       - ./postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro

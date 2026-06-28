@@ -473,7 +473,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/helper/report/{member_id}": {
+    "/helper/reports/member/{member_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -481,16 +481,80 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Generate report
-         * @description Generates an AI-based report for a member. Members can only generate reports for themselves.
-         *     - All authenticated users: can generate a report for themselves.
-         *     - Trainers: can generate reports for members of their team.
+         * List member reports
+         * @description Lists the stored report summaries (without text) for a member, newest first.
+         *     - The member themselves: can list their own reports.
+         *     - Admin: can list reports for any member.
+         */
+        get: operations["listMemberReports"];
+        put?: never;
+        /**
+         * Generate member report
+         * @description Kicks off asynchronous generation of an AI report for a member. Returns immediately; the
+         *     finished report is persisted and can later be fetched via the report endpoints.
+         *     - The member themselves: can generate their own report.
          *     - Admin: can generate a report for any member.
          */
-        get: operations["generateReport"];
+        post: operations["generateMemberReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/helper/reports/team/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List team reports
+         * @description Lists the stored report summaries (without text) for a team, newest first.
+         *     - Trainers of the team: can list the team's reports.
+         *     - Admin: can list reports for any team.
+         */
+        get: operations["listTeamReports"];
+        put?: never;
+        /**
+         * Generate team report
+         * @description Kicks off asynchronous generation of an AI report for a team. Returns immediately; the
+         *     finished report is persisted and can later be fetched via the report endpoints.
+         *     - Trainers of the team: can generate the team's report.
+         *     - Admin: can generate a report for any team.
+         */
+        post: operations["generateTeamReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/helper/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get report
+         * @description Returns a single stored report including its full text. Works for both member and team
+         *     reports; the `kind` field indicates which, and the matching reference is populated.
+         *     - Member reports: the member themselves or an admin.
+         *     - Team reports: a trainer of the team or an admin.
+         */
+        get: operations["getReport"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete report
+         * @description Deletes a single stored report (member or team).
+         *     - Member reports: the member themselves or an admin.
+         *     - Team reports: a trainer of the team or an admin.
+         */
+        delete: operations["deleteReport"];
         options?: never;
         head?: never;
         patch?: never;
@@ -512,6 +576,37 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+        };
+        /** @description Summary of a stored member report, without its generated text. */
+        MemberReportSummary: {
+            /** Format: uuid */
+            id: string;
+            member: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Summary of a stored team report, without its generated text. */
+        TeamReportSummary: {
+            /** Format: uuid */
+            id: string;
+            team: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description A stored report including its generated text. `kind` indicates whether it is a member or
+         *     team report; the matching `member`/`team` reference is populated accordingly.
+         */
+        Report: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "member" | "team";
+            member?: components["schemas"]["Reference"];
+            team?: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+            text: string;
         };
         /** @description The object representation of a Sport within the organization. */
         Sport: {
@@ -818,6 +913,7 @@ export interface components {
         event_id: string;
         feedback_id: string;
         transaction_id: string;
+        report_id: string;
     };
     requestBodies: never;
     headers: never;
@@ -1734,7 +1830,7 @@ export interface operations {
             500: components["responses"]["InternalServerError"];
         };
     };
-    generateReport: {
+    listMemberReports: {
         parameters: {
             query?: never;
             header?: never;
@@ -1751,11 +1847,126 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": string;
+                    "application/json": components["schemas"]["MemberReportSummary"][];
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    generateMemberReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                member_id: components["parameters"]["member_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was accepted and report generation has been started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    listTeamReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: components["parameters"]["team_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReportSummary"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    generateTeamReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: components["parameters"]["team_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was accepted and report generation has been started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: components["parameters"]["report_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    deleteReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: components["parameters"]["report_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: components["responses"]["NoContent"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
         };
     };

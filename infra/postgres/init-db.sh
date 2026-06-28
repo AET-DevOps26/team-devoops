@@ -12,6 +12,7 @@
 #   FEEDBACK_USER_PASSWORD
 #   FINANCE_USER_PASSWORD
 #   LETTER_USER_PASSWORD
+#   REPORTS_USER_PASSWORD
 set -euo pipefail
 
 DB="${POSTGRES_DB}"
@@ -33,16 +34,17 @@ CREATE USER event_user         WITH PASSWORD '${EVENT_USER_PASSWORD}';
 CREATE USER feedback_user      WITH PASSWORD '${FEEDBACK_USER_PASSWORD}';
 CREATE USER finance_user       WITH PASSWORD '${FINANCE_USER_PASSWORD}';
 CREATE USER letter_user        WITH PASSWORD '${LETTER_USER_PASSWORD}';
+CREATE USER reports_user       WITH PASSWORD '${REPORTS_USER_PASSWORD}';
 
 -- Allow all users to connect to the application database
 GRANT CONNECT ON DATABASE ${DB} TO
     organization_user, member_user, event_user,
-    feedback_user, finance_user, letter_user;
+    feedback_user, finance_user, letter_user, reports_user;
 
 -- All users inherit the reader role
 GRANT reader TO
     organization_user, member_user, event_user,
-    feedback_user, finance_user, letter_user;
+    feedback_user, finance_user, letter_user, reports_user;
 
 -- -------------------------------------------------------------------------
 -- Schemas (one per service)
@@ -52,6 +54,7 @@ CREATE SCHEMA member;
 CREATE SCHEMA event;
 CREATE SCHEMA feedback;
 CREATE SCHEMA finance;
+CREATE SCHEMA reports;
 
 -- -------------------------------------------------------------------------
 -- Ownership: each service user owns its schema
@@ -61,17 +64,18 @@ ALTER SCHEMA member        OWNER TO member_user;
 ALTER SCHEMA event         OWNER TO event_user;
 ALTER SCHEMA feedback      OWNER TO feedback_user;
 ALTER SCHEMA finance       OWNER TO finance_user;
+ALTER SCHEMA reports       OWNER TO reports_user;
 
 -- -------------------------------------------------------------------------
 -- Reader role: USAGE on all schemas + SELECT on all current tables
 -- -------------------------------------------------------------------------
 GRANT USAGE ON SCHEMA
-    organization, member, event, feedback, finance
+    organization, member, event, feedback, finance, reports
 TO reader;
 
 -- SELECT on any tables that already exist (none yet, but defensive)
 GRANT SELECT ON ALL TABLES IN SCHEMA
-    organization, member, event, feedback, finance
+    organization, member, event, feedback, finance, reports
 TO reader;
 
 -- -------------------------------------------------------------------------
@@ -98,17 +102,21 @@ ALTER DEFAULT PRIVILEGES FOR ROLE finance_user
     IN SCHEMA finance
     GRANT SELECT ON TABLES TO reader;
 
+ALTER DEFAULT PRIVILEGES FOR ROLE reports_user
+    IN SCHEMA reports
+    GRANT SELECT ON TABLES TO reader;
+
 -- -------------------------------------------------------------------------
 -- Cross-schema REFERENCES: required for FK constraints across schemas.
 -- Granted per-user on the schemas they reference.
 -- -------------------------------------------------------------------------
 ALTER DEFAULT PRIVILEGES FOR ROLE member_user
     IN SCHEMA member
-    GRANT REFERENCES ON TABLES TO organization_user, event_user, feedback_user, finance_user;
+    GRANT REFERENCES ON TABLES TO organization_user, event_user, feedback_user, finance_user, reports_user;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE organization_user
     IN SCHEMA organization
-    GRANT REFERENCES ON TABLES TO event_user;
+    GRANT REFERENCES ON TABLES TO event_user, reports_user;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE event_user
     IN SCHEMA event

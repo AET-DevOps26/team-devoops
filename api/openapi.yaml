@@ -1080,25 +1080,20 @@ paths:
           text/html:
             schema:
               type: string
-  /helper/report/{member_id}:
-    get:
-      operationId: generateReport
+  /helper/reports/member/{member_id}:
+    post:
+      operationId: generateMemberReport
       tags:
         - helper
-      summary: Generate report
+      summary: Generate member report
       description: |
-        Generates an AI-based report for a member. Members can only generate reports for themselves.
-        - All authenticated users: can generate a report for themselves.
-        - Trainers: can generate reports for members of their team.
+        Kicks off asynchronous generation of an AI report for a member. Returns immediately; the
+        finished report is persisted and can later be fetched via the report endpoints.
+        - The member themselves: can generate their own report.
         - Admin: can generate a report for any member.
       responses:
-        "200":
-          description: The request was successful, and the server has returned the
-            requested resource in the response body.
-          content:
-            text/plain:
-              schema:
-                type: string
+        "202":
+          description: The request was accepted and report generation has been started.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1107,6 +1102,143 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       parameters:
         - $ref: "#/components/parameters/member_id"
+      security:
+        - BearerJwt: []
+    get:
+      operationId: listMemberReports
+      tags:
+        - helper
+      summary: List member reports
+      description: |
+        Lists the stored report summaries (without text) for a member, newest first.
+        - The member themselves: can list their own reports.
+        - Admin: can list reports for any member.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberReportSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      security:
+        - BearerJwt: []
+  /helper/reports/team/{team_id}:
+    post:
+      operationId: generateTeamReport
+      tags:
+        - helper
+      summary: Generate team report
+      description: |
+        Kicks off asynchronous generation of an AI report for a team. Returns immediately; the
+        finished report is persisted and can later be fetched via the report endpoints.
+        - Trainers of the team: can generate the team's report.
+        - Admin: can generate a report for any team.
+      responses:
+        "202":
+          description: The request was accepted and report generation has been started.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      security:
+        - BearerJwt: []
+    get:
+      operationId: listTeamReports
+      tags:
+        - helper
+      summary: List team reports
+      description: |
+        Lists the stored report summaries (without text) for a team, newest first.
+        - Trainers of the team: can list the team's reports.
+        - Admin: can list reports for any team.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamReportSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      security:
+        - BearerJwt: []
+  /helper/reports/{report_id}:
+    get:
+      operationId: getReport
+      tags:
+        - helper
+      summary: Get report
+      description: |
+        Returns a single stored report including its full text. Works for both member and team
+        reports; the `kind` field indicates which, and the matching reference is populated.
+        - Member reports: the member themselves or an admin.
+        - Team reports: a trainer of the team or an admin.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/report_id"
+      security:
+        - BearerJwt: []
+    delete:
+      operationId: deleteReport
+      tags:
+        - helper
+      summary: Delete report
+      description: |
+        Deletes a single stored report (member or team).
+        - Member reports: the member themselves or an admin.
+        - Team reports: a trainer of the team or an admin.
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/report_id"
       security:
         - BearerJwt: []
 components:
@@ -1206,6 +1338,13 @@ components:
       schema:
         type: string
         format: uuid
+    report_id:
+      name: report_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     ErrorResponse:
       type: object
@@ -1237,6 +1376,66 @@ components:
         - id
         - name
       description: A lightweight reference to another entity — its id plus a display name.
+    MemberReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        member:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - member
+        - created_at
+      description: Summary of a stored member report, without its generated text.
+    TeamReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        team:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - team
+        - created_at
+      description: Summary of a stored team report, without its generated text.
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - member
+            - team
+        member:
+          $ref: "#/components/schemas/Reference"
+        team:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+        text:
+          type: string
+      required:
+        - id
+        - kind
+        - created_at
+        - text
+      description: |
+        A stored report including its generated text. `kind` indicates whether it is a member or
+        team report; the matching `member`/`team` reference is populated accordingly.
     Sport:
       type: object
       properties:
