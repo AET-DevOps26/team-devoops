@@ -14,7 +14,7 @@ echo "Running OpenAPI code generation..."
 
 # Spring services — each receives only its own tag's API interface + relevant models
 "$SCRIPT_DIR/gen-spring.sh" spring-organization  organization  organizationservice  "Reference:Sport:SportCreate:SportPartialUpdate:Team:TeamCreate:TeamPartialUpdate:ErrorResponse:BadRequestResponse"
-"$SCRIPT_DIR/gen-spring.sh" spring-member        members       memberservice        "Member:MemberSummary:MemberCreate:MemberPartialUpdate:ErrorResponse:BadRequestResponse"
+"$SCRIPT_DIR/gen-spring.sh" spring-member        members       memberservice        "Member:MemberSummary:MemberCreate:MemberPartialUpdate:ErrorResponse:BadRequestResponse:Reference:Dashboard:AdminDashboard:DirectorDashboard:TrainerDashboard:TraineeDashboard:TeamBalanceSummary:FeedbackSummary:EventSummary:MemberReportSummary"
 "$SCRIPT_DIR/gen-spring.sh" spring-event         events        eventservice         "Reference:Event:EventSummary:EventCreate:EventPartialUpdate:ErrorResponse:BadRequestResponse"
 "$SCRIPT_DIR/gen-spring.sh" spring-feedback      feedback      feedbackservice      "Reference:Feedback:FeedbackSummary:FeedbackCreate:FeedbackPartialUpdate:ErrorResponse:BadRequestResponse"
 "$SCRIPT_DIR/gen-spring.sh" spring-finance       finance       financeservice       "Reference:Balance:Transaction:TransactionCreate:TransactionPartialUpdate:ErrorResponse:BadRequestResponse"

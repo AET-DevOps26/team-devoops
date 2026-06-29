@@ -149,6 +149,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/members/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the caller's dashboard
+         * @description Returns dashboard data tailored to the caller's highest role
+         *     (admin > director > trainer > trainee). The `role` field discriminates the
+         *     concrete shape of the response.
+         *     - All authenticated users: can access their own dashboard.
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/members/{member_id}": {
         parameters: {
             query?: never;
@@ -607,6 +630,71 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             text: string;
+        };
+        /**
+         * @description Role-specific dashboard payload. The `role` property discriminates which concrete
+         *     shape is returned, following the caller's highest role (admin > director > trainer > trainee).
+         */
+        Dashboard: components["schemas"]["AdminDashboard"] | components["schemas"]["DirectorDashboard"] | components["schemas"]["TrainerDashboard"] | components["schemas"]["TraineeDashboard"];
+        /** @description Club-wide aggregates shown to administrators. */
+        AdminDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "admin";
+            total_members: number;
+            total_sports: number;
+            total_teams: number;
+            total_directors: number;
+            total_trainers: number;
+            total_balance_cents: number;
+            events_this_week: number;
+        };
+        /** @description Aggregates for the sport a director manages. */
+        DirectorDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "director";
+            sport: components["schemas"]["Reference"];
+            total_teams: number;
+            total_members: number;
+            sport_balance_cents: number;
+            upcoming_events: number;
+            teams: components["schemas"]["TeamBalanceSummary"][];
+        };
+        /** @description Per-team rollup of trainee count and aggregate balance. */
+        TeamBalanceSummary: {
+            team: components["schemas"]["Reference"];
+            member_count: number;
+            balance_cents: number;
+        };
+        /** @description Aggregates for the team a trainer manages, including feedback they authored. */
+        TrainerDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "trainer";
+            team: components["schemas"]["Reference"];
+            total_members: number;
+            upcoming_events: number;
+            recent_feedback: components["schemas"]["FeedbackSummary"][];
+        };
+        /** @description Personal aggregates shown to a trainee/member. */
+        TraineeDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "trainee";
+            balance_cents: number;
+            next_event: components["schemas"]["EventSummary"] | null;
+            upcoming_events: number;
+            recent_feedback: components["schemas"]["FeedbackSummary"][];
+            recent_reports: components["schemas"]["MemberReportSummary"][];
         };
         /** @description The object representation of a Sport within the organization. */
         Sport: {
@@ -1241,6 +1329,29 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];
         };
     };

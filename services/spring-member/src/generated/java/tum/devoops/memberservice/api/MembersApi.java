@@ -6,6 +6,7 @@
 package tum.devoops.memberservice.api;
 
 import tum.devoops.memberservice.model.BadRequestResponse;
+import tum.devoops.memberservice.model.Dashboard;
 import tum.devoops.memberservice.model.ErrorResponse;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
@@ -257,6 +258,76 @@ public interface MembersApi {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "[ { \"last_name\" : \"last_name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" }, { \"last_name\" : \"last_name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"first_name\" : \"first_name\", \"email\" : \"email\" } ]";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"message\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"message\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"message\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * GET /members/dashboard : Get the caller&#39;s dashboard
+     * Returns dashboard data tailored to the caller&#39;s highest role (admin &gt; director &gt; trainer &gt; trainee). The &#x60;role&#x60; field discriminates the concrete shape of the response. - All authenticated users: can access their own dashboard. 
+     *
+     * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
+     *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
+     *         or The server understood the request, but refuses to authorize it. Ensure the client has appropriate permissions. (status code 403)
+     *         or The server encountered an unexpected condition that prevented it from fulfilling the request. (status code 500)
+     */
+    @Operation(
+        operationId = "getDashboard",
+        summary = "Get the caller's dashboard",
+        description = "Returns dashboard data tailored to the caller's highest role (admin > director > trainer > trainee). The `role` field discriminates the concrete shape of the response. - All authenticated users: can access their own dashboard. ",
+        tags = { "members" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Dashboard.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Authentication is required to access the requested resource. The client must include the appropriate credentials.", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "403", description = "The server understood the request, but refuses to authorize it. Ensure the client has appropriate permissions.", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "500", description = "The server encountered an unexpected condition that prevented it from fulfilling the request.", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            })
+        },
+        security = {
+            @SecurityRequirement(name = "BearerJwt")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.GET,
+        value = "/members/dashboard",
+        produces = { "application/json" }
+    )
+    
+    default ResponseEntity<Dashboard> getDashboard(
+        
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"total_sports\" : 6, \"role\" : \"role\", \"total_balance_cents\" : 2, \"total_teams\" : 1, \"total_members\" : 0, \"events_this_week\" : 7, \"total_directors\" : 5, \"total_trainers\" : 5 }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

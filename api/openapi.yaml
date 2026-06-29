@@ -377,6 +377,33 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MemberCreate"
+  /members/dashboard:
+    get:
+      operationId: getDashboard
+      tags:
+        - members
+      summary: Get the caller's dashboard
+      description: |
+        Returns dashboard data tailored to the caller's highest role
+        (admin > director > trainer > trainee). The `role` field discriminates the
+        concrete shape of the response.
+        - All authenticated users: can access their own dashboard.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      security:
+        - BearerJwt: []
   /members/{member_id}:
     get:
       operationId: getMemberDetails
@@ -1436,6 +1463,145 @@ components:
       description: |
         A stored report including its generated text. `kind` indicates whether it is a member or
         team report; the matching `member`/`team` reference is populated accordingly.
+    Dashboard:
+      oneOf:
+        - $ref: "#/components/schemas/AdminDashboard"
+        - $ref: "#/components/schemas/DirectorDashboard"
+        - $ref: "#/components/schemas/TrainerDashboard"
+        - $ref: "#/components/schemas/TraineeDashboard"
+      discriminator:
+        propertyName: role
+        mapping:
+          admin: "#/components/schemas/AdminDashboard"
+          director: "#/components/schemas/DirectorDashboard"
+          trainer: "#/components/schemas/TrainerDashboard"
+          trainee: "#/components/schemas/TraineeDashboard"
+      description: |
+        Role-specific dashboard payload. The `role` property discriminates which concrete
+        shape is returned, following the caller's highest role (admin > director > trainer > trainee).
+    AdminDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        total_members:
+          type: integer
+        total_sports:
+          type: integer
+        total_teams:
+          type: integer
+        total_directors:
+          type: integer
+        total_trainers:
+          type: integer
+        total_balance_cents:
+          type: integer
+        events_this_week:
+          type: integer
+      required:
+        - role
+        - total_members
+        - total_sports
+        - total_teams
+        - total_directors
+        - total_trainers
+        - total_balance_cents
+        - events_this_week
+      description: Club-wide aggregates shown to administrators.
+    DirectorDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        sport:
+          $ref: "#/components/schemas/Reference"
+        total_teams:
+          type: integer
+        total_members:
+          type: integer
+        sport_balance_cents:
+          type: integer
+        upcoming_events:
+          type: integer
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamBalanceSummary"
+      required:
+        - role
+        - sport
+        - total_teams
+        - total_members
+        - sport_balance_cents
+        - upcoming_events
+        - teams
+      description: Aggregates for the sport a director manages.
+    TeamBalanceSummary:
+      type: object
+      properties:
+        team:
+          $ref: "#/components/schemas/Reference"
+        member_count:
+          type: integer
+        balance_cents:
+          type: integer
+      required:
+        - team
+        - member_count
+        - balance_cents
+      description: Per-team rollup of trainee count and aggregate balance.
+    TrainerDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        team:
+          $ref: "#/components/schemas/Reference"
+        total_members:
+          type: integer
+        upcoming_events:
+          type: integer
+        recent_feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackSummary"
+      required:
+        - role
+        - team
+        - total_members
+        - upcoming_events
+        - recent_feedback
+      description: Aggregates for the team a trainer manages, including feedback they authored.
+    TraineeDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        balance_cents:
+          type: integer
+        next_event:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/EventSummary"
+        upcoming_events:
+          type: integer
+        recent_feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackSummary"
+        recent_reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberReportSummary"
+      required:
+        - role
+        - balance_cents
+        - next_event
+        - upcoming_events
+        - recent_feedback
+        - recent_reports
+      description: Personal aggregates shown to a trainee/member.
     Sport:
       type: object
       properties:
