@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import tum.devoops.financeservice.config.SecurityConfig;
+import tum.devoops.financeservice.controller.HelloController;
 
 @WebMvcTest(HelloController.class)
 @Import(SecurityConfig.class)
