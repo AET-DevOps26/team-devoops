@@ -23,7 +23,7 @@ public class TransactionEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    // FK to member.member(id) added in V3 migration.
+    // FK to member.members(id), added in the V2 migration.
     @Column(name = "member_id", nullable = false)
     private UUID memberId;
 
