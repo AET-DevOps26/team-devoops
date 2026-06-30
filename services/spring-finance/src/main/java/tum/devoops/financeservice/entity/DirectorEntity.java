@@ -23,8 +23,8 @@ public class DirectorEntity {
     @Embeddable
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class Id implements Serializable {
-        @Column(name = "sport_name", nullable = false)
-        private String sportName;
+        @Column(name = "sport_id", nullable = false)
+        private UUID sportId;
 
         @Column(name = "member_id", nullable = false)
         private UUID memberId;

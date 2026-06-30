@@ -215,8 +215,8 @@ public class TransactionService {
     // Returns distinct IDs of all members the requester can manage (as director or trainer).
     private List<UUID> getManagedMemberIds(UUID requesterId) {
         Set<UUID> ids = new LinkedHashSet<>();
-        for (String sport : directorRepository.findSportNamesByMemberId(requesterId)) {
-            teamRepository.findTraineesBySportName(sport).stream()
+        for (UUID sport : directorRepository.findSportIdsByMemberId(requesterId)) {
+            teamRepository.findTraineesBySportId(sport).stream()
                     .map(t -> t.getId().getMemberId())
                     .forEach(ids::add);
         }
@@ -230,8 +230,8 @@ public class TransactionService {
     }
 
     private boolean isDirectorOfMember(UUID requesterId, UUID memberId) {
-        for (String sport : directorRepository.findSportNamesByMemberId(requesterId)) {
-            boolean found = teamRepository.findTraineesBySportName(sport).stream()
+        for (UUID sport : directorRepository.findSportIdsByMemberId(requesterId)) {
+            boolean found = teamRepository.findTraineesBySportId(sport).stream()
                     .map(t -> t.getId().getMemberId())
                     .anyMatch(memberId::equals);
             if (found) {

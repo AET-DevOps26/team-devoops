@@ -22,8 +22,8 @@ public class TeamEntity {
     @Column(name = "id", nullable = false)
     UUID id;
 
-    @Column(name = "sport_name", nullable = false)
-    private String sportName;
+    @Column(name = "sport_id", nullable = false)
+    private UUID sportId;
 
     @OneToMany
     @JoinColumn(name = "team_id", referencedColumnName = "id", insertable = false, updatable = false)

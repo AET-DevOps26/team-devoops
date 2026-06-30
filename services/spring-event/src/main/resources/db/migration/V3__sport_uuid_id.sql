@@ -1,19 +1,6 @@
--- Sport now has a UUID primary key (organization.sports.id). Switch sport_events from
--- referencing the sport name to the sport id.
---
--- Assumes the organization schema's V3 migration has already run: it added sports.id (with a
--- unique name column for the backfill join) and dropped this table's old name-based FK
--- (fk_sport_events_sport), so this migration only re-adds the FK against sports(id).
+-- Drop the old FK from event.sport_events -> organization.sports(name) so that the
+-- organization service's V3 migration can swap the sports primary key from name to id.
+-- This must commit before org V3 runs (separate migration so it's its own transaction).
+-- The backfill and new FK are applied in V4 once org V3 has completed.
 
-ALTER TABLE event.sport_events ADD COLUMN sport_id UUID;
-UPDATE event.sport_events se
-    SET sport_id = s.id
-    FROM organization.sports s
-    WHERE se.sport_name = s.name;
-
-ALTER TABLE event.sport_events DROP CONSTRAINT pk_sport_events;
-ALTER TABLE event.sport_events ALTER COLUMN sport_id SET NOT NULL;
-ALTER TABLE event.sport_events DROP COLUMN sport_name;
-ALTER TABLE event.sport_events ADD CONSTRAINT pk_sport_events PRIMARY KEY (event_id, sport_id);
-ALTER TABLE event.sport_events
-    ADD CONSTRAINT fk_sport_events_sport FOREIGN KEY (sport_id) REFERENCES organization.sports (id);
+ALTER TABLE event.sport_events DROP CONSTRAINT IF EXISTS fk_sport_events_sport;
