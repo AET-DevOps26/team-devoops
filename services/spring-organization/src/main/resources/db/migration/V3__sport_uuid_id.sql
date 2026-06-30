@@ -2,11 +2,9 @@
 -- sport can be renamed without rewriting foreign keys. Teams and directors reference the
 -- sport by its new UUID id.
 --
--- NOTE: the cross-schema FK event.sport_events -> organization.sports(name) (added by the
--- event service's migration) depends on the sports name primary key, so it must be dropped
--- here before we can swap the primary key. The event service re-adds it against sports(id)
--- in its own follow-up migration; this migration therefore assumes the organization schema
--- migrates before the event schema (the existing ordering assumption in this codebase).
+-- The cross-schema FK event.sport_events -> organization.sports(name) is dropped by the
+-- event service's own V3 migration (event_user owns that table). This migration assumes
+-- that has happened before the sports PK is swapped in step 4.
 
 -- 1. Add the new id column and backfill a stable UUID per sport.
 ALTER TABLE organization.sports
@@ -29,23 +27,14 @@ UPDATE organization.directors d
 ALTER TABLE organization.directors DROP CONSTRAINT fk_directors_sport;
 ALTER TABLE organization.directors DROP CONSTRAINT pk_directors;
 
--- 4. Drop the dependent cross-schema FK from the event service so the sports PK can change.
---    Guarded so a fresh deploy (event schema not yet created) doesn't fail here; on an existing
---    deploy the constraint exists and is dropped. The event service re-adds it against sports(id).
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables
-               WHERE table_schema = 'event' AND table_name = 'sport_events') THEN
-        ALTER TABLE event.sport_events DROP CONSTRAINT IF EXISTS fk_sport_events_sport;
-    END IF;
-END $$;
-
--- 5. Swap the sports primary key from name to id; keep name as a unique field.
+-- 4. Swap the sports primary key from name to id; keep name as a unique field.
+-- NOTE: the cross-schema FK event.sport_events -> organization.sports(name) must be dropped
+-- before this step. The event service's V3 migration drops it (event_user owns that table).
 ALTER TABLE organization.sports DROP CONSTRAINT pk_sports;
 ALTER TABLE organization.sports ADD CONSTRAINT pk_sports PRIMARY KEY (id);
 ALTER TABLE organization.sports ADD CONSTRAINT uq_sports_name UNIQUE (name);
 
--- 6. Finalise the dependent columns and re-add the organization-owned FKs against sports(id).
+-- 5. Finalise the dependent columns and re-add the organization-owned FKs against sports(id).
 ALTER TABLE organization.teams ALTER COLUMN sport_id SET NOT NULL;
 ALTER TABLE organization.teams DROP COLUMN sport_name;
 ALTER TABLE organization.teams
