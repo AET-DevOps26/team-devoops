@@ -51,7 +51,7 @@ services:
       - "traefik.http.routers.organization-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/organization`)"
       - "traefik.http.routers.organization-service.tls=true"
       - "traefik.http.routers.organization-service.tls.certresolver=le"
-      - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1/organization"
+      - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.organization-service.middlewares=organization-stripprefix,forward-auth@file"
       - "traefik.http.services.organization-service.loadbalancer.server.port=8080"
     networks:
@@ -78,7 +78,7 @@ services:
       - "traefik.http.routers.member-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/members`)"
       - "traefik.http.routers.member-service.tls=true"
       - "traefik.http.routers.member-service.tls.certresolver=le"
-      - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1/members"
+      - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.member-service.middlewares=member-stripprefix,forward-auth@file"
       - "traefik.http.services.member-service.loadbalancer.server.port=8080"
     networks:
@@ -105,7 +105,7 @@ services:
       - "traefik.http.routers.event-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/events`)"
       - "traefik.http.routers.event-service.tls=true"
       - "traefik.http.routers.event-service.tls.certresolver=le"
-      - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1/events"
+      - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.event-service.middlewares=event-stripprefix,forward-auth@file"
       - "traefik.http.services.event-service.loadbalancer.server.port=8080"
     networks:
@@ -132,7 +132,7 @@ services:
       - "traefik.http.routers.feedback-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/feedback`)"
       - "traefik.http.routers.feedback-service.tls=true"
       - "traefik.http.routers.feedback-service.tls.certresolver=le"
-      - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1/feedback"
+      - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.feedback-service.middlewares=feedback-stripprefix,forward-auth@file"
       - "traefik.http.services.feedback-service.loadbalancer.server.port=8080"
     networks:
@@ -159,7 +159,7 @@ services:
       - "traefik.http.routers.finance-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/finance`)"
       - "traefik.http.routers.finance-service.tls=true"
       - "traefik.http.routers.finance-service.tls.certresolver=le"
-      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1/finance"
+      - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.finance-service.middlewares=finance-stripprefix,forward-auth@file"
       - "traefik.http.services.finance-service.loadbalancer.server.port=8080"
     networks:
@@ -188,7 +188,7 @@ services:
       - "traefik.http.routers.letter-service.rule=Host(`team-devoops.uaenorth.cloudapp.azure.com`) && PathPrefix(`/api/v1/letters`)"
       - "traefik.http.routers.letter-service.tls=true"
       - "traefik.http.routers.letter-service.tls.certresolver=le"
-      - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1/letters"
+      - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1"
       - "traefik.http.routers.letter-service.middlewares=letter-stripprefix,forward-auth@file"
       - "traefik.http.services.letter-service.loadbalancer.server.port=8080"
     networks:
