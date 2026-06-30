@@ -1044,10 +1044,25 @@ paths:
         - letters
       summary: Send mail
       description: |
-        Sends an email based on the provided HTML template.
-        - Trainers: can send mail to members of their team.
-        - Directors: can send mail to members related to their sport.
-        - Admins: can send mail to any member.
+        Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
+        template's placeholder tokens are replaced with each receiver's data, and one email is sent
+        per receiver.
+
+        Receivers are determined from the caller's highest role:
+        - **Admin**: all members.
+        - **Director**: all directors, trainers, and trainees in their sport.
+        - **Trainer**: all trainers and trainees of their team.
+        - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+
+        Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+        trainee belongs to exactly one team.
+
+        Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+        empty string):
+        - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+          `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+        - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+        - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -1063,11 +1078,11 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content.
+        description: The subject and HTML template for the personalized mass email.
         content:
-          text/html:
+          application/json:
             schema:
-              type: string
+              $ref: "#/components/schemas/MailRequest"
       parameters: []
   /letters/pdf:
     post:
@@ -1076,10 +1091,26 @@ paths:
         - letters
       summary: Get pdf
       description: |
-        Generates and returns a PDF document from the provided HTML template.
-        - Trainers: can generate PDFs related to their team.
-        - Directors: can generate PDFs related to their sport.
-        - Admins: can generate PDFs related to any member.
+        Generates a personalized mass-letter PDF. The body carries an HTML `template` whose
+        placeholder tokens are replaced with each receiver's data. One letter is rendered per
+        receiver — a layout block with the recipient's name and address followed by the
+        token-substituted template — and all letters are concatenated into a single PDF.
+
+        Receivers are determined from the caller's highest role:
+        - **Admin**: all members.
+        - **Director**: all directors, trainers, and trainees in their sport.
+        - **Trainer**: all trainers and trainees of their team.
+        - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+
+        Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+        trainee belongs to exactly one team.
+
+        Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+        empty string):
+        - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+          `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+        - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+        - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -1102,11 +1133,11 @@ paths:
       parameters: []
       requestBody:
         required: true
-        description: The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content.
+        description: The HTML template for the personalized mass-letter PDF.
         content:
-          text/html:
+          application/json:
             schema:
-              type: string
+              $ref: "#/components/schemas/PdfRequest"
   /helper/reports/member/{member_id}:
     post:
       operationId: generateMemberReport
@@ -1836,6 +1867,34 @@ components:
         - email
         - password
       description: Data transfer object for creating a new Member.
+    PdfRequest:
+      type: object
+      properties:
+        template:
+          type: string
+          description: |
+            HTML letter body. Supports per-receiver placeholder tokens (see the operation
+            description); each token is replaced with that receiver's data. One personalized letter
+            — a name and address layout block followed by the substituted template — is rendered per
+            receiver and concatenated into a single PDF.
+      required:
+        - template
+      description: Request body for generating a personalized mass-letter PDF for the caller's receivers.
+    MailRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Subject line of the email.
+        template:
+          type: string
+          description: |
+            HTML email body. Supports per-receiver placeholder tokens (see the operation
+            description); each token is replaced with that receiver's data before the email is sent.
+      required:
+        - subject
+        - template
+      description: Request body for sending a personalized mass email to the caller's receivers.
     Event:
       type: object
       properties:

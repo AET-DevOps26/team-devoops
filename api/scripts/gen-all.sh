@@ -18,7 +18,7 @@ echo "Running OpenAPI code generation..."
 "$SCRIPT_DIR/gen-spring.sh" spring-event         events        eventservice         "Reference:Event:EventSummary:EventCreate:EventPartialUpdate:ErrorResponse:BadRequestResponse"
 "$SCRIPT_DIR/gen-spring.sh" spring-feedback      feedback      feedbackservice      "Reference:Feedback:FeedbackSummary:FeedbackCreate:FeedbackPartialUpdate:ErrorResponse:BadRequestResponse"
 "$SCRIPT_DIR/gen-spring.sh" spring-finance       finance       financeservice       "Reference:Balance:Transaction:TransactionCreate:TransactionPartialUpdate:ErrorResponse:BadRequestResponse"
-"$SCRIPT_DIR/gen-spring.sh" spring-letter        letters       letterservice        "ErrorResponse:BadRequestResponse"
+"$SCRIPT_DIR/gen-spring.sh" spring-letter        letters       letterservice        "ErrorResponse:BadRequestResponse:MailRequest:PdfRequest"
 
 # Pydantic models for py-genai-helper
 "$SCRIPT_DIR/gen-python-models.sh"

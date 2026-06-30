@@ -461,10 +461,25 @@ export interface paths {
         put?: never;
         /**
          * Send mail
-         * @description Sends an email based on the provided HTML template.
-         *     - Trainers: can send mail to members of their team.
-         *     - Directors: can send mail to members related to their sport.
-         *     - Admins: can send mail to any member.
+         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
+         *     template's placeholder tokens are replaced with each receiver's data, and one email is sent
+         *     per receiver.
+         *
+         *     Receivers are determined from the caller's highest role:
+         *     - **Admin**: all members.
+         *     - **Director**: all directors, trainers, and trainees in their sport.
+         *     - **Trainer**: all trainers and trainees of their team.
+         *     - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+         *
+         *     Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+         *     trainee belongs to exactly one team.
+         *
+         *     Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+         *     empty string):
+         *     - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+         *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+         *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+         *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
          */
         post: operations["sendMail"];
         delete?: never;
@@ -484,10 +499,26 @@ export interface paths {
         put?: never;
         /**
          * Get pdf
-         * @description Generates and returns a PDF document from the provided HTML template.
-         *     - Trainers: can generate PDFs related to their team.
-         *     - Directors: can generate PDFs related to their sport.
-         *     - Admins: can generate PDFs related to any member.
+         * @description Generates a personalized mass-letter PDF. The body carries an HTML `template` whose
+         *     placeholder tokens are replaced with each receiver's data. One letter is rendered per
+         *     receiver — a layout block with the recipient's name and address followed by the
+         *     token-substituted template — and all letters are concatenated into a single PDF.
+         *
+         *     Receivers are determined from the caller's highest role:
+         *     - **Admin**: all members.
+         *     - **Director**: all directors, trainers, and trainees in their sport.
+         *     - **Trainer**: all trainers and trainees of their team.
+         *     - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+         *
+         *     Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+         *     trainee belongs to exactly one team.
+         *
+         *     Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+         *     empty string):
+         *     - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+         *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+         *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+         *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
          */
         post: operations["getPdf"];
         delete?: never;
@@ -803,6 +834,26 @@ export interface components {
             phone_number?: string;
             address?: string;
             information?: string;
+        };
+        /** @description Request body for generating a personalized mass-letter PDF for the caller's receivers. */
+        PdfRequest: {
+            /**
+             * @description HTML letter body. Supports per-receiver placeholder tokens (see the operation
+             *     description); each token is replaced with that receiver's data. One personalized letter
+             *     — a name and address layout block followed by the substituted template — is rendered per
+             *     receiver and concatenated into a single PDF.
+             */
+            template: string;
+        };
+        /** @description Request body for sending a personalized mass email to the caller's receivers. */
+        MailRequest: {
+            /** @description Subject line of the email. */
+            subject: string;
+            /**
+             * @description HTML email body. Supports per-receiver placeholder tokens (see the operation
+             *     description); each token is replaced with that receiver's data before the email is sent.
+             */
+            template: string;
         };
         /** @description The object representation of an Event (e.g., a training session or a match). */
         Event: {
@@ -1898,10 +1949,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. */
+        /** @description The subject and HTML template for the personalized mass email. */
         requestBody: {
             content: {
-                "text/html": string;
+                "application/json": components["schemas"]["MailRequest"];
             };
         };
         responses: {
@@ -1919,10 +1970,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. */
+        /** @description The HTML template for the personalized mass-letter PDF. */
         requestBody: {
             content: {
-                "text/html": string;
+                "application/json": components["schemas"]["PdfRequest"];
             };
         };
         responses: {
