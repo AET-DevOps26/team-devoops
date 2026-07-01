@@ -1,6 +1,5 @@
 package tum.devoops.memberservice.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -49,34 +48,22 @@ public class MemberController implements MembersApi {
     @Override
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Member> createMember(@Valid MemberCreate memberCreate) {
-        try {
-            Optional<Member> optionalMember = memberService.createMember(memberCreate, currentJwt().getTokenValue());
-            if (optionalMember.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            Member member = optionalMember.get();
-            return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Member member = memberService.createMember(memberCreate, currentJwt().getTokenValue());
+        return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
     }
 
     @Override
     @PreAuthorize("hasRole('admin') or hasRole('member') and #id.toString() == authentication.name")
     public ResponseEntity<Member> updateMemberDetails(UUID id, @Valid MemberPartialUpdate memberPartialUpdate) {
-        try {
-            Optional<Member> updated = memberService.updateMember(id, memberPartialUpdate, currentJwt().getTokenValue());
-            return updated.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Member updated = memberService.updateMember(id, memberPartialUpdate, currentJwt().getTokenValue());
+        return ResponseEntity.ok(updated);
     }
 
     @Override
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Void> deleteMember(UUID id) {
-        boolean deleted = memberService.deleteMember(id, currentJwt().getTokenValue());
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        memberService.deleteMember(id, currentJwt().getTokenValue());
+        return ResponseEntity.noContent().build();
     }
 
     @Override

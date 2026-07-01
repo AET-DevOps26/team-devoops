@@ -13,6 +13,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tum.devoops.memberservice.config.SecurityConfig;
+import tum.devoops.memberservice.exception.BadRequestException;
+import tum.devoops.memberservice.exception.ConflictException;
+import tum.devoops.memberservice.exception.NotFoundException;
 import tum.devoops.memberservice.model.AdminDashboard;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
@@ -30,6 +33,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -237,7 +241,7 @@ public class MemberControllerTest {
 
     @Test
     void createMemberAllowedForAdmin() throws Exception {
-        when(memberService.createMember(eq(memberCreate), anyString())).thenReturn(Optional.of(member));
+        when(memberService.createMember(eq(memberCreate), anyString())).thenReturn(member);
 
         mockMvc.perform(post("/members")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -272,7 +276,8 @@ public class MemberControllerTest {
 
     @Test
     void createMemberReturnsBadRequestOnKeycloakFailure() throws Exception {
-        when(memberService.createMember(any(), anyString())).thenReturn(Optional.empty());
+        when(memberService.createMember(any(), anyString()))
+                .thenThrow(new BadRequestException("Failed to create member: keycloak down"));
 
         mockMvc.perform(post("/members")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -281,13 +286,14 @@ public class MemberControllerTest {
                                 .jwt(j -> j.tokenValue(mockToken))
                                 .authorities(new SimpleGrantedAuthority("ROLE_admin"))
                         ))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
     }
 
     @Test
     void createMemberReturnsConflictOnEmailConflict() throws Exception {
         when(memberService.createMember(any(), anyString()))
-                .thenThrow(new IllegalStateException("Email already in use"));
+                .thenThrow(new ConflictException("Email already in use"));
 
         mockMvc.perform(post("/members")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -296,14 +302,15 @@ public class MemberControllerTest {
                                 .jwt(j -> j.tokenValue(mockToken))
                                 .authorities(new SimpleGrantedAuthority("ROLE_admin"))
                         ))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").exists());
     }
 
     // Test cases for updateMemberDetails() endpoint
 
     @Test
     void updateMemberAllowedForAdmin() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(Optional.of(updatedMember));
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(updatedMember);
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -333,7 +340,7 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberAllowedForMemberSameId() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(Optional.of(updatedMember));
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(updatedMember);
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -385,7 +392,8 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberReturnsNotFoundForMissingMember() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(Optional.empty());
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString()))
+                .thenThrow(new NotFoundException("Member not found: " + id));
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -401,7 +409,7 @@ public class MemberControllerTest {
     @Test
     void updateMemberReturnsConflictOnEmailConflict() throws Exception {
         when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString()))
-                .thenThrow(new IllegalStateException("Email already in use"));
+                .thenThrow(new ConflictException("Email already in use"));
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -418,8 +426,6 @@ public class MemberControllerTest {
 
     @Test
     void deleteMemberAllowedForAdmin() throws Exception {
-        when(memberService.deleteMember(eq(id), anyString())).thenReturn(true);
-
         mockMvc.perform(delete("/members/{id}", id)
                         .with(jwt()
                                 .jwt(j -> j.subject(id.toString()))
@@ -460,7 +466,8 @@ public class MemberControllerTest {
 
     @Test
     void deleteMemberReturnsNotFoundForMissingMember() throws Exception {
-        when(memberService.deleteMember(eq(id), anyString())).thenReturn(false);
+        doThrow(new NotFoundException("Member not found: " + id))
+                .when(memberService).deleteMember(eq(id), anyString());
 
         mockMvc.perform(delete("/members/{id}", id)
                         .with(jwt()

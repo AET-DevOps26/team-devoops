@@ -4,6 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tum.devoops.memberservice.converter.MemberConverter;
 import tum.devoops.memberservice.entity.MemberEntity;
+import tum.devoops.memberservice.exception.BadRequestException;
+import tum.devoops.memberservice.exception.ConflictException;
+import tum.devoops.memberservice.exception.NotFoundException;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberPartialUpdate;
@@ -39,37 +42,33 @@ public class MemberService {
                 .map(MemberConverter::convertMemberEntityToMember);
     }
 
-    public Optional<Member> createMember(MemberCreate memberCreate, String bearerToken) {
+    public Member createMember(MemberCreate memberCreate, String bearerToken) {
         if (memberRepository.findByEmail(memberCreate.getEmail()).isPresent()) {
-            throw new IllegalStateException("Email already in use by another member");
+            throw new ConflictException("Email already in use by another member");
         }
 
         UUID id;
         try {
             id = keycloakService.createUser(memberCreate, bearerToken);
         } catch (Exception e) {
-            return Optional.empty();
+            throw new BadRequestException("Failed to create member: " + e.getMessage());
         }
 
         MemberEntity memberEntity = MemberConverter.convertMemberCreateToMemberEntity(memberCreate, id);
         memberEntity = memberRepository.save(memberEntity);
 
-        return Optional.of(MemberConverter.convertMemberEntityToMember(memberEntity));
+        return MemberConverter.convertMemberEntityToMember(memberEntity);
     }
 
-    public Optional<Member> updateMember(UUID memberId, MemberPartialUpdate update, String bearerToken) {
-        Optional<MemberEntity> optionalEntity = memberRepository.findById(memberId);
-        if (optionalEntity.isEmpty()) {
-            return Optional.empty();
-        }
-
-        MemberEntity entity = optionalEntity.get();
+    public Member updateMember(UUID memberId, MemberPartialUpdate update, String bearerToken) {
+        MemberEntity entity = memberRepository.findById(memberId)
+                .orElseThrow(() -> new NotFoundException("Member not found: " + memberId));
 
         if (update.getEmail() != null) {
             memberRepository.findByEmail(update.getEmail())
                     .filter(existing -> !existing.getId().equals(memberId))
                     .ifPresent(e -> {
-                        throw new IllegalStateException("Email already in use by another member");
+                        throw new ConflictException("Email already in use by another member");
                     });
         }
 
@@ -78,26 +77,23 @@ public class MemberService {
         try {
             keycloakService.updateUser(MemberConverter.convertMemberEntityToMember(entity), bearerToken);
         } catch (Exception e) {
-            return Optional.empty();
+            throw new BadRequestException("Failed to update member: " + e.getMessage());
         }
 
         MemberEntity saved = memberRepository.save(entity);
-        return Optional.of(MemberConverter.convertMemberEntityToMember(saved));
+        return MemberConverter.convertMemberEntityToMember(saved);
     }
 
-    public boolean deleteMember(UUID id, String bearerToken) {
-        Optional<MemberEntity> optionalMemberEntity = memberRepository.findById(id);
-        if (optionalMemberEntity.isEmpty()) {
-            return false;
-        }
+    public void deleteMember(UUID id, String bearerToken) {
+        MemberEntity entity = memberRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Member not found: " + id));
 
         try {
             keycloakService.deleteUser(id, bearerToken);
         } catch (Exception e) {
-            return false;
+            throw new BadRequestException("Failed to delete member: " + e.getMessage());
         }
 
-        memberRepository.delete(optionalMemberEntity.get());
-        return true;
+        memberRepository.delete(entity);
     }
 }

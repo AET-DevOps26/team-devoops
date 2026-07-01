@@ -7,6 +7,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tum.devoops.memberservice.entity.MemberEntity;
+import tum.devoops.memberservice.exception.BadRequestException;
+import tum.devoops.memberservice.exception.ConflictException;
+import tum.devoops.memberservice.exception.NotFoundException;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 import tum.devoops.memberservice.model.MemberPartialUpdate;
@@ -19,7 +22,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -171,26 +173,25 @@ class MemberServiceTest {
 
     // Test cases for createMember()
 
-    // Verifies that creation throws when a member with the same email already exists
+    // Verifies that creation throws a ConflictException when a member with the same email already exists
     @Test
     void createMemberThrowsWhenEmailExists() {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(memberEntity));
 
-        assertThrows(IllegalStateException.class, () -> memberService.createMember(memberCreate, TOKEN));
+        assertThrows(ConflictException.class, () -> memberService.createMember(memberCreate, TOKEN));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
     }
 
-    // Verifies that creation is rejected and nothing is persisted when Keycloak fails
+    // Verifies that creation throws a BadRequestException and nothing is persisted when Keycloak fails
     @Test
-    void createMemberReturnsEmptyWhenKeycloakThrows() throws Exception {
+    void createMemberThrowsBadRequestWhenKeycloakThrows() throws Exception {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
         when(keycloakService.createUser(memberCreate, TOKEN)).thenThrow(new RuntimeException("keycloak down"));
 
-        Optional<Member> result = memberService.createMember(memberCreate, TOKEN);
+        assertThrows(BadRequestException.class, () -> memberService.createMember(memberCreate, TOKEN));
 
-        assertTrue(result.isEmpty());
         verify(memberRepository, never()).save(any());
     }
 
@@ -201,23 +202,21 @@ class MemberServiceTest {
         when(keycloakService.createUser(memberCreate, TOKEN)).thenReturn(id);
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Optional<Member> result = memberService.createMember(memberCreate, TOKEN);
+        Member result = memberService.createMember(memberCreate, TOKEN);
 
-        assertTrue(result.isPresent());
-        assertEquals(member, result.get());
+        assertEquals(member, result);
         verify(memberRepository).save(any(MemberEntity.class));
     }
 
     // Test cases for updateMember()
 
-    // Verifies that update is rejected when the member does not exist
+    // Verifies that update throws a NotFoundException when the member does not exist
     @Test
-    void updateMemberReturnsEmptyWhenMemberNotFound() {
+    void updateMemberThrowsNotFoundWhenMemberNotFound() {
         when(memberRepository.findById(id)).thenReturn(Optional.empty());
 
-        Optional<Member> result = memberService.updateMember(id, partialUpdate, TOKEN);
+        assertThrows(NotFoundException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
 
-        assertTrue(result.isEmpty());
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
     }
@@ -232,7 +231,7 @@ class MemberServiceTest {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(otherMember));
 
-        assertThrows(IllegalStateException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
+        assertThrows(ConflictException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
@@ -245,10 +244,9 @@ class MemberServiceTest {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(memberEntity));
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Optional<Member> result = memberService.updateMember(id, partialUpdate, TOKEN);
+        Member result = memberService.updateMember(id, partialUpdate, TOKEN);
 
-        assertTrue(result.isPresent());
-        assertEquals(member, result.get());
+        assertEquals(member, result);
         verify(memberRepository).save(any(MemberEntity.class));
     }
 
@@ -259,49 +257,45 @@ class MemberServiceTest {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Optional<Member> result = memberService.updateMember(id, partialUpdate, TOKEN);
+        Member result = memberService.updateMember(id, partialUpdate, TOKEN);
 
-        assertTrue(result.isPresent());
-        assertEquals(member, result.get());
+        assertEquals(member, result);
         verify(memberRepository).save(any(MemberEntity.class));
     }
 
-    // Verifies that an update is rejected and nothing is persisted when Keycloak fails
+    // Verifies that an update throws a BadRequestException and nothing is persisted when Keycloak fails
     @Test
-    void updateMemberReturnsEmptyWhenKeycloakThrows() {
+    void updateMemberThrowsBadRequestWhenKeycloakThrows() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
         doThrow(new RuntimeException("keycloak down")).when(keycloakService).updateUser(any(), any());
 
-        Optional<Member> result = memberService.updateMember(id, partialUpdate, TOKEN);
+        assertThrows(BadRequestException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
 
-        assertTrue(result.isEmpty());
         verify(memberRepository, never()).save(any());
     }
 
     // Test cases for deleteMember()
 
-    // Verifies that deletion fails when the member does not exist in the repository
+    // Verifies that deletion throws a NotFoundException when the member does not exist in the repository
     @Test
-    void deleteMemberReturnsFalseWhenMemberNotFound() {
+    void deleteMemberThrowsNotFoundWhenMemberNotFound() {
         when(memberRepository.findById(id)).thenReturn(Optional.empty());
 
-        boolean result = memberService.deleteMember(id, TOKEN);
+        assertThrows(NotFoundException.class, () -> memberService.deleteMember(id, TOKEN));
 
-        assertFalse(result);
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).delete(any());
     }
 
-    // Verifies that deletion fails and nothing is removed when Keycloak fails
+    // Verifies that deletion throws a BadRequestException and nothing is removed when Keycloak fails
     @Test
-    void deleteMemberReturnsFalseWhenKeycloakThrows() {
+    void deleteMemberThrowsBadRequestWhenKeycloakThrows() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
         doThrow(new RuntimeException("keycloak down")).when(keycloakService).deleteUser(id, TOKEN);
 
-        boolean result = memberService.deleteMember(id, TOKEN);
+        assertThrows(BadRequestException.class, () -> memberService.deleteMember(id, TOKEN));
 
-        assertFalse(result);
         verify(memberRepository, never()).delete(any());
     }
 
@@ -310,9 +304,8 @@ class MemberServiceTest {
     void deleteMemberReturnsTrueOnSuccess() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
 
-        boolean result = memberService.deleteMember(id, TOKEN);
+        memberService.deleteMember(id, TOKEN);
 
-        assertTrue(result);
         verify(memberRepository).delete(memberEntity);
     }
 }
