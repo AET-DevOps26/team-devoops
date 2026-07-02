@@ -6,6 +6,7 @@ type AuthTokenSnapshot = KeycloakTokenParsed & {
   email?: string
   name?: string
   preferred_username?: string
+  member_roles?: string[]
 }
 
 export function useAuth(): { user: AuthUser; logout: () => void } {
@@ -14,6 +15,7 @@ export function useAuth(): { user: AuthUser; logout: () => void } {
   const user: AuthUser = {
     name: parsed?.name ?? parsed?.preferred_username ?? parsed?.email ?? 'Unknown',
     email: parsed?.email ?? '',
+    roles: parsed?.member_roles ?? [],
   }
   const logout = () => keycloak.logout({ redirectUri: window.location.origin })
   return { user, logout }

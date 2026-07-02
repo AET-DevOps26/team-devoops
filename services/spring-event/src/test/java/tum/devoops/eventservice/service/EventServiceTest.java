@@ -18,11 +18,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.eventservice.entity.AttendanceEntity;
+import tum.devoops.eventservice.entity.MemberEntity;
 import tum.devoops.eventservice.entity.EventEntity;
 import tum.devoops.eventservice.entity.SportEventEntity;
 import tum.devoops.eventservice.entity.TeamEventEntity;
@@ -33,10 +33,14 @@ import tum.devoops.eventservice.model.Event;
 import tum.devoops.eventservice.model.EventCreate;
 import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
+import tum.devoops.eventservice.model.Reference;
 import tum.devoops.eventservice.repository.AttendanceRepository;
 import tum.devoops.eventservice.repository.EventRepository;
+import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
+import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
+import tum.devoops.eventservice.repository.TeamRepository;
 
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
@@ -49,6 +53,12 @@ class EventServiceTest {
     private SportEventRepository sportEventRepository;
     @Mock
     private TeamEventRepository teamEventRepository;
+    @Mock
+    private MemberRepository memberRepository;
+    @Mock
+    private SportRepository sportRepository;
+    @Mock
+    private TeamRepository teamRepository;
 
     @InjectMocks
     private EventService service;
@@ -58,6 +68,7 @@ class EventServiceTest {
     private static final UUID EVENT_ID = UUID.randomUUID();
     private static final UUID MEMBER_ID = UUID.randomUUID();
     private static final UUID TEAM_ID = UUID.randomUUID();
+    private static final UUID SPORT_ID = UUID.randomUUID();
 
     private static final Instant START = Instant.parse("2026-01-01T10:00:00Z");
     private static final Instant END = Instant.parse("2026-01-01T12:00:00Z");
@@ -89,7 +100,7 @@ class EventServiceTest {
     // ─── getAllEvents ──────────────────────────────────────────────────────────
 
     @Test
-    void getAllEventsAsAdminReturnsAllAndIgnoresAttendance() {
+    void getAllEventsAsAdminReturnsAll() {
         EventEntity a = eventEntity(UUID.randomUUID(), REQUESTER_ID);
         EventEntity b = eventEntity(UUID.randomUUID(), OTHER_ID);
         when(eventRepository.findAll()).thenReturn(List.of(a, b));
@@ -97,7 +108,29 @@ class EventServiceTest {
         List<EventSummary> result = service.getAllEvents(REQUESTER_ID, true);
 
         assertThat(result).hasSize(2);
-        verifyNoInteractions(attendanceRepository);
+        // Admin doesn't consult attendance for the membership decision, only to populate attendees.
+        verify(attendanceRepository, never()).findAllById_MemberId(any());
+    }
+
+    @Test
+    void getAllEventsPopulatesAttendeesOnSummaries() {
+        EventEntity event = eventEntity(EVENT_ID, REQUESTER_ID);
+        when(eventRepository.findAll()).thenReturn(List.of(event));
+        when(attendanceRepository.findAllById_EventIdIn(any()))
+                .thenReturn(List.of(new AttendanceEntity(new AttendanceEntity.Id(EVENT_ID, MEMBER_ID))));
+        MemberEntity member = new MemberEntity();
+        member.setId(MEMBER_ID);
+        member.setFirstName("Mary");
+        member.setLastName("Member");
+        when(memberRepository.findAllById(any())).thenReturn(List.of(member));
+
+        List<EventSummary> result = service.getAllEvents(REQUESTER_ID, true);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAttendees())
+                .extracting(Reference::getId).containsExactly(MEMBER_ID);
+        assertThat(result.get(0).getAttendees())
+                .extracting(Reference::getName).containsExactly("Mary Member");
     }
 
     @Test
@@ -156,12 +189,12 @@ class EventServiceTest {
         when(eventRepository.save(any())).thenReturn(saved);
         EventCreate body = validCreate()
                 .attendees(List.of(MEMBER_ID.toString()))
-                .sportsLinked(List.of("football"))
+                .sportsLinked(List.of(SPORT_ID))
                 .teamsLinked(List.of(TEAM_ID.toString()));
 
         Event result = service.createEvent(body, REQUESTER_ID, true);
 
-        assertThat(result.getCreator()).isEqualTo(REQUESTER_ID.toString());
+        assertThat(result.getCreator().getId()).isEqualTo(REQUESTER_ID);
 
         ArgumentCaptor<List<AttendanceEntity>> attendees = listCaptor();
         verify(attendanceRepository).saveAll(attendees.capture());
@@ -169,7 +202,7 @@ class EventServiceTest {
 
         ArgumentCaptor<List<SportEventEntity>> sports = listCaptor();
         verify(sportEventRepository).saveAll(sports.capture());
-        assertThat(sports.getValue()).extracting(s -> s.getId().getSportName()).containsExactly("football");
+        assertThat(sports.getValue()).extracting(s -> s.getId().getSportId()).containsExactly(SPORT_ID);
 
         ArgumentCaptor<List<TeamEventEntity>> teams = listCaptor();
         verify(teamEventRepository).saveAll(teams.capture());
@@ -230,6 +263,16 @@ class EventServiceTest {
         Event result = service.getEventDetails(EVENT_ID, REQUESTER_ID, true);
 
         assertThat(result.getId()).isEqualTo(EVENT_ID);
+    }
+
+    @Test
+    void getEventDetailsWithNullCreatorReturnsNullCreator() {
+        // creator_id is SET NULL when the creator member is deleted; the event survives.
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(eventEntity(EVENT_ID, null)));
+
+        Event result = service.getEventDetails(EVENT_ID, REQUESTER_ID, true);
+
+        assertThat(result.getCreator()).isNull();
     }
 
     // ─── updateEventDetails ──────────────────────────────────────────────────────
@@ -304,6 +347,7 @@ class EventServiceTest {
 
     @Test
     void updateEventDetailsWithEmptyListClearsLinks() {
+        // An empty (non-null) list wipes the links; a null/omitted list would leave them untouched.
         EventEntity entity = eventEntity(EVENT_ID, REQUESTER_ID);
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(entity));
         when(eventRepository.save(any())).thenReturn(entity);
@@ -339,7 +383,7 @@ class EventServiceTest {
     void updateEventDetailsWithNullSportEntryThrowsBadRequest() {
         EventEntity entity = eventEntity(EVENT_ID, REQUESTER_ID);
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(entity));
-        List<String> sports = new ArrayList<>();
+        List<UUID> sports = new ArrayList<>();
         sports.add(null);
 
         assertThatThrownBy(() -> service.updateEventDetails(

@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -18,12 +19,15 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.organizationservice.entity.DirectorEntity;
+import tum.devoops.organizationservice.entity.MemberEntity;
+import tum.devoops.organizationservice.entity.SportEntity;
 import tum.devoops.organizationservice.entity.TeamEntity;
 import tum.devoops.organizationservice.entity.TraineeEntity;
 import tum.devoops.organizationservice.entity.TrainerEntity;
 import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.model.TeamCreate;
 import tum.devoops.organizationservice.model.TeamPartialUpdate;
@@ -33,6 +37,7 @@ import tum.devoops.organizationservice.repository.SportRepository;
 import tum.devoops.organizationservice.repository.TeamRepository;
 import tum.devoops.organizationservice.repository.TraineeRepository;
 import tum.devoops.organizationservice.repository.TrainerRepository;
+import tum.devoops.organizationservice.service.MemberRoleSyncService;
 import tum.devoops.organizationservice.service.OrganizationTeamService;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +55,8 @@ class OrganizationTeamServiceTest {
     private TrainerRepository trainerRepository;
     @Mock
     private TraineeRepository traineeRepository;
+    @Mock
+    private MemberRoleSyncService memberRoleSyncService;
 
     @InjectMocks
     private OrganizationTeamService service;
@@ -59,8 +66,10 @@ class OrganizationTeamServiceTest {
     private static final UUID DIRECTOR_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID TRAINER_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
     private static final UUID TRAINEE_ID = UUID.fromString("00000000-0000-0000-0000-000000000004");
+    private static final UUID SPORT_ID = UUID.fromString("00000000-0000-0000-0000-000000000050");
+    private static final UUID OTHER_SPORT_ID = UUID.fromString("00000000-0000-0000-0000-000000000051");
 
-    private TeamEntity teamEntity(UUID id, String sportName,
+    private TeamEntity teamEntity(UUID id, UUID sportId,
             List<TrainerEntity> trainers, List<TraineeEntity> trainees) {
         TeamEntity entity = new TeamEntity();
         entity.setId(id);
@@ -68,7 +77,7 @@ class OrganizationTeamServiceTest {
         entity.setDescription("A test team");
         entity.setAddress("123 Main St");
         entity.setCreatedAt(LocalDate.of(2024, 1, 1));
-        entity.setSportName(sportName);
+        entity.setSportId(sportId);
         entity.setTrainers(trainers);
         entity.setTrainees(trainees);
         return entity;
@@ -82,8 +91,23 @@ class OrganizationTeamServiceTest {
         return new TraineeEntity(new TraineeEntity.Id(teamId, memberId));
     }
 
-    private DirectorEntity directorEntity(String sportName, UUID memberId) {
-        return new DirectorEntity(new DirectorEntity.Id(sportName, memberId));
+    private DirectorEntity directorEntity(UUID sportId, UUID memberId) {
+        return new DirectorEntity(new DirectorEntity.Id(sportId, memberId));
+    }
+
+    private MemberEntity memberNamed(UUID id, String first, String last) {
+        MemberEntity m = new MemberEntity();
+        m.setId(id);
+        m.setFirstName(first);
+        m.setLastName(last);
+        return m;
+    }
+
+    private SportEntity sportNamed(UUID id, String name) {
+        SportEntity s = new SportEntity();
+        s.setId(id);
+        s.setName(name);
+        return s;
     }
 
     // --- getAllTeams ---
@@ -97,25 +121,35 @@ class OrganizationTeamServiceTest {
 
     @Test
     void getAllTeams_returnsMappedList_whenTeamsExist() {
-        TeamEntity entity = teamEntity(TEAM_ID, "soccer",
+        TeamEntity entity = teamEntity(TEAM_ID, SPORT_ID,
                 List.of(trainerEntity(TEAM_ID, TRAINER_ID)),
                 List.of(traineeEntity(TEAM_ID, TRAINEE_ID)));
         when(teamRepository.findAll()).thenReturn(List.of(entity));
+        when(sportRepository.findById(SPORT_ID)).thenReturn(Optional.of(sportNamed(SPORT_ID, "Soccer")));
+        when(memberRepository.findAllById(any())).thenReturn(List.of(
+                memberNamed(TRAINER_ID, "Tina", "Trainer"),
+                memberNamed(TRAINEE_ID, "Tom", "Trainee")));
 
         List<Team> result = service.getAllTeams();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(TEAM_ID);
         assertThat(result.get(0).getName()).isEqualTo("Team Alpha");
-        assertThat(result.get(0).getTrainers()).containsExactly(TRAINER_ID.toString());
-        assertThat(result.get(0).getTrainees()).containsExactly(TRAINEE_ID.toString());
+        assertThat(result.get(0).getSport().getId()).isEqualTo(SPORT_ID);
+        assertThat(result.get(0).getSport().getName()).isEqualTo("Soccer");
+        assertThat(result.get(0).getTrainers())
+                .extracting(Reference::getId).containsExactly(TRAINER_ID);
+        assertThat(result.get(0).getTrainers())
+                .extracting(Reference::getName).containsExactly("Tina Trainer");
+        assertThat(result.get(0).getTrainees())
+                .extracting(Reference::getId).containsExactly(TRAINEE_ID);
     }
 
     // --- getTeam ---
 
     @Test
     void getTeam_returnsMappedTeam_whenFound() {
-        TeamEntity entity = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity entity = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(entity));
 
         Team result = service.getTeam(TEAM_ID);
@@ -124,7 +158,7 @@ class OrganizationTeamServiceTest {
         assertThat(result.getName()).isEqualTo("Team Alpha");
         assertThat(result.getDescription()).isEqualTo("A test team");
         assertThat(result.getAddress()).isEqualTo("123 Main St");
-        assertThat(result.getSport()).isEqualTo("soccer");
+        assertThat(result.getSport().getId()).isEqualTo(SPORT_ID);
         assertThat(result.getCreatedAt()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
@@ -141,37 +175,37 @@ class OrganizationTeamServiceTest {
 
     @Test
     void createTeam_throwsBadRequest_whenSportNotFound() {
-        when(sportRepository.existsById("soccer")).thenReturn(false);
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.createTeam(new TeamCreate("Team Alpha", "soccer"), ADMIN_ID, true))
+        assertThatThrownBy(() -> service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), ADMIN_ID, true))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("soccer");
+                .hasMessageContaining(SPORT_ID.toString());
     }
 
     @Test
     void createTeam_throwsForbidden_whenNotAdminAndNotDirector() {
         UUID callerId = UUID.randomUUID();
-        when(sportRepository.existsById("soccer")).thenReturn(true);
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.createTeam(new TeamCreate("Team Alpha", "soccer"), callerId, false))
+        assertThatThrownBy(() -> service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), callerId, false))
                 .isInstanceOf(ForbiddenException.class);
     }
 
     @Test
     void createTeam_allowsCreate_whenDirectorOfSport() {
-        DirectorEntity director = directorEntity("soccer", DIRECTOR_ID);
-        when(sportRepository.existsById("soccer")).thenReturn(true);
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of(director));
+        DirectorEntity director = directorEntity(SPORT_ID, DIRECTOR_ID);
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of(director));
         when(teamRepository.save(any(TeamEntity.class))).thenAnswer(inv -> {
             TeamEntity t = inv.getArgument(0);
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
 
-        Team result = service.createTeam(new TeamCreate("Team Alpha", "soccer"), DIRECTOR_ID, false);
+        Team result = service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), DIRECTOR_ID, false);
 
         verify(teamRepository).save(any(TeamEntity.class));
         assertThat(result.getId()).isEqualTo(TEAM_ID);
@@ -179,11 +213,11 @@ class OrganizationTeamServiceTest {
 
     @Test
     void createTeam_throwsBadRequest_whenTrainerUuidMalformed() {
-        when(sportRepository.existsById("soccer")).thenReturn(true);
-        when(directorRepository.findAllById_SportName("soccer"))
-                .thenReturn(List.of(directorEntity("soccer", DIRECTOR_ID)));
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
+        when(directorRepository.findAllById_SportId(SPORT_ID))
+                .thenReturn(List.of(directorEntity(SPORT_ID, DIRECTOR_ID)));
 
-        TeamCreate body = new TeamCreate("Team Alpha", "soccer");
+        TeamCreate body = new TeamCreate("Team Alpha", SPORT_ID);
         body.setTrainers(List.of("not-a-uuid"));
 
         assertThatThrownBy(() -> service.createTeam(body, DIRECTOR_ID, false))
@@ -193,12 +227,12 @@ class OrganizationTeamServiceTest {
 
     @Test
     void createTeam_throwsBadRequest_whenTraineeMemberNotFound() {
-        when(sportRepository.existsById("soccer")).thenReturn(true);
-        when(directorRepository.findAllById_SportName("soccer"))
-                .thenReturn(List.of(directorEntity("soccer", DIRECTOR_ID)));
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
+        when(directorRepository.findAllById_SportId(SPORT_ID))
+                .thenReturn(List.of(directorEntity(SPORT_ID, DIRECTOR_ID)));
         when(memberRepository.existsById(TRAINEE_ID)).thenReturn(false);
 
-        TeamCreate body = new TeamCreate("Team Alpha", "soccer");
+        TeamCreate body = new TeamCreate("Team Alpha", SPORT_ID);
         body.setTrainees(List.of(TRAINEE_ID.toString()));
 
         assertThatThrownBy(() -> service.createTeam(body, DIRECTOR_ID, false))
@@ -208,9 +242,9 @@ class OrganizationTeamServiceTest {
 
     @Test
     void createTeam_savesEntityAndTrainersAndTrainees_andReturnsResult() {
-        when(sportRepository.existsById("soccer")).thenReturn(true);
-        when(directorRepository.findAllById_SportName("soccer"))
-                .thenReturn(List.of(directorEntity("soccer", DIRECTOR_ID)));
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
+        when(directorRepository.findAllById_SportId(SPORT_ID))
+                .thenReturn(List.of(directorEntity(SPORT_ID, DIRECTOR_ID)));
         when(memberRepository.existsById(TRAINER_ID)).thenReturn(true);
         when(memberRepository.existsById(TRAINEE_ID)).thenReturn(true);
         when(teamRepository.save(any(TeamEntity.class))).thenAnswer(inv -> {
@@ -218,12 +252,12 @@ class OrganizationTeamServiceTest {
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, "soccer",
+        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID,
                 List.of(trainerEntity(TEAM_ID, TRAINER_ID)),
                 List.of(traineeEntity(TEAM_ID, TRAINEE_ID)));
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
 
-        TeamCreate body = new TeamCreate("Team Alpha", "soccer");
+        TeamCreate body = new TeamCreate("Team Alpha", SPORT_ID);
         body.setTrainers(List.of(TRAINER_ID.toString()));
         body.setTrainees(List.of(TRAINEE_ID.toString()));
         Team result = service.createTeam(body, DIRECTOR_ID, false);
@@ -231,22 +265,24 @@ class OrganizationTeamServiceTest {
         verify(teamRepository).save(any(TeamEntity.class));
         verify(trainerRepository).saveAll(any());
         verify(traineeRepository).saveAll(any());
-        assertThat(result.getTrainers()).containsExactly(TRAINER_ID.toString());
-        assertThat(result.getTrainees()).containsExactly(TRAINEE_ID.toString());
+        verify(memberRoleSyncService).scheduleSync(
+                argThat(ids -> ids.contains(TRAINER_ID) && ids.contains(TRAINEE_ID)));
+        assertThat(result.getTrainers()).extracting(Reference::getId).containsExactly(TRAINER_ID);
+        assertThat(result.getTrainees()).extracting(Reference::getId).containsExactly(TRAINEE_ID);
     }
 
     @Test
     void createTeam_savesEntityWithNoMembers_whenEmptyLists() {
-        when(sportRepository.existsById("soccer")).thenReturn(true);
+        when(sportRepository.existsById(SPORT_ID)).thenReturn(true);
         when(teamRepository.save(any(TeamEntity.class))).thenAnswer(inv -> {
             TeamEntity t = inv.getArgument(0);
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
 
-        Team result = service.createTeam(new TeamCreate("Team Alpha", "soccer"), ADMIN_ID, true);
+        Team result = service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), ADMIN_ID, true);
 
         verify(teamRepository).save(any(TeamEntity.class));
         assertThat(result.getTrainers()).isEmpty();
@@ -266,9 +302,9 @@ class OrganizationTeamServiceTest {
     @Test
     void updateTeam_throwsForbidden_whenNotAdminNotDirectorNotTrainer() {
         UUID outsiderId = UUID.randomUUID();
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.updateTeam(TEAM_ID, new TeamPartialUpdate(), outsiderId, false))
@@ -277,11 +313,11 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_allowsUpdate_whenMemberIsTrainer() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -292,12 +328,12 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_allowsUpdate_whenMemberIsDirector() {
-        DirectorEntity director = directorEntity("soccer", DIRECTOR_ID);
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        DirectorEntity director = directorEntity(SPORT_ID, DIRECTOR_ID);
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of(director));
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of(director));
 
         Team result = service.updateTeam(TEAM_ID, new TeamPartialUpdate(), DIRECTOR_ID, false);
 
@@ -306,14 +342,14 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_throwsForbidden_whenTrainerTriesToUpdateSport() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
         TeamPartialUpdate body = new TeamPartialUpdate();
-        body.setSport("football");
+        body.setSport(OTHER_SPORT_ID);
 
         assertThatThrownBy(() -> service.updateTeam(TEAM_ID, body, TRAINER_ID, false))
                 .isInstanceOf(ForbiddenException.class);
@@ -321,9 +357,9 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_throwsForbidden_whenTrainerTriesToUpdateTrainers() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -336,25 +372,25 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_throwsBadRequest_whenNewSportNotFound() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(sportRepository.existsById("unknown")).thenReturn(false);
+        when(sportRepository.existsById(OTHER_SPORT_ID)).thenReturn(false);
 
         TeamPartialUpdate body = new TeamPartialUpdate();
-        body.setSport("unknown");
+        body.setSport(OTHER_SPORT_ID);
 
         assertThatThrownBy(() -> service.updateTeam(TEAM_ID, body, ADMIN_ID, true))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("unknown");
+                .hasMessageContaining(OTHER_SPORT_ID.toString());
     }
 
     @Test
     void updateTeam_updatesScalarFields_whenNonNull() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -372,11 +408,11 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_doesNotUpdateScalarField_whenNull() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -389,29 +425,29 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_updatesSport_whenAdminSetsNewSport() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "football", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
-        when(sportRepository.existsById("football")).thenReturn(true);
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, OTHER_SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
+        when(sportRepository.existsById(OTHER_SPORT_ID)).thenReturn(true);
 
         TeamPartialUpdate body = new TeamPartialUpdate();
-        body.setSport("football");
+        body.setSport(OTHER_SPORT_ID);
         Team result = service.updateTeam(TEAM_ID, body, ADMIN_ID, true);
 
-        assertThat(team.getSportName()).isEqualTo("football");
+        assertThat(team.getSportId()).isEqualTo(OTHER_SPORT_ID);
         verify(teamRepository).save(team);
-        assertThat(result.getSport()).isEqualTo("football");
+        assertThat(result.getSport().getId()).isEqualTo(OTHER_SPORT_ID);
     }
 
     @Test
-    void updateTeam_doesNotReplaceTrainers_whenEmptyList() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+    void updateTeam_doesNotReplaceTrainers_whenNullList() {
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer", List.of(), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -422,14 +458,31 @@ class OrganizationTeamServiceTest {
     }
 
     @Test
-    void updateTeam_replacesTrainers_whenNonEmptyList() {
-        DirectorEntity director = directorEntity("soccer", DIRECTOR_ID);
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+    void updateTeam_clearsTrainers_whenEmptyList() {
+        DirectorEntity director = directorEntity(SPORT_ID, DIRECTOR_ID);
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer",
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of())));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of(director));
+
+        TeamPartialUpdate body = new TeamPartialUpdate();
+        body.setTrainers(List.of());
+        service.updateTeam(TEAM_ID, body, DIRECTOR_ID, false);
+
+        verify(trainerRepository).deleteAllById_TeamId(TEAM_ID);
+        verify(trainerRepository).saveAll(argThat(it -> !it.iterator().hasNext()));
+    }
+
+    @Test
+    void updateTeam_replacesTrainers_whenNonEmptyList() {
+        DirectorEntity director = directorEntity(SPORT_ID, DIRECTOR_ID);
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
+        when(teamRepository.findById(TEAM_ID))
+                .thenReturn(Optional.of(team))
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID,
                         List.of(trainerEntity(TEAM_ID, TRAINER_ID)), List.of())));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of(director));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of(director));
         when(memberRepository.existsById(TRAINER_ID)).thenReturn(true);
 
         TeamPartialUpdate body = new TeamPartialUpdate();
@@ -442,12 +495,12 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_replacesTrainees_whenNonEmptyList() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID))
                 .thenReturn(Optional.of(team))
-                .thenReturn(Optional.of(teamEntity(TEAM_ID, "soccer",
+                .thenReturn(Optional.of(teamEntity(TEAM_ID, SPORT_ID,
                         List.of(), List.of(traineeEntity(TEAM_ID, TRAINEE_ID)))));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
         when(memberRepository.existsById(TRAINEE_ID)).thenReturn(true);
@@ -462,9 +515,9 @@ class OrganizationTeamServiceTest {
 
     @Test
     void updateTeam_throwsBadRequest_whenTraineeUuidMalformed() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
         when(trainerRepository.findAllById_TeamId(TEAM_ID))
                 .thenReturn(List.of(trainerEntity(TEAM_ID, TRAINER_ID)));
 
@@ -488,9 +541,9 @@ class OrganizationTeamServiceTest {
 
     @Test
     void deleteTeam_throwsForbidden_whenTrainerTriesToDelete() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of());
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.deleteTeam(TEAM_ID, TRAINER_ID, false))
                 .isInstanceOf(ForbiddenException.class);
@@ -498,10 +551,10 @@ class OrganizationTeamServiceTest {
 
     @Test
     void deleteTeam_allowsDelete_whenDirectorOfSport() {
-        DirectorEntity director = directorEntity("soccer", DIRECTOR_ID);
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        DirectorEntity director = directorEntity(SPORT_ID, DIRECTOR_ID);
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer")).thenReturn(List.of(director));
+        when(directorRepository.findAllById_SportId(SPORT_ID)).thenReturn(List.of(director));
 
         service.deleteTeam(TEAM_ID, DIRECTOR_ID, false);
 
@@ -510,10 +563,10 @@ class OrganizationTeamServiceTest {
 
     @Test
     void deleteTeam_deletesTraineesTrainersAndTeam() {
-        TeamEntity team = teamEntity(TEAM_ID, "soccer", List.of(), List.of());
+        TeamEntity team = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
         when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(team));
-        when(directorRepository.findAllById_SportName("soccer"))
-                .thenReturn(List.of(directorEntity("soccer", DIRECTOR_ID)));
+        when(directorRepository.findAllById_SportId(SPORT_ID))
+                .thenReturn(List.of(directorEntity(SPORT_ID, DIRECTOR_ID)));
 
         service.deleteTeam(TEAM_ID, DIRECTOR_ID, false);
 

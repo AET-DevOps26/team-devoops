@@ -33,6 +33,7 @@ import tum.devoops.eventservice.exception.ForbiddenException;
 import tum.devoops.eventservice.exception.NotFoundException;
 import tum.devoops.eventservice.model.Event;
 import tum.devoops.eventservice.model.EventSummary;
+import tum.devoops.eventservice.model.Reference;
 import tum.devoops.eventservice.service.EventService;
 
 @WebMvcTest(EventController.class)
@@ -52,7 +53,7 @@ class EventControllerTest {
         return new Event(EVENT_ID, "Training session", "Weekly practice",
                 OffsetDateTime.parse("2026-07-01T10:00:00Z"),
                 OffsetDateTime.parse("2026-07-01T12:00:00Z"),
-                REQUESTER_ID.toString());
+                new Reference(REQUESTER_ID, "Casey Creator"));
     }
 
     private EventSummary sampleSummary() {

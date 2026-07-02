@@ -70,7 +70,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SportCreate"
-  /organization/sports/{sport_name}:
+  /organization/sports/{sport_id}:
     patch:
       operationId: updateSport
       tags:
@@ -81,7 +81,7 @@ paths:
         - Directors: can update all fields except directors.
         - Admins: can update all fields.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -118,7 +118,7 @@ paths:
         Deletes a sport from the organization.
         - Admins: can delete sports.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "204":
           description: The request was successful, but there is no content to return in
@@ -142,7 +142,7 @@ paths:
         Returns the details of a specific sport.
         - All authenticated users: can access this endpoint.
       parameters:
-        - $ref: "#/components/parameters/sport_name"
+        - $ref: "#/components/parameters/sport_id"
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -377,6 +377,33 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MemberCreate"
+  /members/dashboard:
+    get:
+      operationId: getDashboard
+      tags:
+        - members
+      summary: Get the caller's dashboard
+      description: |
+        Returns dashboard data tailored to the caller's highest role
+        (admin > director > trainer > trainee). The `role` field discriminates the
+        concrete shape of the response.
+        - All authenticated users: can access their own dashboard.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      security:
+        - BearerJwt: []
   /members/{member_id}:
     get:
       operationId: getMemberDetails
@@ -1017,10 +1044,25 @@ paths:
         - letters
       summary: Send mail
       description: |
-        Sends an email based on the provided HTML template.
-        - Trainers: can send mail to members of their team.
-        - Directors: can send mail to members related to their sport.
-        - Admins: can send mail to any member.
+        Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
+        template's placeholder tokens are replaced with each receiver's data, and one email is sent
+        per receiver.
+
+        Receivers are determined from the caller's highest role:
+        - **Admin**: all members.
+        - **Director**: all directors, trainers, and trainees in their sport.
+        - **Trainer**: all trainers and trainees of their team.
+        - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+
+        Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+        trainee belongs to exactly one team.
+
+        Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+        empty string):
+        - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+          `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+        - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+        - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -1036,11 +1078,11 @@ paths:
         - BearerJwt: []
       requestBody:
         required: true
-        description: The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content.
+        description: The subject and HTML template for the personalized mass email.
         content:
-          text/html:
+          application/json:
             schema:
-              type: string
+              $ref: "#/components/schemas/MailRequest"
       parameters: []
   /letters/pdf:
     post:
@@ -1049,10 +1091,26 @@ paths:
         - letters
       summary: Get pdf
       description: |
-        Generates and returns a PDF document from the provided HTML template.
-        - Trainers: can generate PDFs related to their team.
-        - Directors: can generate PDFs related to their sport.
-        - Admins: can generate PDFs related to any member.
+        Generates a personalized mass-letter PDF. The body carries an HTML `template` whose
+        placeholder tokens are replaced with each receiver's data. One letter is rendered per
+        receiver — a layout block with the recipient's name and address followed by the
+        token-substituted template — and all letters are concatenated into a single PDF.
+
+        Receivers are determined from the caller's highest role:
+        - **Admin**: all members.
+        - **Director**: all directors, trainers, and trainees in their sport.
+        - **Trainer**: all trainers and trainees of their team.
+        - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+
+        Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+        trainee belongs to exactly one team.
+
+        Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+        empty string):
+        - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+          `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+        - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+        - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
       responses:
         "200":
           description: The request was successful, and the server has returned the
@@ -1075,30 +1133,25 @@ paths:
       parameters: []
       requestBody:
         required: true
-        description: The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content.
+        description: The HTML template for the personalized mass-letter PDF.
         content:
-          text/html:
+          application/json:
             schema:
-              type: string
-  /helper/report/{member_id}:
-    get:
-      operationId: generateReport
+              $ref: "#/components/schemas/PdfRequest"
+  /helper/reports/member/{member_id}:
+    post:
+      operationId: generateMemberReport
       tags:
         - helper
-      summary: Generate report
+      summary: Generate member report
       description: |
-        Generates an AI-based report for a member. Members can only generate reports for themselves.
-        - All authenticated users: can generate a report for themselves.
-        - Trainers: can generate reports for members of their team.
+        Kicks off asynchronous generation of an AI report for a member. Returns immediately; the
+        finished report is persisted and can later be fetched via the report endpoints.
+        - The member themselves: can generate their own report.
         - Admin: can generate a report for any member.
       responses:
-        "200":
-          description: The request was successful, and the server has returned the
-            requested resource in the response body.
-          content:
-            text/plain:
-              schema:
-                type: string
+        "202":
+          description: The request was accepted and report generation has been started.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1107,6 +1160,143 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       parameters:
         - $ref: "#/components/parameters/member_id"
+      security:
+        - BearerJwt: []
+    get:
+      operationId: listMemberReports
+      tags:
+        - helper
+      summary: List member reports
+      description: |
+        Lists the stored report summaries (without text) for a member, newest first.
+        - The member themselves: can list their own reports.
+        - Admin: can list reports for any member.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberReportSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/member_id"
+      security:
+        - BearerJwt: []
+  /helper/reports/team/{team_id}:
+    post:
+      operationId: generateTeamReport
+      tags:
+        - helper
+      summary: Generate team report
+      description: |
+        Kicks off asynchronous generation of an AI report for a team. Returns immediately; the
+        finished report is persisted and can later be fetched via the report endpoints.
+        - Trainers of the team: can generate the team's report.
+        - Admin: can generate a report for any team.
+      responses:
+        "202":
+          description: The request was accepted and report generation has been started.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      security:
+        - BearerJwt: []
+    get:
+      operationId: listTeamReports
+      tags:
+        - helper
+      summary: List team reports
+      description: |
+        Lists the stored report summaries (without text) for a team, newest first.
+        - Trainers of the team: can list the team's reports.
+        - Admin: can list reports for any team.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamReportSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/team_id"
+      security:
+        - BearerJwt: []
+  /helper/reports/{report_id}:
+    get:
+      operationId: getReport
+      tags:
+        - helper
+      summary: Get report
+      description: |
+        Returns a single stored report including its full text. Works for both member and team
+        reports; the `kind` field indicates which, and the matching reference is populated.
+        - Member reports: the member themselves or an admin.
+        - Team reports: a trainer of the team or an admin.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/report_id"
+      security:
+        - BearerJwt: []
+    delete:
+      operationId: deleteReport
+      tags:
+        - helper
+      summary: Delete report
+      description: |
+        Deletes a single stored report (member or team).
+        - Member reports: the member themselves or an admin.
+        - Team reports: a trainer of the team or an admin.
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/report_id"
       security:
         - BearerJwt: []
 components:
@@ -1164,12 +1354,13 @@ components:
       description: "Jwt Auth: Authenticated requests contain a valid Json Web Token
         (JWT) as part of the `Authorization: Bearer <JWT>` header."
   parameters:
-    sport_name:
-      name: sport_name
+    sport_id:
+      name: sport_id
       in: path
       required: true
       schema:
         type: string
+        format: uuid
     team_id:
       name: team_id
       in: path
@@ -1205,6 +1396,13 @@ components:
       schema:
         type: string
         format: uuid
+    report_id:
+      name: report_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     ErrorResponse:
       type: object
@@ -1224,9 +1422,223 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
       required:
         - message
+    Reference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - id
+        - name
+      description: A lightweight reference to another entity — its id plus a display name.
+    MemberReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        member:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - member
+        - created_at
+      description: Summary of a stored member report, without its generated text.
+    TeamReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        team:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - team
+        - created_at
+      description: Summary of a stored team report, without its generated text.
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - member
+            - team
+        member:
+          $ref: "#/components/schemas/Reference"
+        team:
+          $ref: "#/components/schemas/Reference"
+        created_at:
+          type: string
+          format: date-time
+        text:
+          type: string
+      required:
+        - id
+        - kind
+        - created_at
+        - text
+      description: |
+        A stored report including its generated text. `kind` indicates whether it is a member or
+        team report; the matching `member`/`team` reference is populated accordingly.
+    Dashboard:
+      oneOf:
+        - $ref: "#/components/schemas/AdminDashboard"
+        - $ref: "#/components/schemas/DirectorDashboard"
+        - $ref: "#/components/schemas/TrainerDashboard"
+        - $ref: "#/components/schemas/TraineeDashboard"
+      discriminator:
+        propertyName: role
+        mapping:
+          admin: "#/components/schemas/AdminDashboard"
+          director: "#/components/schemas/DirectorDashboard"
+          trainer: "#/components/schemas/TrainerDashboard"
+          trainee: "#/components/schemas/TraineeDashboard"
+      description: |
+        Role-specific dashboard payload. The `role` property discriminates which concrete
+        shape is returned, following the caller's highest role (admin > director > trainer > trainee).
+    AdminDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        total_members:
+          type: integer
+        total_sports:
+          type: integer
+        total_teams:
+          type: integer
+        total_directors:
+          type: integer
+        total_trainers:
+          type: integer
+        total_balance_cents:
+          type: integer
+        events_this_week:
+          type: integer
+      required:
+        - role
+        - total_members
+        - total_sports
+        - total_teams
+        - total_directors
+        - total_trainers
+        - total_balance_cents
+        - events_this_week
+      description: Club-wide aggregates shown to administrators.
+    DirectorDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        sport:
+          $ref: "#/components/schemas/Reference"
+        total_teams:
+          type: integer
+        total_members:
+          type: integer
+        sport_balance_cents:
+          type: integer
+        upcoming_events:
+          type: integer
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamBalanceSummary"
+      required:
+        - role
+        - sport
+        - total_teams
+        - total_members
+        - sport_balance_cents
+        - upcoming_events
+        - teams
+      description: Aggregates for the sport a director manages.
+    TeamBalanceSummary:
+      type: object
+      properties:
+        team:
+          $ref: "#/components/schemas/Reference"
+        member_count:
+          type: integer
+        balance_cents:
+          type: integer
+      required:
+        - team
+        - member_count
+        - balance_cents
+      description: Per-team rollup of trainee count and aggregate balance.
+    TrainerDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        team:
+          $ref: "#/components/schemas/Reference"
+        total_members:
+          type: integer
+        upcoming_events:
+          type: integer
+        recent_feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackSummary"
+      required:
+        - role
+        - team
+        - total_members
+        - upcoming_events
+        - recent_feedback
+      description: Aggregates for the team a trainer manages, including feedback they authored.
+    TraineeDashboard:
+      type: object
+      properties:
+        role:
+          type: string
+        balance_cents:
+          type: integer
+        next_event:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/EventSummary"
+        upcoming_events:
+          type: integer
+        recent_feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackSummary"
+        recent_reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberReportSummary"
+      required:
+        - role
+        - balance_cents
+        - next_event
+        - upcoming_events
+        - recent_feedback
+        - recent_reports
+      description: Personal aggregates shown to a trainee/member.
     Sport:
       type: object
       properties:
+        id:
+          type: string
+          format: uuid
         name:
           type: string
         description:
@@ -1237,8 +1649,9 @@ components:
         directors:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
       required:
+        - id
         - name
         - description
         - created_at
@@ -1287,15 +1700,15 @@ components:
         address:
           type: string
         sport:
-          type: string
+          $ref: "#/components/schemas/Reference"
         trainers:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
         trainees:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1317,6 +1730,8 @@ components:
           type: string
         sport:
           type: string
+          format: uuid
+          description: ID of the sport this team belongs to.
         trainers:
           type: array
           items:
@@ -1340,6 +1755,8 @@ components:
           type: string
         sport:
           type: string
+          format: uuid
+          description: ID of the sport this team belongs to.
         trainers:
           type: array
           items:
@@ -1450,6 +1867,34 @@ components:
         - email
         - password
       description: Data transfer object for creating a new Member.
+    PdfRequest:
+      type: object
+      properties:
+        template:
+          type: string
+          description: |
+            HTML letter body. Supports per-receiver placeholder tokens (see the operation
+            description); each token is replaced with that receiver's data. One personalized letter
+            — a name and address layout block followed by the substituted template — is rendered per
+            receiver and concatenated into a single PDF.
+      required:
+        - template
+      description: Request body for generating a personalized mass-letter PDF for the caller's receivers.
+    MailRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Subject line of the email.
+        template:
+          type: string
+          description: |
+            HTML email body. Supports per-receiver placeholder tokens (see the operation
+            description); each token is replaced with that receiver's data before the email is sent.
+      required:
+        - subject
+        - template
+      description: Request body for sending a personalized mass email to the caller's receivers.
     Event:
       type: object
       properties:
@@ -1469,19 +1914,22 @@ components:
         attendees:
           type: array
           items:
-            type: string
+            $ref: "#/components/schemas/Reference"
         sports_linked:
           type: array
           items:
-            type: string
-          description: Names of the sports associated with this event.
+            $ref: "#/components/schemas/Reference"
+          description: Sports associated with this event.
         teams_linked:
           type: array
           items:
-            type: string
-          description: IDs of the teams associated with this event.
+            $ref: "#/components/schemas/Reference"
+          description: Teams associated with this event.
         creator:
-          type: string
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1504,6 +1952,10 @@ components:
         end_time:
           type: string
           format: date-time
+        attendees:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reference"
       required:
         - id
         - name
@@ -1531,6 +1983,8 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          description: IDs of the sports associated with this event.
         teams_linked:
           type: array
           items:
@@ -1558,6 +2012,8 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          description: IDs of the sports associated with this event.
         teams_linked:
           type: array
           items:
@@ -1574,16 +2030,24 @@ components:
           type: string
           format: uuid
         event:
-          type: string
+          $ref: "#/components/schemas/Reference"
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - id
         - event
@@ -1591,6 +2055,7 @@ components:
         - creator
         - created_at
         - feedback
+        - rating
       description: The object representation of Feedback, which is associated with a specific Event and Member.
     FeedbackSummary:
       type: object
@@ -1599,20 +2064,29 @@ components:
           type: string
           format: uuid
         event:
-          type: string
+          $ref: "#/components/schemas/Reference"
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         created_at:
           type: string
           format: date-time
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - id
         - event
         - member
         - creator
         - created_at
+        - rating
       description: A simplified representation of a Feedback, typically used in list views.
     FeedbackPartialUpdate:
       type: object
@@ -1623,6 +2097,11 @@ components:
           type: string
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       description: Data transfer object for partially updating an existing Feedback
         (PATCH operation).
     FeedbackCreate:
@@ -1634,10 +2113,16 @@ components:
           type: string
         feedback:
           type: string
+        rating:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 10
       required:
         - event
         - member
         - feedback
+        - rating
       description: Data transfer object for creating a new Feedback.
     Transaction:
       type: object
@@ -1646,9 +2131,12 @@ components:
           type: string
           format: uuid
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         creator:
-          type: string
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Reference"
         amount_cents:
           type: integer
         created_at:
@@ -1700,7 +2188,7 @@ components:
       type: object
       properties:
         member:
-          type: string
+          $ref: "#/components/schemas/Reference"
         balance_cents:
           type: integer
       required:

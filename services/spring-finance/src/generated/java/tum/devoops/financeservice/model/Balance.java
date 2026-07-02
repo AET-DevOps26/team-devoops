@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.springframework.lang.Nullable;
+import tum.devoops.financeservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -22,7 +23,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Balance {
 
-  private String member;
+  private Reference member;
 
   private Integer balanceCents;
 
@@ -33,12 +34,12 @@ public class Balance {
   /**
    * Constructor with only required parameters
    */
-  public Balance(String member, Integer balanceCents) {
+  public Balance(Reference member, Integer balanceCents) {
     this.member = member;
     this.balanceCents = balanceCents;
   }
 
-  public Balance member(String member) {
+  public Balance member(Reference member) {
     this.member = member;
     return this;
   }
@@ -47,14 +48,14 @@ public class Balance {
    * Get member
    * @return member
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("member")
-  public String getMember() {
+  public Reference getMember() {
     return member;
   }
 
-  public void setMember(String member) {
+  public void setMember(Reference member) {
     this.member = member;
   }
 

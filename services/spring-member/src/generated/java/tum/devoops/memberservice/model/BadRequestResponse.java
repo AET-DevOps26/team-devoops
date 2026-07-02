@@ -28,7 +28,7 @@ public class BadRequestResponse {
   private String message;
 
   @Valid
-  private List<@Valid ErrorResponse> errors = new ArrayList<>();
+  private @Nullable List<@Valid ErrorResponse> errors;
 
   public BadRequestResponse() {
     super();
@@ -61,7 +61,7 @@ public class BadRequestResponse {
     this.message = message;
   }
 
-  public BadRequestResponse errors(List<@Valid ErrorResponse> errors) {
+  public BadRequestResponse errors(@Nullable List<@Valid ErrorResponse> errors) {
     this.errors = errors;
     return this;
   }
@@ -81,11 +81,11 @@ public class BadRequestResponse {
   @Valid 
   @Schema(name = "errors", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("errors")
-  public List<@Valid ErrorResponse> getErrors() {
+  public @Nullable List<@Valid ErrorResponse> getErrors() {
     return errors;
   }
 
-  public void setErrors(List<@Valid ErrorResponse> errors) {
+  public void setErrors(@Nullable List<@Valid ErrorResponse> errors) {
     this.errors = errors;
   }
 

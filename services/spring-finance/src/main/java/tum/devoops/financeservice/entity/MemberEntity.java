@@ -17,4 +17,10 @@ public class MemberEntity {
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
+
+    @Column(name = "first_name", insertable = false, updatable = false)
+    private String firstName;
+
+    @Column(name = "last_name", insertable = false, updatable = false)
+    private String lastName;
 }

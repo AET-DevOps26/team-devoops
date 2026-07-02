@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tum.devoops.financeservice.config.SecurityConfig;
 import tum.devoops.financeservice.controller.FinanceController;
 import tum.devoops.financeservice.model.Balance;
+import tum.devoops.financeservice.model.Reference;
 import tum.devoops.financeservice.model.Transaction;
 import tum.devoops.financeservice.model.TransactionCreate;
 import tum.devoops.financeservice.model.TransactionPartialUpdate;
@@ -62,7 +63,7 @@ class FinanceControllerTest {
     }
 
     private Transaction sampleTransaction() {
-        return new Transaction(TX_ID, MEMBER_ID.toString(), REQUESTER_ID.toString(),
+        return new Transaction(TX_ID, new Reference(MEMBER_ID, null), new Reference(REQUESTER_ID, null),
                 500, OffsetDateTime.now(), "Membership fee", null);
     }
 
@@ -249,7 +250,7 @@ class FinanceControllerTest {
     @Test
     void getAllBalancesAsMemberReturns200() throws Exception {
         when(transactionService.getAllBalances(REQUESTER_ID, false))
-                .thenReturn(List.of(new Balance(MEMBER_ID.toString(), 200)));
+                .thenReturn(List.of(new Balance(new Reference(MEMBER_ID, null), 200)));
 
         mockMvc.perform(get("/finance/balances").with(memberJwt()))
                 .andExpect(status().isOk())
@@ -275,7 +276,7 @@ class FinanceControllerTest {
 
     @Test
     void getMemberBalanceAsMemberReturns200() throws Exception {
-        Balance balance = new Balance(MEMBER_ID.toString(), 500);
+        Balance balance = new Balance(new Reference(MEMBER_ID, null), 500);
         when(transactionService.getMemberBalance(MEMBER_ID, REQUESTER_ID, false)).thenReturn(balance);
 
         mockMvc.perform(get("/finance/balances/{memberId}", MEMBER_ID).with(memberJwt()))
@@ -285,7 +286,7 @@ class FinanceControllerTest {
 
     @Test
     void getMemberBalanceAsAdminReturns200() throws Exception {
-        Balance balance = new Balance(MEMBER_ID.toString(), 300);
+        Balance balance = new Balance(new Reference(MEMBER_ID, null), 300);
         when(transactionService.getMemberBalance(MEMBER_ID, REQUESTER_ID, true)).thenReturn(balance);
 
         mockMvc.perform(get("/finance/balances/{memberId}", MEMBER_ID).with(adminJwt()))

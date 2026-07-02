@@ -6,7 +6,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import tum.devoops.memberservice.service.DashboardService;
 import tum.devoops.memberservice.service.MemberService;
+import tum.devoops.memberservice.service.ReportQueryService;
 
 /**
  * Context-load smoke test.
@@ -32,6 +34,14 @@ class MemberServiceApplicationTests {
 
     @MockitoBean
     private MemberService memberService;
+
+    // Depends on the cross-schema JPA repositories, which are not created without a DataSource.
+    @MockitoBean
+    private DashboardService dashboardService;
+
+    // Depends on JdbcTemplate, which is not created without a DataSource.
+    @MockitoBean
+    private ReportQueryService reportQueryService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;

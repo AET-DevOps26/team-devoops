@@ -1,7 +1,12 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -16,6 +21,7 @@ import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ConflictException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Sport;
 import tum.devoops.organizationservice.model.SportCreate;
 import tum.devoops.organizationservice.model.SportPartialUpdate;
@@ -41,6 +47,8 @@ public class OrganizationSportService {
     private TrainerRepository trainerRepository;
     @Autowired
     private TraineeRepository traineeRepository;
+    @Autowired
+    private MemberRoleSyncService memberRoleSyncService;
 
     @Transactional(readOnly = true)
     public List<Sport> getAllSports() {
@@ -50,13 +58,13 @@ public class OrganizationSportService {
     }
 
     @Transactional(readOnly = true)
-    public Sport getSport(String sportName) {
-        return toSport(findSportOrThrow(sportName));
+    public Sport getSport(UUID sportId) {
+        return toSport(findSportOrThrow(sportId));
     }
 
     @Transactional
     public Sport createSport(SportCreate body) {
-        if (sportRepository.existsById(body.getName())) {
+        if (sportRepository.existsByName(body.getName())) {
             throw new ConflictException("Sport already exists: " + body.getName());
         }
         List<UUID> directorIds = resolveDirectorUuids(body.getDirectors());
@@ -67,88 +75,85 @@ public class OrganizationSportService {
         entity.setCreatedAt(LocalDate.now());
         sportRepository.save(entity);
 
-        saveDirectors(body.getName(), directorIds);
+        saveDirectors(entity.getId(), directorIds);
 
-        return toSport(findSportOrThrow(body.getName()));
+        memberRoleSyncService.scheduleSync(new HashSet<>(directorIds));
+
+        return toSport(findSportOrThrow(entity.getId()));
     }
 
     @Transactional
-    public Sport updateSport(String sportName, SportPartialUpdate body, UUID requesterId, boolean isAdmin) {
-        SportEntity sport = findSportOrThrow(sportName);
+    public Sport updateSport(UUID sportId, SportPartialUpdate body, UUID requesterId, boolean isAdmin) {
+        SportEntity sport = findSportOrThrow(sportId);
 
-        boolean isDirector = directorRepository.findAllById_SportName(sportName).stream()
+        boolean isDirector = directorRepository.findAllById_SportId(sportId).stream()
                 .anyMatch(d -> d.getId().getMemberId().equals(requesterId));
         if (!isAdmin && !isDirector) {
             throw new ForbiddenException("Access denied");
         }
 
-        String effectiveName = (body.getName() != null) ? body.getName() : sportName;
-        String effectiveDescription = (body.getDescription() != null) ? body.getDescription() : sport.getDescription();
-
-        if (!effectiveName.equals(sportName)) {
-            if (sportRepository.existsById(effectiveName)) {
-                throw new ConflictException("Sport already exists: " + effectiveName);
+        // Renaming is now a plain field update — no foreign keys reference the name.
+        if (body.getName() != null && !body.getName().equals(sport.getName())) {
+            if (sportRepository.existsByName(body.getName())) {
+                throw new ConflictException("Sport already exists: " + body.getName());
             }
-            List<DirectorEntity> oldDirectors = directorRepository.findAllById_SportName(sportName);
-            List<TeamEntity> teams = teamRepository.findAllBySportName(sportName);
-            for (TeamEntity team : teams) {
-                team.setSportName(effectiveName);
-            }
-
-            SportEntity newSport = new SportEntity();
-            newSport.setName(effectiveName);
-            newSport.setDescription(effectiveDescription);
-            newSport.setCreatedAt(sport.getCreatedAt());
-            sportRepository.save(newSport);
-
-            teamRepository.saveAll(teams);
-            directorRepository.deleteAllById_SportName(sportName);
-
-            if (isAdmin && !body.getDirectors().isEmpty()) {
-                saveDirectors(effectiveName, resolveDirectorUuids(body.getDirectors()));
-            } else {
-                List<DirectorEntity> migratedDirectors = oldDirectors.stream()
-                        .map(d -> new DirectorEntity(
-                                new DirectorEntity.Id(effectiveName, d.getId().getMemberId())))
-                        .collect(Collectors.toList());
-                directorRepository.saveAll(migratedDirectors);
-            }
-
-            sportRepository.delete(sport);
-        } else {
-            sport.setDescription(effectiveDescription);
-            sportRepository.save(sport);
-
-            if (isAdmin && !body.getDirectors().isEmpty()) {
-                directorRepository.deleteAllById_SportName(sportName);
-                saveDirectors(sportName, resolveDirectorUuids(body.getDirectors()));
-            }
+            sport.setName(body.getName());
         }
+        if (body.getDescription() != null) {
+            sport.setDescription(body.getDescription());
+        }
+        sportRepository.save(sport);
 
-        return toSport(findSportOrThrow(effectiveName));
+        // null means the directors list was omitted (no change); a non-null list (including empty)
+        // replaces the current directors, so an empty list clears them. Only admins may change it.
+        Set<UUID> affected = new HashSet<>();
+        if (isAdmin && body.getDirectors() != null) {
+            directorRepository.findAllById_SportId(sportId)
+                    .forEach(d -> affected.add(d.getId().getMemberId()));
+            directorRepository.deleteAllById_SportId(sportId);
+            List<UUID> newDirectorIds = resolveDirectorUuids(body.getDirectors());
+            saveDirectors(sportId, newDirectorIds);
+            affected.addAll(newDirectorIds);
+        }
+        memberRoleSyncService.scheduleSync(affected);
+
+        return toSport(findSportOrThrow(sportId));
     }
 
     @Transactional
-    public void deleteSport(String sportName) {
-        SportEntity sport = findSportOrThrow(sportName);
+    public void deleteSport(UUID sportId) {
+        SportEntity sport = findSportOrThrow(sportId);
 
-        List<TeamEntity> teams = teamRepository.findAllBySportName(sportName);
+        Set<UUID> affected = new HashSet<>();
+        directorRepository.findAllById_SportId(sportId)
+                .forEach(d -> affected.add(d.getId().getMemberId()));
+
+        List<TeamEntity> teams = teamRepository.findAllBySportId(sportId);
         for (TeamEntity team : teams) {
+            trainerRepository.findAllById_TeamId(team.getId())
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
+            traineeRepository.findAllById_TeamId(team.getId())
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             traineeRepository.deleteAllById_TeamId(team.getId());
             trainerRepository.deleteAllById_TeamId(team.getId());
         }
         teamRepository.deleteAll(teams);
 
-        directorRepository.deleteAllById_SportName(sportName);
+        directorRepository.deleteAllById_SportId(sportId);
         sportRepository.delete(sport);
+
+        memberRoleSyncService.scheduleSync(affected);
     }
 
-    private SportEntity findSportOrThrow(String sportName) {
-        return sportRepository.findById(sportName)
-                .orElseThrow(() -> new NotFoundException("Sport not found: " + sportName));
+    private SportEntity findSportOrThrow(UUID sportId) {
+        return sportRepository.findById(sportId)
+                .orElseThrow(() -> new NotFoundException("Sport not found: " + sportId));
     }
 
     private List<UUID> resolveDirectorUuids(List<String> directorStrings) {
+        if (directorStrings == null) {
+            return List.of();
+        }
         return directorStrings.stream()
                 .map(s -> {
                     try {
@@ -165,17 +170,30 @@ public class OrganizationSportService {
                 .collect(Collectors.toList());
     }
 
-    private void saveDirectors(String sportName, List<UUID> directorIds) {
+    private void saveDirectors(UUID sportId, List<UUID> directorIds) {
         List<DirectorEntity> directors = directorIds.stream()
-                .map(id -> new DirectorEntity(new DirectorEntity.Id(sportName, id)))
+                .map(id -> new DirectorEntity(new DirectorEntity.Id(sportId, id)))
                 .collect(Collectors.toList());
         directorRepository.saveAll(directors);
     }
 
     private Sport toSport(SportEntity entity) {
-        List<String> directors = entity.getDirectors().stream()
-                .map(d -> d.getId().getMemberId().toString())
+        List<UUID> directorIds = entity.getDirectors().stream()
+                .map(d -> d.getId().getMemberId())
                 .collect(Collectors.toList());
-        return new Sport(entity.getName(), entity.getDescription(), entity.getCreatedAt(), directors);
+        return new Sport(entity.getId(), entity.getName(), entity.getDescription(),
+                entity.getCreatedAt(), memberReferences(directorIds));
+    }
+
+    private List<Reference> memberReferences(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> names.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        return memberIds.stream()
+                .map(id -> new Reference(id, names.get(id)))
+                .collect(Collectors.toList());
     }
 }

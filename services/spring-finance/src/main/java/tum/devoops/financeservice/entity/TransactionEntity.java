@@ -28,8 +28,8 @@ public class TransactionEntity {
     private UUID memberId;
 
     // UUID of the member who created this transaction.
-    // FK to member.members(id), added in the V2 migration.
-    @Column(name = "creator_id", nullable = false)
+    // FK to member.member(id); ON DELETE SET NULL, so this is cleared if the creator is deleted.
+    @Column(name = "creator_id")
     private UUID creatorId;
 
     // Amount in cents (e.g. 1000 = €10.00). Positive = credit, negative = debit.

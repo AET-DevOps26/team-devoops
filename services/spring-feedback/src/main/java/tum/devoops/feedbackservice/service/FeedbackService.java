@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tum.devoops.feedbackservice.entity.EventEntity;
 import tum.devoops.feedbackservice.entity.FeedbackEntity;
 import tum.devoops.feedbackservice.exception.BadRequestException;
 import tum.devoops.feedbackservice.exception.ForbiddenException;
@@ -21,6 +22,7 @@ import tum.devoops.feedbackservice.model.Feedback;
 import tum.devoops.feedbackservice.model.FeedbackCreate;
 import tum.devoops.feedbackservice.model.FeedbackPartialUpdate;
 import tum.devoops.feedbackservice.model.FeedbackSummary;
+import tum.devoops.feedbackservice.model.Reference;
 import tum.devoops.feedbackservice.repository.EventRepository;
 import tum.devoops.feedbackservice.repository.FeedbackRepository;
 import tum.devoops.feedbackservice.repository.MemberRepository;
@@ -79,12 +81,15 @@ public class FeedbackService {
             assertTrainerOfMember(requesterId, memberId);
         }
 
+        assertRatingInRange(body.getRating());
+
         FeedbackEntity entity = new FeedbackEntity();
         entity.setEventId(eventId);
         entity.setMemberId(memberId);
         entity.setCreatorId(requesterId);
         entity.setCreatedAt(Instant.now());
         entity.setFeedback(body.getFeedback());
+        entity.setRating(body.getRating());
 
         return toFeedback(feedbackRepository.save(entity));
     }
@@ -124,6 +129,10 @@ public class FeedbackService {
         if (body.getFeedback() != null) {
             entity.setFeedback(body.getFeedback());
         }
+        if (body.getRating() != null) {
+            assertRatingInRange(body.getRating());
+            entity.setRating(body.getRating());
+        }
 
         return toFeedback(feedbackRepository.save(entity));
     }
@@ -155,6 +164,12 @@ public class FeedbackService {
                 .orElseThrow(() -> new NotFoundException("Feedback not found: " + feedbackId));
     }
 
+    private void assertRatingInRange(Integer rating) {
+        if (rating != null && (rating < 0 || rating > 10)) {
+            throw new BadRequestException("rating must be between 0 and 10");
+        }
+    }
+
     private UUID parseUuid(String value, String fieldName) {
         if (value == null) {
             throw new BadRequestException("Field '" + fieldName + "' is required");
@@ -169,21 +184,39 @@ public class FeedbackService {
     private Feedback toFeedback(FeedbackEntity entity) {
         return new Feedback(
                 entity.getId(),
-                entity.getEventId().toString(),
-                entity.getMemberId().toString(),
-                entity.getCreatorId().toString(),
+                eventReference(entity.getEventId()),
+                memberReference(entity.getMemberId()),
+                memberReference(entity.getCreatorId()),
                 entity.getCreatedAt().atOffset(ZoneOffset.UTC),
-                entity.getFeedback()
+                entity.getFeedback(),
+                entity.getRating()
         );
     }
 
     private FeedbackSummary toFeedbackSummary(FeedbackEntity entity) {
         return new FeedbackSummary(
                 entity.getId(),
-                entity.getEventId().toString(),
-                entity.getMemberId().toString(),
-                entity.getCreatorId().toString(),
-                entity.getCreatedAt().atOffset(ZoneOffset.UTC)
+                eventReference(entity.getEventId()),
+                memberReference(entity.getMemberId()),
+                memberReference(entity.getCreatorId()),
+                entity.getCreatedAt().atOffset(ZoneOffset.UTC),
+                entity.getRating()
         );
+    }
+
+    private Reference eventReference(UUID eventId) {
+        String name = eventRepository.findById(eventId).map(EventEntity::getName).orElse(null);
+        return new Reference(eventId, name);
+    }
+
+    private Reference memberReference(UUID memberId) {
+        // memberId is null only for a creator whose member was deleted (ON DELETE SET NULL); the
+        // subject member is never null.
+        if (memberId == null) {
+            return null;
+        }
+        String name = memberRepository.findById(memberId)
+                .map(m -> m.getFirstName() + " " + m.getLastName()).orElse(null);
+        return new Reference(memberId, name);
     }
 }

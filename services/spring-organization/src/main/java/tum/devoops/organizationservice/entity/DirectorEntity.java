@@ -19,17 +19,17 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class DirectorEntity {
 
-    // Composite PK: (sport_name, member_id).
-    // sport_name references organization.sport(name).
-    // member_id references member.member(id) — FK added in V3 migration.
+    // Composite PK: (sport_id, member_id).
+    // sport_id references organization.sports(id).
+    // member_id references member.members(id).
     @EmbeddedId
     private Id id;
 
     @Embeddable
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class Id implements Serializable {
-        @Column(name = "sport_name", nullable = false)
-        private String sportName;
+        @Column(name = "sport_id", nullable = false)
+        private UUID sportId;
 
         @Column(name = "member_id", nullable = false)
         private UUID memberId;

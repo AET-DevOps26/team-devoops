@@ -28,6 +28,8 @@ public class FeedbackCreate {
 
   private String feedback;
 
+  private Integer rating;
+
   public FeedbackCreate() {
     super();
   }
@@ -35,10 +37,11 @@ public class FeedbackCreate {
   /**
    * Constructor with only required parameters
    */
-  public FeedbackCreate(String event, String member, String feedback) {
+  public FeedbackCreate(String event, String member, String feedback, Integer rating) {
     this.event = event;
     this.member = member;
     this.feedback = feedback;
+    this.rating = rating;
   }
 
   public FeedbackCreate event(String event) {
@@ -101,6 +104,28 @@ public class FeedbackCreate {
     this.feedback = feedback;
   }
 
+  public FeedbackCreate rating(Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @NotNull @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("rating")
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -112,12 +137,13 @@ public class FeedbackCreate {
     FeedbackCreate feedbackCreate = (FeedbackCreate) o;
     return Objects.equals(this.event, feedbackCreate.event) &&
         Objects.equals(this.member, feedbackCreate.member) &&
-        Objects.equals(this.feedback, feedbackCreate.feedback);
+        Objects.equals(this.feedback, feedbackCreate.feedback) &&
+        Objects.equals(this.rating, feedbackCreate.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(event, member, feedback);
+    return Objects.hash(event, member, feedback, rating);
   }
 
   @Override
@@ -127,6 +153,7 @@ public class FeedbackCreate {
     sb.append("    event: ").append(toIndentedString(event)).append("\n");
     sb.append("    member: ").append(toIndentedString(member)).append("\n");
     sb.append("    feedback: ").append(toIndentedString(feedback)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }

@@ -2,7 +2,7 @@ import os
 from functools import wraps
 
 import jwt
-from flask import request
+from flask import g, request
 
 KEYCLOAK_ISSUER_URL = os.environ.get(
     "KEYCLOAK_ISSUER_URL",
@@ -33,7 +33,7 @@ def require_auth(f):
         token = auth_header[len("Bearer ") :]
         try:
             signing_key = _get_signing_key(token)
-            jwt.decode(
+            payload = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
@@ -45,6 +45,16 @@ def require_auth(f):
         except Exception:
             return {"error": "Invalid token"}, 401
 
+        # Expose the caller's identity and roles for authorization checks.
+        g.user_id = payload.get("sub")
+        g.roles = payload.get("realm_access", {}).get("roles", [])
+        g.token = token
+
         return f(*args, **kwargs)
 
     return decorated
+
+
+def is_admin() -> bool:
+    """True if the authenticated caller has the admin realm role."""
+    return "admin" in getattr(g, "roles", [])

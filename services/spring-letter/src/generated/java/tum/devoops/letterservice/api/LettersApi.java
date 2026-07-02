@@ -7,6 +7,8 @@ package tum.devoops.letterservice.api;
 
 import tum.devoops.letterservice.model.BadRequestResponse;
 import tum.devoops.letterservice.model.ErrorResponse;
+import tum.devoops.letterservice.model.MailRequest;
+import tum.devoops.letterservice.model.PdfRequest;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,9 +48,9 @@ public interface LettersApi {
 
     /**
      * POST /letters/pdf : Get pdf
-     * Generates and returns a PDF document from the provided HTML template. - Trainers: can generate PDFs related to their team. - Directors: can generate PDFs related to their sport. - Admins: can generate PDFs related to any member. 
+     * Generates a personalized mass-letter PDF. The body carries an HTML &#x60;template&#x60; whose placeholder tokens are replaced with each receiver&#39;s data. One letter is rendered per receiver — a layout block with the recipient&#39;s name and address followed by the token-substituted template — and all letters are concatenated into a single PDF.  Receivers are determined from the caller&#39;s highest role: - **Admin**: all members. - **Director**: all directors, trainers, and trainees in their sport. - **Trainer**: all trainers and trainees of their team. - **Trainee / member-only**: forbidden — cannot use the letter service (&#x60;403&#x60;).  Assumes a director directs exactly one sport, a trainer trains exactly one team, and a trainee belongs to exactly one team.  Supported placeholder tokens (&#x60;{{snake_case}}&#x60;; an unknown or empty value resolves to an empty string): - Member: &#x60;{{first_name}}&#x60;, &#x60;{{last_name}}&#x60;, &#x60;{{full_name}}&#x60;, &#x60;{{email}}&#x60;, &#x60;{{address}}&#x60;,   &#x60;{{phone_number}}&#x60;, &#x60;{{birthday}}&#x60;, &#x60;{{joining_date}}&#x60;. - Organization: &#x60;{{team_name}}&#x60;, &#x60;{{sport_name}}&#x60; — the receiver&#39;s team/sport, blank if none. - Finance: &#x60;{{balance}}&#x60; — the receiver&#39;s current balance, formatted (e.g. &#x60;€12.50&#x60;). 
      *
-     * @param body The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
+     * @param pdfRequest The HTML template for the personalized mass-letter PDF. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -58,7 +60,7 @@ public interface LettersApi {
     @Operation(
         operationId = "getPdf",
         summary = "Get pdf",
-        description = "Generates and returns a PDF document from the provided HTML template. - Trainers: can generate PDFs related to their team. - Directors: can generate PDFs related to their sport. - Admins: can generate PDFs related to any member. ",
+        description = "Generates a personalized mass-letter PDF. The body carries an HTML `template` whose placeholder tokens are replaced with each receiver's data. One letter is rendered per receiver — a layout block with the recipient's name and address followed by the token-substituted template — and all letters are concatenated into a single PDF.  Receivers are determined from the caller's highest role: - **Admin**: all members. - **Director**: all directors, trainers, and trainees in their sport. - **Trainer**: all trainers and trainees of their team. - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).  Assumes a director directs exactly one sport, a trainer trains exactly one team, and a trainee belongs to exactly one team.  Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an empty string): - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,   `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`. - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none. - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`). ",
         tags = { "letters" },
         responses = {
             @ApiResponse(responseCode = "200", description = "The request was successful, and the server has returned the requested resource in the response body.", content = {
@@ -90,11 +92,11 @@ public interface LettersApi {
         method = RequestMethod.POST,
         value = "/letters/pdf",
         produces = { "application/pdf", "application/json" },
-        consumes = { "text/html" }
+        consumes = { "application/json" }
     )
     
     default ResponseEntity<org.springframework.core.io.Resource> getPdf(
-        @Parameter(name = "body", description = "The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content.", required = true) @Valid @RequestBody String body
+        @Parameter(name = "PdfRequest", description = "The HTML template for the personalized mass-letter PDF.", required = true) @Valid @RequestBody PdfRequest pdfRequest
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -127,9 +129,9 @@ public interface LettersApi {
 
     /**
      * POST /letters/mail : Send mail
-     * Sends an email based on the provided HTML template. - Trainers: can send mail to members of their team. - Directors: can send mail to members related to their sport. - Admins: can send mail to any member. 
+     * Sends a personalized mass email. The body carries a &#x60;subject&#x60; and an HTML &#x60;template&#x60;; the template&#39;s placeholder tokens are replaced with each receiver&#39;s data, and one email is sent per receiver.  Receivers are determined from the caller&#39;s highest role: - **Admin**: all members. - **Director**: all directors, trainers, and trainees in their sport. - **Trainer**: all trainers and trainees of their team. - **Trainee / member-only**: forbidden — cannot use the letter service (&#x60;403&#x60;).  Assumes a director directs exactly one sport, a trainer trains exactly one team, and a trainee belongs to exactly one team.  Supported placeholder tokens (&#x60;{{snake_case}}&#x60;; an unknown or empty value resolves to an empty string): - Member: &#x60;{{first_name}}&#x60;, &#x60;{{last_name}}&#x60;, &#x60;{{full_name}}&#x60;, &#x60;{{email}}&#x60;, &#x60;{{address}}&#x60;,   &#x60;{{phone_number}}&#x60;, &#x60;{{birthday}}&#x60;, &#x60;{{joining_date}}&#x60;. - Organization: &#x60;{{team_name}}&#x60;, &#x60;{{sport_name}}&#x60; — the receiver&#39;s team/sport, blank if none. - Finance: &#x60;{{balance}}&#x60; — the receiver&#39;s current balance, formatted (e.g. &#x60;€12.50&#x60;). 
      *
-     * @param body The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. (required)
+     * @param mailRequest The subject and HTML template for the personalized mass email. (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
@@ -139,7 +141,7 @@ public interface LettersApi {
     @Operation(
         operationId = "sendMail",
         summary = "Send mail",
-        description = "Sends an email based on the provided HTML template. - Trainers: can send mail to members of their team. - Directors: can send mail to members related to their sport. - Admins: can send mail to any member. ",
+        description = "Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the template's placeholder tokens are replaced with each receiver's data, and one email is sent per receiver.  Receivers are determined from the caller's highest role: - **Admin**: all members. - **Director**: all directors, trainers, and trainees in their sport. - **Trainer**: all trainers and trainees of their team. - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).  Assumes a director directs exactly one sport, a trainer trains exactly one team, and a trainee belongs to exactly one team.  Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an empty string): - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,   `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`. - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none. - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`). ",
         tags = { "letters" },
         responses = {
             @ApiResponse(responseCode = "204", description = "The request was successful, but there is no content to return in the response."),
@@ -164,11 +166,11 @@ public interface LettersApi {
         method = RequestMethod.POST,
         value = "/letters/mail",
         produces = { "application/json" },
-        consumes = { "text/html" }
+        consumes = { "application/json" }
     )
     
     default ResponseEntity<Void> sendMail(
-        @Parameter(name = "body", description = "The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content.", required = true) @Valid @RequestBody String body
+        @Parameter(name = "MailRequest", description = "The subject and HTML template for the personalized mass email.", required = true) @Valid @RequestBody MailRequest mailRequest
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {

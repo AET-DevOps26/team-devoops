@@ -27,17 +27,39 @@
         }
       ],
       "realmRoles": ["member"]
+    },
+    {
+      "username": "service-account-org-role-sync",
+      "enabled": true,
+      "serviceAccountClientId": "org-role-sync",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-clients"]
+      }
     }
   ],
   "roles": {
     "realm": [
       {
-        "name": "admin"
+        "name": "admin",
+        "composite": true,
+        "composites": {
+          "client": {
+            "devops-client": ["Admin"]
+          }
+        }
       },
       {
         "name": "member"
       }
-    ]
+    ],
+    "client": {
+      "devops-client": [
+        { "name": "Trainee" },
+        { "name": "Coach" },
+        { "name": "Director" },
+        { "name": "Admin" }
+      ]
+    }
   },
   "components": {
     "org.keycloak.userprofile.UserProfileProvider": [
@@ -59,7 +81,33 @@
       "publicClient": true,
       "redirectUris": ["*"],
       "webOrigins": ["*"],
-      "directAccessGrantsEnabled": true
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "member-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "member_roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "usermodel.clientRoleMapping.clientId": "devops-client",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "org-role-sync",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "org-role-sync-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
     },
     {
       "clientId": "traefik-forward-auth",

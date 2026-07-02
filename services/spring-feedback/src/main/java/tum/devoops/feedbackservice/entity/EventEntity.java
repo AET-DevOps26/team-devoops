@@ -18,4 +18,7 @@ public class EventEntity {
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
+
+    @Column(name = "name", insertable = false, updatable = false)
+    private String name;
 }

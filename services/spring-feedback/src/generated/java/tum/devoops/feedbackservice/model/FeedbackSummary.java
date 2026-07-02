@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.feedbackservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -27,14 +28,16 @@ public class FeedbackSummary {
 
   private UUID id;
 
-  private String event;
+  private Reference event;
 
-  private String member;
+  private Reference member;
 
-  private String creator;
+  private Reference creator = null;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;
+
+  private Integer rating;
 
   public FeedbackSummary() {
     super();
@@ -43,12 +46,13 @@ public class FeedbackSummary {
   /**
    * Constructor with only required parameters
    */
-  public FeedbackSummary(UUID id, String event, String member, String creator, OffsetDateTime createdAt) {
+  public FeedbackSummary(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt, Integer rating) {
     this.id = id;
     this.event = event;
     this.member = member;
     this.creator = creator;
     this.createdAt = createdAt;
+    this.rating = rating;
   }
 
   public FeedbackSummary id(UUID id) {
@@ -71,7 +75,7 @@ public class FeedbackSummary {
     this.id = id;
   }
 
-  public FeedbackSummary event(String event) {
+  public FeedbackSummary event(Reference event) {
     this.event = event;
     return this;
   }
@@ -80,18 +84,18 @@ public class FeedbackSummary {
    * Get event
    * @return event
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "event", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("event")
-  public String getEvent() {
+  public Reference getEvent() {
     return event;
   }
 
-  public void setEvent(String event) {
+  public void setEvent(Reference event) {
     this.event = event;
   }
 
-  public FeedbackSummary member(String member) {
+  public FeedbackSummary member(Reference member) {
     this.member = member;
     return this;
   }
@@ -100,18 +104,18 @@ public class FeedbackSummary {
    * Get member
    * @return member
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("member")
-  public String getMember() {
+  public Reference getMember() {
     return member;
   }
 
-  public void setMember(String member) {
+  public void setMember(Reference member) {
     this.member = member;
   }
 
-  public FeedbackSummary creator(String creator) {
+  public FeedbackSummary creator(Reference creator) {
     this.creator = creator;
     return this;
   }
@@ -120,14 +124,14 @@ public class FeedbackSummary {
    * Get creator
    * @return creator
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "creator", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("creator")
-  public String getCreator() {
+  public Reference getCreator() {
     return creator;
   }
 
-  public void setCreator(String creator) {
+  public void setCreator(Reference creator) {
     this.creator = creator;
   }
 
@@ -151,6 +155,28 @@ public class FeedbackSummary {
     this.createdAt = createdAt;
   }
 
+  public FeedbackSummary rating(Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @NotNull @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("rating")
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -164,12 +190,13 @@ public class FeedbackSummary {
         Objects.equals(this.event, feedbackSummary.event) &&
         Objects.equals(this.member, feedbackSummary.member) &&
         Objects.equals(this.creator, feedbackSummary.creator) &&
-        Objects.equals(this.createdAt, feedbackSummary.createdAt);
+        Objects.equals(this.createdAt, feedbackSummary.createdAt) &&
+        Objects.equals(this.rating, feedbackSummary.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, event, member, creator, createdAt);
+    return Objects.hash(id, event, member, creator, createdAt, rating);
   }
 
   @Override
@@ -181,6 +208,7 @@ public class FeedbackSummary {
     sb.append("    member: ").append(toIndentedString(member)).append("\n");
     sb.append("    creator: ").append(toIndentedString(creator)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }

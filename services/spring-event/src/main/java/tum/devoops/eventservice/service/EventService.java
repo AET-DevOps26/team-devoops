@@ -1,7 +1,10 @@
 package tum.devoops.eventservice.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,8 +27,11 @@ import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
 import tum.devoops.eventservice.repository.AttendanceRepository;
 import tum.devoops.eventservice.repository.EventRepository;
+import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
+import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
+import tum.devoops.eventservice.repository.TeamRepository;
 
 @Service
 public class EventService {
@@ -38,6 +44,12 @@ public class EventService {
     private SportEventRepository sportEventRepository;
     @Autowired
     private TeamEventRepository teamEventRepository;
+    @Autowired
+    private MemberRepository memberRepository;
+    @Autowired
+    private SportRepository sportRepository;
+    @Autowired
+    private TeamRepository teamRepository;
 
     @Transactional(readOnly = true)
     public List<EventSummary> getAllEvents(UUID requesterId, boolean isAdmin) {
@@ -62,7 +74,22 @@ public class EventService {
             entities = new ArrayList<>(created);
             entities.addAll(attended);
         }
-        return entities.stream().map(EventConverter::toSummary).collect(Collectors.toList());
+
+        List<UUID> eventIds = entities.stream().map(EventEntity::getId).collect(Collectors.toList());
+        Map<UUID, List<AttendanceEntity>> attendancesByEvent = new HashMap<>();
+        Set<UUID> attendeeMemberIds = new HashSet<>();
+        for (AttendanceEntity a : attendanceRepository.findAllById_EventIdIn(eventIds)) {
+            attendancesByEvent.computeIfAbsent(a.getId().getEventId(), k -> new ArrayList<>()).add(a);
+            attendeeMemberIds.add(a.getId().getMemberId());
+        }
+        Map<UUID, String> memberNames = new HashMap<>();
+        memberRepository.findAllById(attendeeMemberIds)
+                .forEach(m -> memberNames.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+
+        return entities.stream()
+                .map(e -> EventConverter.toSummary(e,
+                        attendancesByEvent.getOrDefault(e.getId(), List.of()), memberNames))
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -120,7 +147,8 @@ public class EventService {
             throw new BadRequestException("Event end time must be after start time");
         }
 
-        // null means the field was omitted (no change); non-null (including empty) means replace
+        // null means the field was omitted (no change); a non-null list (including empty) replaces
+        // the existing links, so an empty list clears them.
         if (body.getAttendees() != null) {
             attendanceRepository.deleteAllById_EventId(eventId);
             attendanceRepository.saveAll(buildAttendanceEntities(eventId, body.getAttendees()));
@@ -149,7 +177,7 @@ public class EventService {
         eventRepository.delete(entity);
     }
 
-    private void persistLinks(UUID eventId, List<String> attendees, List<String> sports, List<String> teams) {
+    private void persistLinks(UUID eventId, List<String> attendees, List<UUID> sports, List<String> teams) {
         if (attendees != null) {
             attendanceRepository.saveAll(buildAttendanceEntities(eventId, attendees));
         }
@@ -170,9 +198,9 @@ public class EventService {
         return result;
     }
 
-    private List<SportEventEntity> buildSportEntities(UUID eventId, List<String> sports) {
+    private List<SportEventEntity> buildSportEntities(UUID eventId, List<UUID> sports) {
         List<SportEventEntity> result = new ArrayList<>();
-        for (String sport : sports) {
+        for (UUID sport : sports) {
             if (sport == null) {
                 throw new BadRequestException("'sports_linked' contains a null entry");
             }
@@ -212,11 +240,27 @@ public class EventService {
 
     private Event toEvent(EventEntity entity) {
         UUID eventId = entity.getId();
-        return EventConverter.toEvent(
-                entity,
-                attendanceRepository.findAllById_EventId(eventId),
-                sportEventRepository.findAllById_EventId(eventId),
-                teamEventRepository.findAllById_EventId(eventId)
-        );
+        List<AttendanceEntity> attendances = attendanceRepository.findAllById_EventId(eventId);
+        List<SportEventEntity> sports = sportEventRepository.findAllById_EventId(eventId);
+        List<TeamEventEntity> teams = teamEventRepository.findAllById_EventId(eventId);
+
+        Set<UUID> memberIds = new HashSet<>();
+        memberIds.add(entity.getCreatorId());
+        attendances.forEach(a -> memberIds.add(a.getId().getMemberId()));
+        List<UUID> sportIds = sports.stream()
+                .map(s -> s.getId().getSportId()).collect(Collectors.toList());
+        List<UUID> teamIds = teams.stream()
+                .map(t -> t.getId().getTeamId()).collect(Collectors.toList());
+
+        Map<UUID, String> memberNames = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> memberNames.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        Map<UUID, String> sportNames = new HashMap<>();
+        sportRepository.findAllById(sportIds).forEach(s -> sportNames.put(s.getId(), s.getName()));
+        Map<UUID, String> teamNames = new HashMap<>();
+        teamRepository.findAllById(teamIds).forEach(t -> teamNames.put(t.getId(), t.getName()));
+
+        return EventConverter.toEvent(entity, attendances, sports, teams,
+                memberNames, sportNames, teamNames);
     }
 }

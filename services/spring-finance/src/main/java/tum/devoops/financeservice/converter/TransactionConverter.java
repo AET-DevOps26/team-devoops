@@ -1,6 +1,7 @@
 package tum.devoops.financeservice.converter;
 
 import tum.devoops.financeservice.entity.TransactionEntity;
+import tum.devoops.financeservice.model.Reference;
 import tum.devoops.financeservice.model.Transaction;
 import tum.devoops.financeservice.model.TransactionCreate;
 
@@ -10,11 +11,11 @@ import java.util.UUID;
 
 public class TransactionConverter {
 
-    public static Transaction toTransaction(TransactionEntity entity) {
+    public static Transaction toTransaction(TransactionEntity entity, Reference member, Reference creator) {
         return new Transaction(
                 entity.getId(),
-                entity.getMemberId().toString(),
-                entity.getCreatorId().toString(),
+                member,
+                creator,
                 entity.getAmountCents(),
                 entity.getCreatedAt().atOffset(ZoneOffset.UTC),
                 entity.getTitle(),

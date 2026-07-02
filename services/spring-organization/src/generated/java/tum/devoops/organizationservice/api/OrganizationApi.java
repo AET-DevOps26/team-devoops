@@ -105,7 +105,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"directors\" : [ \"directors\", \"directors\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\" }";
+                    String exampleString = "{ \"directors\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -195,7 +195,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"trainers\" : [ \"trainers\", \"trainers\" ], \"address\" : \"address\", \"trainees\" : [ \"trainees\", \"trainees\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : \"sport\" }";
+                    String exampleString = "{ \"trainers\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"address\" : \"address\", \"trainees\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -232,10 +232,10 @@ public interface OrganizationApi {
 
 
     /**
-     * DELETE /organization/sports/{sport_name} : Delete sport
+     * DELETE /organization/sports/{sport_id} : Delete sport
      * Deletes a sport from the organization. - Admins: can delete sports. 
      *
-     * @param sportName  (required)
+     * @param sportId  (required)
      * @return The request was successful, but there is no content to return in the response. (status code 204)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
      *         or The server understood the request, but refuses to authorize it. Ensure the client has appropriate permissions. (status code 403)
@@ -268,12 +268,12 @@ public interface OrganizationApi {
     )
     @RequestMapping(
         method = RequestMethod.DELETE,
-        value = "/organization/sports/{sport_name}",
+        value = "/organization/sports/{sport_id}",
         produces = { "application/json" }
     )
     
     default ResponseEntity<Void> deleteSport(
-        @Parameter(name = "sport_name", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_name") String sportName
+        @Parameter(name = "sport_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_id") UUID sportId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
@@ -421,7 +421,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"directors\" : [ \"directors\", \"directors\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\" }, { \"directors\" : [ \"directors\", \"directors\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\" } ]";
+                    String exampleString = "[ { \"directors\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"directors\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -491,7 +491,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"trainers\" : [ \"trainers\", \"trainers\" ], \"address\" : \"address\", \"trainees\" : [ \"trainees\", \"trainees\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : \"sport\" }, { \"trainers\" : [ \"trainers\", \"trainers\" ], \"address\" : \"address\", \"trainees\" : [ \"trainees\", \"trainees\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : \"sport\" } ]";
+                    String exampleString = "[ { \"trainers\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"address\" : \"address\", \"trainees\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } }, { \"trainers\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"address\" : \"address\", \"trainees\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } } ]";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -518,10 +518,10 @@ public interface OrganizationApi {
 
 
     /**
-     * GET /organization/sports/{sport_name} : Get sport
+     * GET /organization/sports/{sport_id} : Get sport
      * Returns the details of a specific sport. - All authenticated users: can access this endpoint. 
      *
-     * @param sportName  (required)
+     * @param sportId  (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or Authentication is required to access the requested resource. The client must include the appropriate credentials. (status code 401)
      *         or The server understood the request, but refuses to authorize it. Ensure the client has appropriate permissions. (status code 403)
@@ -556,17 +556,17 @@ public interface OrganizationApi {
     )
     @RequestMapping(
         method = RequestMethod.GET,
-        value = "/organization/sports/{sport_name}",
+        value = "/organization/sports/{sport_id}",
         produces = { "application/json" }
     )
     
     default ResponseEntity<Sport> getSport(
-        @Parameter(name = "sport_name", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_name") String sportName
+        @Parameter(name = "sport_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_id") UUID sportId
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"directors\" : [ \"directors\", \"directors\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\" }";
+                    String exampleString = "{ \"directors\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -646,7 +646,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"trainers\" : [ \"trainers\", \"trainers\" ], \"address\" : \"address\", \"trainees\" : [ \"trainees\", \"trainees\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : \"sport\" }";
+                    String exampleString = "{ \"trainers\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"address\" : \"address\", \"trainees\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -678,10 +678,10 @@ public interface OrganizationApi {
 
 
     /**
-     * PATCH /organization/sports/{sport_name} : Update sport
+     * PATCH /organization/sports/{sport_id} : Update sport
      * Partially updates an existing sport&#39;s details. - Directors: can update all fields except directors. - Admins: can update all fields. 
      *
-     * @param sportName  (required)
+     * @param sportId  (required)
      * @param sportPartialUpdate The request body for partially updating a sport. (required)
      * @return The request was successful, and the server has returned the requested resource in the response body. (status code 200)
      *         or The server could not understand the request due to invalid syntax. The client should modify the request and try again. (status code 400)
@@ -721,19 +721,19 @@ public interface OrganizationApi {
     )
     @RequestMapping(
         method = RequestMethod.PATCH,
-        value = "/organization/sports/{sport_name}",
+        value = "/organization/sports/{sport_id}",
         produces = { "application/json" },
         consumes = { "application/json" }
     )
     
     default ResponseEntity<Sport> updateSport(
-        @Parameter(name = "sport_name", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_name") String sportName,
+        @Parameter(name = "sport_id", description = "", required = true, in = ParameterIn.PATH) @PathVariable("sport_id") UUID sportId,
         @Parameter(name = "SportPartialUpdate", description = "The request body for partially updating a sport.", required = true) @Valid @RequestBody SportPartialUpdate sportPartialUpdate
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"directors\" : [ \"directors\", \"directors\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\" }";
+                    String exampleString = "{ \"directors\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -825,7 +825,7 @@ public interface OrganizationApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"trainers\" : [ \"trainers\", \"trainers\" ], \"address\" : \"address\", \"trainees\" : [ \"trainees\", \"trainees\" ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : \"sport\" }";
+                    String exampleString = "{ \"trainers\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"address\" : \"address\", \"trainees\" : [ { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ], \"name\" : \"name\", \"description\" : \"description\", \"created_at\" : \"2000-01-23\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"sport\" : { \"name\" : \"name\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

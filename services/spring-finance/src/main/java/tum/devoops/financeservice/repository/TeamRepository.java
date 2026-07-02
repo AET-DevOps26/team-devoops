@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TeamRepository extends JpaRepository<TeamEntity, UUID> {
-    @Query("SELECT t.trainees FROM TeamEntity t WHERE t.sportName = :sportName")
-    List<TraineeEntity> findTraineesBySportName(@Param("sportName") String sportName);
+    @Query("SELECT t.trainees FROM TeamEntity t WHERE t.sportId = :sportId")
+    List<TraineeEntity> findTraineesBySportId(@Param("sportId") UUID sportId);
 
     @Query("SELECT t.trainees FROM TeamEntity t WHERE t.id = :teamId")
     List<TraineeEntity> findTraineesByTeamId(@Param("teamId") UUID teamId);

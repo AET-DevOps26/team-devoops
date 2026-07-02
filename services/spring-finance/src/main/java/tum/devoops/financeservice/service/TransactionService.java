@@ -11,6 +11,7 @@ import tum.devoops.financeservice.exception.BadRequestException;
 import tum.devoops.financeservice.exception.ForbiddenException;
 import tum.devoops.financeservice.exception.NotFoundException;
 import tum.devoops.financeservice.model.Balance;
+import tum.devoops.financeservice.model.Reference;
 import tum.devoops.financeservice.model.Transaction;
 import tum.devoops.financeservice.model.TransactionCreate;
 import tum.devoops.financeservice.model.TransactionPartialUpdate;
@@ -55,13 +56,13 @@ public class TransactionService {
         }
 
         TransactionEntity saved = transactionRepository.save(TransactionConverter.toEntity(transactionCreate, memberId, requesterId));
-        return TransactionConverter.toTransaction(saved);
+        return toTransaction(saved);
     }
 
     public List<Transaction> getAllTransactions(UUID requesterId, boolean isAdmin) {
         if (isAdmin) {
             return transactionRepository.findAll().stream()
-                    .map(TransactionConverter::toTransaction)
+                    .map(this::toTransaction)
                     .toList();
         }
 
@@ -72,7 +73,7 @@ public class TransactionService {
         for (UUID managedId : getManagedMemberIds(requesterId)) {
             transactionRepository.findAllByMemberId(managedId).forEach(e -> seen.put(e.getId(), e));
         }
-        return seen.values().stream().map(TransactionConverter::toTransaction).toList();
+        return seen.values().stream().map(this::toTransaction).toList();
     }
 
     public Transaction getTransaction(UUID transactionId, UUID requesterId, boolean isAdmin) {
@@ -90,7 +91,7 @@ public class TransactionService {
             throw new ForbiddenException("Access denied.");
         }
 
-        return TransactionConverter.toTransaction(entity);
+        return toTransaction(entity);
     }
 
     @Transactional
@@ -142,7 +143,7 @@ public class TransactionService {
             entity.setDescription(update.getDescription());
         }
 
-        return TransactionConverter.toTransaction(transactionRepository.save(entity));
+        return toTransaction(transactionRepository.save(entity));
     }
 
     public List<Balance> getAllBalances(UUID requesterId, boolean isAdmin) {
@@ -166,7 +167,7 @@ public class TransactionService {
                         TransactionEntity::getMemberId,
                         Collectors.summingInt(TransactionEntity::getAmountCents)))
                 .entrySet().stream()
-                .map(e -> new Balance(e.getKey().toString(), e.getValue()))
+                .map(e -> new Balance(memberReference(e.getKey()), e.getValue()))
                 .toList();
     }
 
@@ -188,14 +189,34 @@ public class TransactionService {
                 .mapToInt(TransactionEntity::getAmountCents)
                 .sum();
 
-        return new Balance(memberId.toString(), balance);
+        return new Balance(memberReference(memberId), balance);
+    }
+
+    // Builds a Transaction response, resolving the member and creator UUIDs to {id, name} references.
+    private Transaction toTransaction(TransactionEntity entity) {
+        return TransactionConverter.toTransaction(
+                entity,
+                memberReference(entity.getMemberId()),
+                memberReference(entity.getCreatorId()));
+    }
+
+    // Resolves a member UUID to a {id, name} reference, looking up the display name in the member schema.
+    // Returns null when memberId is null (the creator reference is cleared when its member is deleted).
+    private Reference memberReference(UUID memberId) {
+        if (memberId == null) {
+            return null;
+        }
+        String name = memberRepository.findById(memberId)
+                .map(m -> m.getFirstName() + " " + m.getLastName())
+                .orElse(null);
+        return new Reference(memberId, name);
     }
 
     // Returns distinct IDs of all members the requester can manage (as director or trainer).
     private List<UUID> getManagedMemberIds(UUID requesterId) {
         Set<UUID> ids = new LinkedHashSet<>();
-        for (String sport : directorRepository.findSportNamesByMemberId(requesterId)) {
-            teamRepository.findTraineesBySportName(sport).stream()
+        for (UUID sport : directorRepository.findSportIdsByMemberId(requesterId)) {
+            teamRepository.findTraineesBySportId(sport).stream()
                     .map(t -> t.getId().getMemberId())
                     .forEach(ids::add);
         }
@@ -209,8 +230,8 @@ public class TransactionService {
     }
 
     private boolean isDirectorOfMember(UUID requesterId, UUID memberId) {
-        for (String sport : directorRepository.findSportNamesByMemberId(requesterId)) {
-            boolean found = teamRepository.findTraineesBySportName(sport).stream()
+        for (UUID sport : directorRepository.findSportIdsByMemberId(requesterId)) {
+            boolean found = teamRepository.findTraineesBySportId(sport).stream()
                     .map(t -> t.getId().getMemberId())
                     .anyMatch(memberId::equals);
             if (found) {

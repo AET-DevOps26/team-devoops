@@ -2,6 +2,7 @@ tum/devoops/organizationservice/api/ApiUtil.java
 tum/devoops/organizationservice/api/OrganizationApi.java
 tum/devoops/organizationservice/model/BadRequestResponse.java
 tum/devoops/organizationservice/model/ErrorResponse.java
+tum/devoops/organizationservice/model/Reference.java
 tum/devoops/organizationservice/model/Sport.java
 tum/devoops/organizationservice/model/SportCreate.java
 tum/devoops/organizationservice/model/SportPartialUpdate.java

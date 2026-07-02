@@ -28,6 +28,8 @@ public class FeedbackPartialUpdate {
 
   private @Nullable String feedback;
 
+  private @Nullable Integer rating;
+
   public FeedbackPartialUpdate event(@Nullable String event) {
     this.event = event;
     return this;
@@ -88,6 +90,28 @@ public class FeedbackPartialUpdate {
     this.feedback = feedback;
   }
 
+  public FeedbackPartialUpdate rating(@Nullable Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("rating")
+  public @Nullable Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(@Nullable Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -99,12 +123,13 @@ public class FeedbackPartialUpdate {
     FeedbackPartialUpdate feedbackPartialUpdate = (FeedbackPartialUpdate) o;
     return Objects.equals(this.event, feedbackPartialUpdate.event) &&
         Objects.equals(this.member, feedbackPartialUpdate.member) &&
-        Objects.equals(this.feedback, feedbackPartialUpdate.feedback);
+        Objects.equals(this.feedback, feedbackPartialUpdate.feedback) &&
+        Objects.equals(this.rating, feedbackPartialUpdate.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(event, member, feedback);
+    return Objects.hash(event, member, feedback, rating);
   }
 
   @Override
@@ -114,6 +139,7 @@ public class FeedbackPartialUpdate {
     sb.append("    event: ").append(toIndentedString(event)).append("\n");
     sb.append("    member: ").append(toIndentedString(member)).append("\n");
     sb.append("    feedback: ").append(toIndentedString(feedback)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }

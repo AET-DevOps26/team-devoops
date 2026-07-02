@@ -1,7 +1,12 @@
 package tum.devoops.organizationservice.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -9,12 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tum.devoops.organizationservice.entity.SportEntity;
 import tum.devoops.organizationservice.entity.TeamEntity;
 import tum.devoops.organizationservice.entity.TraineeEntity;
 import tum.devoops.organizationservice.entity.TrainerEntity;
 import tum.devoops.organizationservice.exception.BadRequestException;
 import tum.devoops.organizationservice.exception.ForbiddenException;
 import tum.devoops.organizationservice.exception.NotFoundException;
+import tum.devoops.organizationservice.model.Reference;
 import tum.devoops.organizationservice.model.Team;
 import tum.devoops.organizationservice.model.TeamCreate;
 import tum.devoops.organizationservice.model.TeamPartialUpdate;
@@ -40,6 +47,8 @@ public class OrganizationTeamService {
     private TrainerRepository trainerRepository;
     @Autowired
     private TraineeRepository traineeRepository;
+    @Autowired
+    private MemberRoleSyncService memberRoleSyncService;
 
     @Transactional(readOnly = true)
     public List<Team> getAllTeams() {
@@ -59,7 +68,7 @@ public class OrganizationTeamService {
             throw new BadRequestException("Sport not found: " + body.getSport());
         }
 
-        boolean isDirectorOfSport = directorRepository.findAllById_SportName(body.getSport()).stream()
+        boolean isDirectorOfSport = directorRepository.findAllById_SportId(body.getSport()).stream()
                 .anyMatch(d -> d.getId().getMemberId().equals(requesterId));
         if (!isAdmin && !isDirectorOfSport) {
             throw new ForbiddenException("Access denied");
@@ -72,12 +81,16 @@ public class OrganizationTeamService {
         team.setName(body.getName());
         team.setDescription(body.getDescription());
         team.setAddress(body.getAddress());
-        team.setSportName(body.getSport());
+        team.setSportId(body.getSport());
         team.setCreatedAt(LocalDate.now());
         teamRepository.save(team);
 
         saveTrainers(team.getId(), trainerIds);
         saveTrainees(team.getId(), traineeIds);
+
+        Set<UUID> affected = new HashSet<>(trainerIds);
+        affected.addAll(traineeIds);
+        memberRoleSyncService.scheduleSync(affected);
 
         return toTeam(findTeamOrThrow(team.getId()));
     }
@@ -86,7 +99,7 @@ public class OrganizationTeamService {
     public Team updateTeam(UUID teamId, TeamPartialUpdate body, UUID requesterId, boolean isAdmin) {
         TeamEntity team = findTeamOrThrow(teamId);
 
-        boolean isDirectorOfSport = directorRepository.findAllById_SportName(team.getSportName()).stream()
+        boolean isDirectorOfSport = directorRepository.findAllById_SportId(team.getSportId()).stream()
                 .anyMatch(d -> d.getId().getMemberId().equals(requesterId));
         boolean isTrainerOfTeam = trainerRepository.findAllById_TeamId(teamId).stream()
                 .anyMatch(t -> t.getId().getMemberId().equals(requesterId));
@@ -98,7 +111,7 @@ public class OrganizationTeamService {
         if (body.getSport() != null && !isAdmin) {
             throw new ForbiddenException("Only admins can update the sport field");
         }
-        if (!body.getTrainers().isEmpty() && !isAdmin && !isDirectorOfSport) {
+        if (body.getTrainers() != null && !isAdmin && !isDirectorOfSport) {
             throw new ForbiddenException("Only directors and admins can update the trainers list");
         }
 
@@ -106,7 +119,7 @@ public class OrganizationTeamService {
             if (!sportRepository.existsById(body.getSport())) {
                 throw new BadRequestException("Sport not found: " + body.getSport());
             }
-            team.setSportName(body.getSport());
+            team.setSportId(body.getSport());
         }
         if (body.getName() != null) {
             team.setName(body.getName());
@@ -119,16 +132,26 @@ public class OrganizationTeamService {
         }
         teamRepository.save(team);
 
-        if (!body.getTrainers().isEmpty()) {
+        // null means the list was omitted (no change); a non-null list (including empty) replaces
+        // the current members, so an empty list clears them.
+        Set<UUID> affected = new HashSet<>();
+        if (body.getTrainers() != null) {
             List<UUID> trainerIds = resolveAndValidateMemberUuids(body.getTrainers(), "trainer");
+            trainerRepository.findAllById_TeamId(teamId)
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             trainerRepository.deleteAllById_TeamId(teamId);
             saveTrainers(teamId, trainerIds);
+            affected.addAll(trainerIds);
         }
-        if (!body.getTrainees().isEmpty()) {
+        if (body.getTrainees() != null) {
             List<UUID> traineeIds = resolveAndValidateMemberUuids(body.getTrainees(), "trainee");
+            traineeRepository.findAllById_TeamId(teamId)
+                    .forEach(t -> affected.add(t.getId().getMemberId()));
             traineeRepository.deleteAllById_TeamId(teamId);
             saveTrainees(teamId, traineeIds);
+            affected.addAll(traineeIds);
         }
+        memberRoleSyncService.scheduleSync(affected);
 
         return toTeam(findTeamOrThrow(teamId));
     }
@@ -137,15 +160,23 @@ public class OrganizationTeamService {
     public void deleteTeam(UUID teamId, UUID requesterId, boolean isAdmin) {
         TeamEntity team = findTeamOrThrow(teamId);
 
-        boolean isDirectorOfSport = directorRepository.findAllById_SportName(team.getSportName()).stream()
+        boolean isDirectorOfSport = directorRepository.findAllById_SportId(team.getSportId()).stream()
                 .anyMatch(d -> d.getId().getMemberId().equals(requesterId));
         if (!isAdmin && !isDirectorOfSport) {
             throw new ForbiddenException("Access denied");
         }
 
+        Set<UUID> affected = new HashSet<>();
+        trainerRepository.findAllById_TeamId(teamId)
+                .forEach(t -> affected.add(t.getId().getMemberId()));
+        traineeRepository.findAllById_TeamId(teamId)
+                .forEach(t -> affected.add(t.getId().getMemberId()));
+
         traineeRepository.deleteAllById_TeamId(teamId);
         trainerRepository.deleteAllById_TeamId(teamId);
         teamRepository.delete(team);
+
+        memberRoleSyncService.scheduleSync(affected);
     }
 
     private TeamEntity findTeamOrThrow(UUID teamId) {
@@ -154,6 +185,9 @@ public class OrganizationTeamService {
     }
 
     private List<UUID> resolveAndValidateMemberUuids(List<String> strings, String role) {
+        if (strings == null) {
+            return List.of();
+        }
         return strings.stream()
                 .map(s -> {
                     try {
@@ -185,11 +219,11 @@ public class OrganizationTeamService {
     }
 
     private Team toTeam(TeamEntity entity) {
-        List<String> trainers = entity.getTrainers().stream()
-                .map(t -> t.getId().getMemberId().toString())
+        List<UUID> trainerIds = entity.getTrainers().stream()
+                .map(t -> t.getId().getMemberId())
                 .collect(Collectors.toList());
-        List<String> trainees = entity.getTrainees().stream()
-                .map(t -> t.getId().getMemberId().toString())
+        List<UUID> traineeIds = entity.getTrainees().stream()
+                .map(t -> t.getId().getMemberId())
                 .collect(Collectors.toList());
         return new Team(
                 entity.getId(),
@@ -197,9 +231,26 @@ public class OrganizationTeamService {
                 entity.getDescription(),
                 entity.getCreatedAt(),
                 entity.getAddress(),
-                entity.getSportName(),
-                trainers,
-                trainees
+                sportReference(entity.getSportId()),
+                memberReferences(trainerIds),
+                memberReferences(traineeIds)
         );
+    }
+
+    private Reference sportReference(UUID sportId) {
+        String name = sportRepository.findById(sportId).map(SportEntity::getName).orElse(null);
+        return new Reference(sportId, name);
+    }
+
+    private List<Reference> memberReferences(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        memberRepository.findAllById(memberIds)
+                .forEach(m -> names.put(m.getId(), m.getFirstName() + " " + m.getLastName()));
+        return memberIds.stream()
+                .map(id -> new Reference(id, names.get(id)))
+                .collect(Collectors.toList());
     }
 }
