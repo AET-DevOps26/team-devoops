@@ -150,11 +150,11 @@ cd infra && docker compose down -v         # wipes the postgres volume too
 
 ## Production Deployment
 
-The stack runs on a single Azure VM in **Germany West Central**, fronted by Traefik with a
+The stack runs on a single Azure VM in **Poland Central**, fronted by Traefik with a
 real TLS certificate from Let's Encrypt (production CA). Everything is
 automated; no manual VM access is required for normal deploys.
 
-**Live URL:** <https://team-devoops.germanywestcentral.cloudapp.azure.com>
+**Live URL:** <https://team-devoops.polandcentral.cloudapp.azure.com>
 
 ### Infrastructure stack
 
@@ -280,7 +280,7 @@ The web client redirects to Keycloak automatically (`login-required` strategy). 
 
 ### Production admin console
 
-Keycloak is publicly accessible via Traefik at <https://team-devoops.germanywestcentral.cloudapp.azure.com/auth>. Admin console: `/auth/admin`.
+Keycloak is publicly accessible via Traefik at <https://team-devoops.polandcentral.cloudapp.azure.com/auth>. Admin console: `/auth/admin`.
 
 ### Spring services — JWT validation
 

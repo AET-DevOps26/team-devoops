@@ -11,7 +11,7 @@ services:
       app-database:
         condition: service_healthy
     environment:
-      - KEYCLOAK_ISSUER_URL=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_ISSUER_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
       - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=reports_user
@@ -21,7 +21,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.py-genai-helper.entrypoints=websecure"
-      - "traefik.http.routers.py-genai-helper.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/helper`)"
+      - "traefik.http.routers.py-genai-helper.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/helper`)"
       - "traefik.http.routers.py-genai-helper.tls=true"
       - "traefik.http.routers.py-genai-helper.tls.certresolver=le"
       - "traefik.http.middlewares.helper-stripprefix.stripprefix.prefixes=/api/v1/helper"
@@ -44,11 +44,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=organization_user
       - SPRING_DATASOURCE_PASSWORD=organization_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=websecure"
-      - "traefik.http.routers.organization-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/organization`)"
+      - "traefik.http.routers.organization-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/organization`)"
       - "traefik.http.routers.organization-service.tls=true"
       - "traefik.http.routers.organization-service.tls.certresolver=le"
       - "traefik.http.middlewares.organization-stripprefix.stripprefix.prefixes=/api/v1"
@@ -71,11 +71,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=member_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=websecure"
-      - "traefik.http.routers.member-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/members`)"
+      - "traefik.http.routers.member-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/members`)"
       - "traefik.http.routers.member-service.tls=true"
       - "traefik.http.routers.member-service.tls.certresolver=le"
       - "traefik.http.middlewares.member-stripprefix.stripprefix.prefixes=/api/v1"
@@ -98,11 +98,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=event_user
       - SPRING_DATASOURCE_PASSWORD=event_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.event-service.entrypoints=websecure"
-      - "traefik.http.routers.event-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/events`)"
+      - "traefik.http.routers.event-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/events`)"
       - "traefik.http.routers.event-service.tls=true"
       - "traefik.http.routers.event-service.tls.certresolver=le"
       - "traefik.http.middlewares.event-stripprefix.stripprefix.prefixes=/api/v1"
@@ -125,11 +125,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=feedback_user
       - SPRING_DATASOURCE_PASSWORD=feedback_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.feedback-service.entrypoints=websecure"
-      - "traefik.http.routers.feedback-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/feedback`)"
+      - "traefik.http.routers.feedback-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/feedback`)"
       - "traefik.http.routers.feedback-service.tls=true"
       - "traefik.http.routers.feedback-service.tls.certresolver=le"
       - "traefik.http.middlewares.feedback-stripprefix.stripprefix.prefixes=/api/v1"
@@ -152,11 +152,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=finance_user
       - SPRING_DATASOURCE_PASSWORD=finance_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.finance-service.entrypoints=websecure"
-      - "traefik.http.routers.finance-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/finance`)"
+      - "traefik.http.routers.finance-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/finance`)"
       - "traefik.http.routers.finance-service.tls=true"
       - "traefik.http.routers.finance-service.tls.certresolver=le"
       - "traefik.http.middlewares.finance-stripprefix.stripprefix.prefixes=/api/v1"
@@ -179,11 +179,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=letter_user
       - SPRING_DATASOURCE_PASSWORD=letter_password
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.letter-service.entrypoints=websecure"
-      - "traefik.http.routers.letter-service.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/letters`)"
+      - "traefik.http.routers.letter-service.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/api/v1/letters`)"
       - "traefik.http.routers.letter-service.tls=true"
       - "traefik.http.routers.letter-service.tls.certresolver=le"
       - "traefik.http.middlewares.letter-stripprefix.stripprefix.prefixes=/api/v1"
@@ -206,7 +206,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api-docs.entrypoints=websecure"
-      - "traefik.http.routers.api-docs.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.api-docs.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/docs`)"
       - "traefik.http.routers.api-docs.tls=true"
       - "traefik.http.routers.api-docs.tls.certresolver=le"
       - "traefik.http.services.api-docs.loadbalancer.server.port=8080"
@@ -217,7 +217,7 @@ services:
     build:
       context: ../web-client/
       args:
-        VITE_KEYCLOAK_URL: https://team-devoops.germanywestcentral.cloudapp.azure.com/auth
+        VITE_KEYCLOAK_URL: https://team-devoops.polandcentral.cloudapp.azure.com/auth
     container_name: web-client
     expose:
       - 8080
@@ -232,7 +232,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web-client.entrypoints=websecure"
-      - "traefik.http.routers.web-client.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`)"
+      - "traefik.http.routers.web-client.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`)"
       - "traefik.http.routers.web-client.tls=true"
       - "traefik.http.routers.web-client.tls.certresolver=le"
       - "traefik.http.routers.web-client.middlewares=forward-auth@file"
@@ -279,14 +279,14 @@ services:
     container_name: traefik-forward-auth
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.germanywestcentral.cloudapp.azure.com/auth/realms/devops
+      - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
       - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
       - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
       - SECRET=a-random-32-char-secret-changeme!
       - INSECURE_COOKIE=false
       - LOG_LEVEL=debug
     extra_hosts:
-      - "team-devoops.germanywestcentral.cloudapp.azure.com:host-gateway"
+      - "team-devoops.polandcentral.cloudapp.azure.com:host-gateway"
     labels:
       - "traefik.enable=false"
     depends_on:
@@ -313,12 +313,12 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
-      KC_HOSTNAME: https://team-devoops.germanywestcentral.cloudapp.azure.com/auth
+      KC_HOSTNAME: https://team-devoops.polandcentral.cloudapp.azure.com/auth
       KC_PROXY_HEADERS: xforwarded
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.entrypoints=websecure"
-      - "traefik.http.routers.keycloak.rule=Host(`team-devoops.germanywestcentral.cloudapp.azure.com`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.keycloak.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/auth`)"
       - "traefik.http.routers.keycloak.tls=true"
       - "traefik.http.routers.keycloak.tls.certresolver=le"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
