@@ -146,7 +146,7 @@ jobs:
           printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
           kubectl -n "$NAMESPACE" create secret generic genai-env \
             --from-env-file=/tmp/genai.env \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)
         run: |
