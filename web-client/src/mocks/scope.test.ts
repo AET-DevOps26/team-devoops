@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AuthUser, EventSummary, SportEvent } from '@/types'
+import type { AuthUser, EventListItem, SportEvent } from '@/types'
 import {
   balanceFixtures,
   eventDetailsById,
@@ -21,7 +21,7 @@ import {
   scopeTransactions,
 } from './scope'
 
-type EventRow = EventSummary | SportEvent
+type EventRow = EventListItem | SportEvent
 
 const users = {
   member: MOCK_PERSONAS.member,
@@ -54,12 +54,12 @@ function directorSports(userId: string): Set<string> {
   return new Set(
     sportFixtures
       .filter((sport) => sport.directors.some((director) => director.id === userId))
-      .map((sport) => sport.name),
+      .map((sport) => sport.id),
   )
 }
 
 function sportTeamIds(sports: Set<string>): Set<string> {
-  return new Set(teamFixtures.filter((team) => sports.has(team.sport)).map((team) => team.id))
+  return new Set(teamFixtures.filter((team) => sports.has(team.sport.id)).map((team) => team.id))
 }
 
 function teamMemberIds(teamIds: Set<string>): Set<string> {
@@ -79,11 +79,12 @@ function trainerMemberIds(user: AuthUser): Set<string> {
 }
 
 function eventCreatorId(row: EventRow): string | undefined {
-  return 'creator' in row ? row.creator.id : eventDetailsById[row.id]?.creator.id
+  return 'creator' in row ? row.creator?.id : eventDetailsById[row.id]?.creator?.id
 }
 
 function eventSports(row: EventRow): string[] {
-  return 'sports_linked' in row ? (row.sports_linked ?? []) : (eventDetailsById[row.id]?.sports_linked ?? [])
+  const linked = 'sports_linked' in row ? row.sports_linked : eventDetailsById[row.id]?.sports_linked
+  return (linked ?? []).map((sport) => sport.id)
 }
 
 function eventTeamIds(row: EventRow): string[] {
@@ -103,7 +104,7 @@ describe('scopeFeedback', () => {
       ids(feedbackSummaryFixtures.filter((row) => row.member.id === users.member.id)),
     )
     expect(ids(scopeFeedback(feedbackSummaryFixtures, users.trainer))).toEqual(
-      ids(feedbackSummaryFixtures.filter((row) => row.creator.id === users.trainer.id)),
+      ids(feedbackSummaryFixtures.filter((row) => row.creator?.id === users.trainer.id)),
     )
     expect(scopeFeedback(feedbackSummaryFixtures, users.director)).toEqual([])
   })
@@ -143,8 +144,8 @@ describe('scopeEvents', () => {
   it('scopes events for every role', () => {
     const memberTeams = memberTeamIds(users.member.id)
     const trainerTeams = trainerTeamIds(users.trainer.id)
-    const directorSportNames = directorSports(users.director.id)
-    const directorTeams = sportTeamIds(directorSportNames)
+    const directorSportIds = directorSports(users.director.id)
+    const directorTeams = sportTeamIds(directorSportIds)
 
     expect(ids(scopeEvents(eventSummaryFixtures, users.admin))).toEqual(ids(eventSummaryFixtures))
     expect(ids(scopeEvents(eventSummaryFixtures, users.member))).toEqual(
@@ -163,7 +164,7 @@ describe('scopeEvents', () => {
       ids(
         eventSummaryFixtures.filter(
           (row) =>
-            eventSports(row).some((sport) => directorSportNames.has(sport)) ||
+            eventSports(row).some((sport) => directorSportIds.has(sport)) ||
             eventTeamIds(row).some((teamId) => directorTeams.has(teamId)),
         ),
       ),

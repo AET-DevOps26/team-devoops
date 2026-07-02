@@ -1,17 +1,18 @@
 import type {
   AuthUser,
   Balance,
-  EventSummary,
+  EventListItem,
   FeedbackSummary,
   Member,
   MemberSummary,
   SportEvent,
   Transaction,
 } from '@/types'
+import { highestRole } from '@/types'
 import { eventDetailsById, sportFixtures, teamFixtures } from './fixtures'
 
 type MemberRow = Member | MemberSummary
-type EventRow = EventSummary | SportEvent
+type EventRow = EventListItem | SportEvent
 
 function memberTeamIds(userId: string): Set<string> {
   return new Set(
@@ -33,12 +34,12 @@ function directorSports(userId: string): Set<string> {
   return new Set(
     sportFixtures
       .filter((sport) => sport.directors.some((director) => director.id === userId))
-      .map((sport) => sport.name),
+      .map((sport) => sport.id),
   )
 }
 
 function sportTeamIds(sports: Set<string>): Set<string> {
-  return new Set(teamFixtures.filter((team) => sports.has(team.sport)).map((team) => team.id))
+  return new Set(teamFixtures.filter((team) => sports.has(team.sport.id)).map((team) => team.id))
 }
 
 function teamMemberIds(teamIds: Set<string>): Set<string> {
@@ -63,16 +64,16 @@ function eventHasTeam(row: EventRow, teamIds: Set<string>): boolean {
 
 function eventHasSport(row: EventRow, sports: Set<string>): boolean {
   if ('sports_linked' in row) {
-    return row.sports_linked?.some((sport) => sports.has(sport)) ?? false
+    return row.sports_linked?.some((sport) => sports.has(sport.id)) ?? false
   }
 
   const detail = eventDetailsById[row.id]
-  return detail?.sports_linked?.some((sport) => sports.has(sport)) ?? false
+  return detail?.sports_linked?.some((sport) => sports.has(sport.id)) ?? false
 }
 
 function eventCreatorId(row: EventRow): string | undefined {
-  if ('creator' in row) return row.creator.id
-  return eventDetailsById[row.id]?.creator.id
+  if ('creator' in row) return row.creator?.id
+  return eventDetailsById[row.id]?.creator?.id
 }
 
 function eventInMemberScope(row: EventRow, user: AuthUser): boolean {
@@ -89,11 +90,11 @@ function eventInDirectorScope(row: EventRow, user: AuthUser): boolean {
 }
 
 export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUser): T[] {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return rows
     case 'trainer':
-      return rows.filter((row) => row.creator.id === user.id)
+      return rows.filter((row) => row.creator?.id === user.id)
     case 'member':
       return rows.filter((row) => row.member.id === user.id)
     case 'director':
@@ -102,7 +103,7 @@ export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUs
 }
 
 export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUser): T[] {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return rows
     case 'member':
@@ -117,7 +118,7 @@ export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUs
 }
 
 export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[] {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return rows
     case 'member':
@@ -132,7 +133,7 @@ export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[]
 }
 
 export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return rows
     case 'member':
@@ -145,7 +146,7 @@ export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] 
 }
 
 export function scopeMembers<T extends MemberRow>(rows: T[], user: AuthUser): T[] {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return rows
     case 'member':
@@ -162,7 +163,7 @@ export function scopeMembers<T extends MemberRow>(rows: T[], user: AuthUser): T[
 }
 
 export function scopeReport(memberId: string, user: AuthUser): boolean {
-  switch (user.role) {
+  switch (highestRole(user.roles)) {
     case 'admin':
       return true
     case 'member':
@@ -171,5 +172,18 @@ export function scopeReport(memberId: string, user: AuthUser): boolean {
       return memberIdsInTrainerScope(user).has(memberId)
     case 'director':
       return memberIdsInDirectorScope(user).has(memberId)
+  }
+}
+
+export function scopeTeamReport(teamId: string, user: AuthUser): boolean {
+  switch (highestRole(user.roles)) {
+    case 'admin':
+      return true
+    case 'trainer':
+      return trainerTeamIds(user.id).has(teamId)
+    case 'director':
+      return sportTeamIds(directorSports(user.id)).has(teamId)
+    case 'member':
+      return false
   }
 }

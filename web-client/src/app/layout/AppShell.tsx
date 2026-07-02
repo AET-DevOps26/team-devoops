@@ -20,7 +20,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useTheme } from '@/app/theme/useTheme'
 import type { Theme } from '@/app/theme/ThemeContext'
 import { useAuth } from '@/features/auth'
-import type { Role } from '@/types'
+import { highestRole, type Role } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -115,7 +115,8 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const userInitial = user.name.trim().charAt(0).toUpperCase() || 'U'
-  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(user.role))
+  const role = highestRole(user.roles)
+  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(role))
 
   return (
     <SidebarProvider>
