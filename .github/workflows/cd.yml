@@ -139,6 +139,13 @@ jobs:
           printf '%s' "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Verify cluster auth
+        run: |
+          kubectl get --raw /apis >/dev/null || {
+            echo "::error::KUBECONFIG appears invalid/expired (system:unauthenticated) — rotate the secret."
+            exit 1
+          }
+
       - name: Create/refresh genai-env secret
         env:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
