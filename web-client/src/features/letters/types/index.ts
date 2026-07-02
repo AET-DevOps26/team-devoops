@@ -1,7 +1,1 @@
-export interface SendMailRequest {
-  html: string
-}
-
-export interface GeneratePdfRequest {
-  html: string
-}
+export type { MailRequest as SendMailRequest, PdfRequest as GeneratePdfRequest } from '@/types'
