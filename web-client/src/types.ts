@@ -126,9 +126,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
-  // Membership roles from the Keycloak `member_roles` claim — display labels
-  // (Trainee/Coach/Director/Admin), unordered. Collapse with `highestRole(roles)`.
-  roles: string[]
+  role: Role
 }
 
 /** Render a resolved reference (member/team/event) as its display name. */

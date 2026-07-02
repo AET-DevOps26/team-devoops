@@ -121,8 +121,8 @@ export function PaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {view.rows.map((transaction, index) => (
-                  <TRow key={`${transaction.date}-${transaction.description}-${index}`}>
+                {view.rows.map((transaction) => (
+                  <TRow key={transaction.id}>
                     <TCell className="whitespace-nowrap text-text-secondary">
                       {transaction.date}
                     </TCell>

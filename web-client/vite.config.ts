@@ -20,16 +20,18 @@ export default defineConfig({
         changeOrigin: true,
         // Traefik strips the full `/api/v1/<name>` prefix, so duplicate the service
         // segment to survive it; also trim a bare trailing slash the services 404 on.
-        rewrite: (p) =>
-          p
-            .replace(
-              /^(\/api\/v1\/(?:organization|members|events|feedback|finance|letters|helper))\/(\?|$)/,
-              '$1$2',
-            )
-            .replace(
-              /^\/api\/v1\/(organization|members|events|feedback|finance|letters|helper)(\/|$)/,
-              '/api/v1/$1/$1$2',
-            ),
+        rewrite: (p) => {
+          const queryStart = p.indexOf('?')
+          const pathname = queryStart === -1 ? p : p.slice(0, queryStart)
+          const query = queryStart === -1 ? '' : p.slice(queryStart)
+          const rewrittenPathname = pathname.replace(
+            /^\/api\/v1\/(organization|members|events|feedback|finance|letters|helper)(?:\/(.*))?$/,
+            (_match, service: string, rest: string | undefined) =>
+              `/api/v1/${service}/${service}${rest ? `/${rest}` : ''}`,
+          )
+
+          return `${rewrittenPathname}${query}`
+        },
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
             // Strip cookies: unused by services, and big localhost cookie jars can 400.

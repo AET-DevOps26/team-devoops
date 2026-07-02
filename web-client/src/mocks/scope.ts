@@ -8,7 +8,6 @@ import type {
   SportEvent,
   Transaction,
 } from '@/types'
-import { highestRole } from '@/types'
 import { eventDetailsById, sportFixtures, teamFixtures } from './fixtures'
 
 type MemberRow = Member | MemberSummary
@@ -90,7 +89,7 @@ function eventInDirectorScope(row: EventRow, user: AuthUser): boolean {
 }
 
 export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUser): T[] {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return rows
     case 'trainer':
@@ -103,7 +102,7 @@ export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUs
 }
 
 export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUser): T[] {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return rows
     case 'member':
@@ -118,7 +117,7 @@ export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUs
 }
 
 export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[] {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return rows
     case 'member':
@@ -133,7 +132,7 @@ export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[]
 }
 
 export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return rows
     case 'member':
@@ -146,7 +145,7 @@ export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] 
 }
 
 export function scopeMembers<T extends MemberRow>(rows: T[], user: AuthUser): T[] {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return rows
     case 'member':
@@ -163,7 +162,7 @@ export function scopeMembers<T extends MemberRow>(rows: T[], user: AuthUser): T[
 }
 
 export function scopeReport(memberId: string, user: AuthUser): boolean {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return true
     case 'member':
@@ -176,7 +175,7 @@ export function scopeReport(memberId: string, user: AuthUser): boolean {
 }
 
 export function scopeTeamReport(teamId: string, user: AuthUser): boolean {
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'admin':
       return true
     case 'trainer':

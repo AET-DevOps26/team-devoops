@@ -5,7 +5,6 @@ import type {
   Reference,
   TeamBalanceSummary,
 } from '@/types'
-import { highestRole } from '@/types'
 import type { MockPersonaKey } from '../personas'
 import { MOCK_PERSONAS } from '../personas'
 import { scopeEvents, scopeFeedback } from '../scope'
@@ -56,7 +55,7 @@ function sportRef(id: string): Reference {
 function dashboardFor(key: MockPersonaKey): Dashboard {
   const user = MOCK_PERSONAS[key]
 
-  switch (highestRole(user.roles)) {
+  switch (user.role) {
     case 'member':
       return {
         role: 'trainee',
@@ -132,9 +131,9 @@ export function dashboardForUser(user: AuthUser): Dashboard {
   )
   if (byId) return dashboardFixtures[byId]
 
-  const role = highestRole(user.roles)
+  const role = user.role
   const byRole = (Object.keys(dashboardFixtures) as MockPersonaKey[]).find(
-    (key) => highestRole(MOCK_PERSONAS[key].roles) === role,
+    (key) => MOCK_PERSONAS[key].role === role,
   )
   return dashboardFixtures[byRole ?? 'member']
 }

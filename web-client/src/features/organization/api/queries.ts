@@ -54,7 +54,7 @@ export function useSport(id: string) {
           if (!found) throw new Error('Sport not found')
           return Promise.resolve(found)
         },
-        () => organizationClient.get<Sport>(`/sports/${id}`).then(r => r.data),
+        () => organizationClient.get<Sport>(`/sports/${encodeURIComponent(id)}`).then(r => r.data),
       ),
     enabled: !!id,
   })

@@ -7,7 +7,6 @@ import { useEventsList } from '@/features/sport-events/api/queries'
 import { formatCents, formatDateShort, formatTime } from '@/lib/format'
 import {
   creatorName,
-  highestRole,
   memberRefName,
   type Dashboard,
   type EventSummary,
@@ -115,10 +114,16 @@ function buildEventsSection(
   next: EventSummary | null,
   preview: EventSummary[],
 ): DashboardEventsSection {
-  const sorted = preview.toSorted(
-    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
-  )
-  const nextEvent = next ?? sorted[0] ?? null
+  const now = new Date()
+  const sorted = preview
+    .filter((event) => new Date(event.start_time).getTime() >= now.getTime())
+    .toSorted(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+    )
+  const nextEvent =
+    next && new Date(next.start_time).getTime() >= now.getTime()
+      ? next
+      : sorted[0] ?? null
 
   return {
     upcomingCount,
@@ -133,6 +138,10 @@ function buildBalanceSection(balanceCents: number): DashboardBalanceSection {
     balanceFormatted: formatCents(balanceCents),
     status: balanceCents < 0 ? 'overdue' : 'clear',
   }
+}
+
+function shouldShowBalance(role: Role): boolean {
+  return role === 'member'
 }
 
 // recent_feedback arrives already scoped to the caller; render the latest N by created_at.
@@ -201,8 +210,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const isNonAdmin = !!data && data.role !== 'admin'
   const eventsQuery = useEventsList(isNonAdmin)
 
-  // Single-role collapse of the (unordered, possibly multi-value) member_roles claim.
-  const role = highestRole(user.roles)
+  const role = user.role
 
   return useMemo(() => {
     const view: DashboardView = {
@@ -270,6 +278,9 @@ function fillSections(
       states.adminCounts = org.orgState
       states.sports = org.orgState
     } else {
+      if (shouldShowBalance(view.role)) {
+        states.myBalance = state
+      }
       states.myEvents = state
     }
     return

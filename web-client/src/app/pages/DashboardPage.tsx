@@ -24,6 +24,9 @@ const initials = (name: string) =>
 
 export function DashboardPage() {
   const { view, states } = useDashboardViewModel()
+  const showBalanceCard = Boolean(view.myBalance || states.myBalance?.isLoading)
+  const showEventsCards = Boolean(view.myEvents || states.myEvents?.isLoading)
+  const showFeedbackStat = Boolean(view.myFeedback || states.myFeedback?.isLoading)
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6">
@@ -37,11 +40,11 @@ export function DashboardPage() {
         <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
       )}
 
-      {(view.myBalance || view.myEvents || view.myFeedback) && (
+      {(showBalanceCard || showEventsCards || showFeedbackStat) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {view.myBalance && <BalanceCard balance={view.myBalance} state={states.myBalance} />}
-          {view.myEvents && <EventsCards events={view.myEvents} state={states.myEvents} />}
-          {view.myFeedback && (
+          {showBalanceCard && <BalanceCard balance={view.myBalance} state={states.myBalance} />}
+          {showEventsCards && <EventsCards events={view.myEvents} state={states.myEvents} />}
+          {showFeedbackStat && (
             <FeedbackStat feedback={view.myFeedback} state={states.myFeedback} />
           )}
         </div>
@@ -86,10 +89,11 @@ function BalanceCard({
   balance,
   state,
 }: {
-  balance: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myBalance']>
+  balance?: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myBalance']>
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) return <Skeleton className="h-32 border" />
+  if (!balance) return null
 
   return (
     <StatCard
@@ -105,7 +109,7 @@ function EventsCards({
   events,
   state,
 }: {
-  events: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myEvents']>
+  events?: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myEvents']>
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) {
@@ -116,6 +120,7 @@ function EventsCards({
       </>
     )
   }
+  if (!events) return null
 
   return (
     <>
@@ -141,10 +146,11 @@ function FeedbackStat({
   feedback,
   state,
 }: {
-  feedback: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myFeedback']>
+  feedback?: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myFeedback']>
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) return <Skeleton className="h-32 border" />
+  if (!feedback) return null
 
   return (
     <StatCard

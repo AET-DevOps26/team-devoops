@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useAuth } from '@/features/auth'
 import { useTeamsList } from '@/features/organization/api/queries'
 import { formatDate } from '@/lib/format'
-import { highestRole, memberRefName, type Reference } from '@/types'
+import { memberRefName, type Reference } from '@/types'
 import {
   helperKeys,
   useDeleteReport,
@@ -28,7 +28,7 @@ export function useReportViewModel() {
 
   // Coaches report on the team they train; everyone else reports on a member (their own
   // for trainees; admins/directors fall back to the member path per the task's scope).
-  const isTrainer = highestRole(user.roles) === 'trainer'
+  const isTrainer = user.role === 'trainer'
   const teamsQuery = useTeamsList(isTrainer)
   const team = useMemo<Reference | null>(() => {
     if (!isTrainer) return null

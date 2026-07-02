@@ -12,6 +12,7 @@ type PaymentStatus = 'clear' | 'overdue'
 type PaymentKind = 'charge' | 'payment'
 
 export interface PaymentRow {
+  id: string
   createdAt: string
   date: string
   title: string
@@ -100,6 +101,7 @@ export function buildPaymentsView(
     chargedFormatted: formatEuroCents(Math.abs(chargedCents)),
     status: balanceCents < 0 ? 'overdue' : 'clear',
     rows: sortPaymentRows(filterPaymentRows(memberTransactions.map((transaction) => ({
+      id: transaction.id,
       createdAt: transaction.created_at,
       date: formatDateShort(transaction.created_at),
       title: transaction.title,

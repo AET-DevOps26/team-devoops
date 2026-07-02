@@ -36,6 +36,7 @@ export function useFeedbackList(enabled = true) {
 export function useFeedback(id: string) {
   return useQuery<Feedback>({
     queryKey: feedbackKeys.detail(id),
+    staleTime: 30_000,
     queryFn: () =>
       mockOr(
         () => {

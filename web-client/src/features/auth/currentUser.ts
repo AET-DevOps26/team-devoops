@@ -3,14 +3,14 @@ import type { KeycloakTokenParsed } from 'keycloak-js'
 import keycloak from '@/lib/keycloak'
 import { USE_MOCKS } from '@/mocks/mockSwitch'
 import { MOCK_PERSONAS, type MockPersonaKey } from '@/mocks/personas'
-import type { AuthUser } from '@/types'
+import { highestRole, type AuthUser } from '@/types'
 
 type AuthTokenSnapshot = KeycloakTokenParsed & {
   email?: string
   name?: string
   preferred_username?: string
   // Keycloak client-role claim: display labels (Trainee/Coach/Director/Admin), unordered.
-  // Collapse to a single Role with `highestRole(roles)` — never rely on array order.
+  // Collapse to a single Role with `highestRole(member_roles)` — never rely on array order.
   member_roles?: string[]
 }
 
@@ -35,7 +35,7 @@ function tokenUser(): AuthUser {
     id: parsed?.sub ?? '',
     name: parsed?.name ?? parsed?.preferred_username ?? parsed?.email ?? 'Unknown',
     email: parsed?.email ?? '',
-    roles: parsed?.member_roles ?? [],
+    role: highestRole(parsed?.member_roles ?? []),
   }
 }
 
