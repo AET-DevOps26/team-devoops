@@ -31,7 +31,7 @@ export function useEventsList(enabled = true) {
     queryFn: () =>
       mockOr(
         () => Promise.resolve(scopeEvents(eventSummaryFixtures, getCurrentUser())),
-        () => sportEventsClient.get<EventSummary[]>('/').then(r => r.data),
+        () => sportEventsClient.get<EventSummary[]>('').then(r => r.data),
       ),
   })
 }
@@ -62,7 +62,7 @@ export function useCreateSportEvent() {
   const qc = useQueryClient()
 
   return useMutation<SportEvent, Error, EventCreate>({
-    mutationFn: data => sportEventsClient.post<SportEvent>('/', data).then(r => r.data),
+    mutationFn: data => sportEventsClient.post<SportEvent>('', data).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: eventKeys.all }),
   })
 }

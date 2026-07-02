@@ -26,7 +26,7 @@ export function useMembers() {
     queryFn: () =>
       mockOr(
         () => Promise.resolve(scopeMembers(memberSummaryFixtures, getCurrentUser())),
-        () => membersClient.get<MemberSummary[]>('/').then(r => r.data),
+        () => membersClient.get<MemberSummary[]>('').then(r => r.data),
       ),
   })
 }
@@ -52,7 +52,7 @@ export function useCreateMember() {
   const qc = useQueryClient()
 
   return useMutation<Member, Error, MemberCreate>({
-    mutationFn: data => membersClient.post<Member>('/', data).then(r => r.data),
+    mutationFn: data => membersClient.post<Member>('', data).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: membersKeys.all }),
   })
 }

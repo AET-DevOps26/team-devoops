@@ -28,7 +28,7 @@ export function useFeedbackList(enabled = true) {
     queryFn: () =>
       mockOr(
         () => Promise.resolve(scopeFeedback(feedbackSummaryFixtures, getCurrentUser())),
-        () => feedbackClient.get<FeedbackSummary[]>('/').then(r => r.data),
+        () => feedbackClient.get<FeedbackSummary[]>('').then(r => r.data),
       ),
   })
 }
@@ -55,7 +55,7 @@ export function useCreateFeedback() {
   const qc = useQueryClient()
 
   return useMutation<Feedback, Error, FeedbackCreate>({
-    mutationFn: data => feedbackClient.post<Feedback>('/', data).then(r => r.data),
+    mutationFn: data => feedbackClient.post<Feedback>('', data).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: feedbackKeys.all }),
   })
 }
