@@ -1,64 +1,140 @@
-import type { AuthUser, Balance, DashboardAggregate, MemberSummary } from '@/types'
+import type {
+  AuthUser,
+  Dashboard,
+  EventSummary,
+  Reference,
+  TeamBalanceSummary,
+} from '@/types'
+import { highestRole } from '@/types'
 import type { MockPersonaKey } from '../personas'
 import { MOCK_PERSONAS } from '../personas'
 import { scopeEvents, scopeFeedback } from '../scope'
 import { eventSummaryFixtures } from './events'
 import { feedbackSummaryFixtures } from './feedback'
 import { balanceFixtures } from './finance'
-import { memberSummaryFixtures } from './members'
 import { sportFixtures, teamFixtures } from './organization'
-import { reportTextById } from './report'
+import { memberReportSummaries } from './report'
 
-// Pre-built dashboard responses, one per persona — the object GET /members/dashboard
-// would return. Assembled once at module load from the typed fixtures; the page reads
-// these verbatim and derives nothing.
+// Pre-built dashboard envelopes, one per persona — the discriminated union GET
+// /members/dashboard returns. The server emits only the caller's highest role's shape, so
+// each persona gets exactly one envelope. Assembled from the typed fixtures + scope helpers.
 
-const EMPTY_MEMBER: MemberSummary = { id: '', first_name: '', last_name: '', email: '' }
+// Reference dashboard "now": upcoming = on/after this instant (matches the view-model).
+const DASHBOARD_NOW = new Date('2026-06-19T00:00:00Z')
 
-function personaMember(id: string): MemberSummary {
-  return memberSummaryFixtures.find((member) => member.id === id) ?? EMPTY_MEMBER
+function upcomingEvents(user: AuthUser): EventSummary[] {
+  return scopeEvents(eventSummaryFixtures, user)
+    .filter((event) => new Date(event.start_time) >= DASHBOARD_NOW)
+    .toSorted((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 }
 
-function personaBalance(id: string): Balance {
-  return (
-    balanceFixtures.find((entry) => entry.member.id === id) ?? {
-      member: { id, first_name: '', last_name: '' },
-      balance_cents: 0,
-    }
+function balanceCents(memberId: string): number {
+  return balanceFixtures.find((entry) => entry.member.id === memberId)?.balance_cents ?? 0
+}
+
+function trainerTeams(userId: string) {
+  return teamFixtures.filter((team) => team.trainers.some((trainer) => trainer.id === userId))
+}
+
+function directorSportIds(userId: string): Set<string> {
+  return new Set(
+    sportFixtures
+      .filter((sport) => sport.directors.some((director) => director.id === userId))
+      .map((sport) => sport.id),
   )
 }
 
-function dashboardFor(key: MockPersonaKey): DashboardAggregate {
-  const user = MOCK_PERSONAS[key]
-  const isAdmin = user.role === 'admin'
+function teamBalance(team: { trainees: { id: string }[] }): number {
+  return team.trainees.reduce((sum, trainee) => sum + balanceCents(trainee.id), 0)
+}
 
-  return {
-    member: personaMember(user.id),
-    events: scopeEvents(eventSummaryFixtures, user),
-    feedback: scopeFeedback(feedbackSummaryFixtures, user),
-    balance: personaBalance(user.id),
-    report: reportTextById[user.id] ?? '',
-    sports: isAdmin ? sportFixtures : [],
-    teams: isAdmin ? teamFixtures : [],
+function sportRef(id: string): Reference {
+  const sport = sportFixtures.find((entry) => entry.id === id)
+  return { id, name: sport?.name ?? '' }
+}
+
+function dashboardFor(key: MockPersonaKey): Dashboard {
+  const user = MOCK_PERSONAS[key]
+
+  switch (highestRole(user.roles)) {
+    case 'member':
+      return {
+        role: 'trainee',
+        balance_cents: balanceCents(user.id),
+        next_event: upcomingEvents(user)[0] ?? null,
+        upcoming_events: upcomingEvents(user).length,
+        recent_feedback: scopeFeedback(feedbackSummaryFixtures, user),
+        recent_reports: memberReportSummaries(user.id),
+      }
+
+    case 'trainer': {
+      const teams = trainerTeams(user.id)
+      const team = teams[0]
+      return {
+        role: 'trainer',
+        team: team ? { id: team.id, name: team.name } : { id: '', name: '' },
+        total_members: teams.reduce((sum, t) => sum + t.trainees.length, 0),
+        upcoming_events: upcomingEvents(user).length,
+        recent_feedback: scopeFeedback(feedbackSummaryFixtures, user),
+      }
+    }
+
+    case 'director': {
+      const sportIds = directorSportIds(user.id)
+      const teams = teamFixtures.filter((team) => sportIds.has(team.sport.id))
+      const teamSummaries: TeamBalanceSummary[] = teams.map((team) => ({
+        team: { id: team.id, name: team.name },
+        member_count: team.trainees.length,
+        balance_cents: teamBalance(team),
+      }))
+      const firstSportId = [...sportIds][0] ?? ''
+      return {
+        role: 'director',
+        sport: sportRef(firstSportId),
+        total_teams: teams.length,
+        total_members: teams.reduce((sum, t) => sum + t.trainees.length, 0),
+        sport_balance_cents: teamSummaries.reduce((sum, t) => sum + t.balance_cents, 0),
+        upcoming_events: upcomingEvents(user).length,
+        teams: teamSummaries,
+      }
+    }
+
+    case 'admin':
+      return {
+        role: 'admin',
+        total_members: new Set(teamFixtures.flatMap((team) => team.trainees.map((m) => m.id))).size,
+        total_sports: sportFixtures.length,
+        total_teams: teamFixtures.length,
+        total_directors: new Set(
+          sportFixtures.flatMap((sport) => sport.directors.map((d) => d.id)),
+        ).size,
+        total_trainers: new Set(teamFixtures.flatMap((team) => team.trainers.map((t) => t.id))).size,
+        total_balance_cents: balanceFixtures.reduce((sum, b) => sum + b.balance_cents, 0),
+        events_this_week: eventSummaryFixtures.filter((event) => {
+          const start = new Date(event.start_time).getTime()
+          return start >= DASHBOARD_NOW.getTime() && start < DASHBOARD_NOW.getTime() + 7 * 86_400_000
+        }).length,
+      }
   }
 }
 
-export const dashboardFixtures: Record<MockPersonaKey, DashboardAggregate> = {
+export const dashboardFixtures: Record<MockPersonaKey, Dashboard> = {
   member: dashboardFor('member'),
   coach: dashboardFor('coach'),
   director: dashboardFor('director'),
   admin: dashboardFor('admin'),
 }
 
-// Pick the pre-built dashboard for the current persona (matched by id, role as fallback).
-export function dashboardForUser(user: AuthUser): DashboardAggregate {
+// Pick the pre-built envelope for the current persona (matched by id, role as fallback).
+export function dashboardForUser(user: AuthUser): Dashboard {
   const byId = (Object.keys(dashboardFixtures) as MockPersonaKey[]).find(
     (key) => MOCK_PERSONAS[key].id === user.id,
   )
   if (byId) return dashboardFixtures[byId]
 
+  const role = highestRole(user.roles)
   const byRole = (Object.keys(dashboardFixtures) as MockPersonaKey[]).find(
-    (key) => MOCK_PERSONAS[key].role === user.role,
+    (key) => highestRole(MOCK_PERSONAS[key].roles) === role,
   )
   return dashboardFixtures[byRole ?? 'member']
 }

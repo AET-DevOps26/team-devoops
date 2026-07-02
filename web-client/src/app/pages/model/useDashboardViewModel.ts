@@ -2,8 +2,20 @@ import { useMemo } from 'react'
 
 import { useDashboard } from '@/app/pages/api/dashboardQueries'
 import { useAuth } from '@/features/auth'
+import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
+import { useEventsList } from '@/features/sport-events/api/queries'
 import { formatCents, formatDateShort, formatTime } from '@/lib/format'
-import { memberRefName, type Balance, type EventSummary, type FeedbackSummary, type Role, type Sport, type Team } from '@/types'
+import {
+  creatorName,
+  highestRole,
+  memberRefName,
+  type Dashboard,
+  type EventSummary,
+  type FeedbackSummary,
+  type Role,
+  type Sport,
+  type Team,
+} from '@/types'
 
 export interface DashboardEventItem {
   id: string
@@ -83,26 +95,8 @@ export interface DashboardViewModel {
   }
 }
 
-const DASHBOARD_NOW = new Date('2026-06-19T00:00:00Z')
-
 // "Recent" = latest N by created_at, no time window (decision 2026-06-26).
 const RECENT_FEEDBACK_COUNT = 3
-
-function shouldShowEvents(role: Role): boolean {
-  return role !== 'admin'
-}
-
-function shouldShowBalance(role: Role): boolean {
-  return role === 'member' || role === 'director'
-}
-
-function shouldShowFeedback(role: Role): boolean {
-  return role === 'member' || role === 'trainer'
-}
-
-function shouldShowSports(role: Role): boolean {
-  return role === 'admin'
-}
 
 function eventItem(event: EventSummary): DashboardEventItem {
   return {
@@ -113,21 +107,27 @@ function eventItem(event: EventSummary): DashboardEventItem {
   }
 }
 
-function buildEventsSection(events: EventSummary[]): DashboardEventsSection {
-  const upcoming = events
-    .filter((event) => new Date(event.start_time) >= DASHBOARD_NOW)
-    .toSorted((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+// The dashboard envelope gives only a COUNT of upcoming events (+ a single next_event for
+// trainees), never an array — so the 3-event preview list is sourced separately from the
+// server-scoped events query (Option A), mirroring how the admin branch pulls /sports + /teams.
+function buildEventsSection(
+  upcomingCount: number,
+  next: EventSummary | null,
+  preview: EventSummary[],
+): DashboardEventsSection {
+  const sorted = preview.toSorted(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+  )
+  const nextEvent = next ?? sorted[0] ?? null
 
   return {
-    upcomingCount: upcoming.length,
-    nextEvent: upcoming[0] ? eventItem(upcoming[0]) : undefined,
-    items: upcoming.slice(0, 3).map(eventItem),
+    upcomingCount,
+    nextEvent: nextEvent ? eventItem(nextEvent) : undefined,
+    items: sorted.slice(0, 3).map(eventItem),
   }
 }
 
-function buildBalanceSection(balance: Balance): DashboardBalanceSection {
-  const balanceCents = balance.balance_cents
-
+function buildBalanceSection(balanceCents: number): DashboardBalanceSection {
   return {
     balanceCents,
     balanceFormatted: formatCents(balanceCents),
@@ -135,52 +135,40 @@ function buildBalanceSection(balance: Balance): DashboardBalanceSection {
   }
 }
 
-function buildFeedbackSection(
-  feedback: FeedbackSummary[],
-  events: EventSummary[],
-  role: Role,
-  memberId: string,
-): DashboardFeedbackSection {
-  const eventNamesById = new Map(events.map((event) => [event.id, event.name]))
-  const scopedFeedback = feedback.filter((entry) =>
-    role === 'trainer' ? entry.creator.id === memberId : entry.member.id === memberId,
-  )
-  const items = scopedFeedback
+// recent_feedback arrives already scoped to the caller; render the latest N by created_at.
+function buildFeedbackSection(feedback: FeedbackSummary[]): DashboardFeedbackSection {
+  const items = feedback
     .toSorted((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, RECENT_FEEDBACK_COUNT)
     .map((entry) => ({
       id: entry.id,
-      from: memberRefName(entry.creator),
+      from: creatorName(entry.creator),
       about: memberRefName(entry.member),
-      eventName: eventNamesById.get(entry.event) ?? 'Unknown event',
+      eventName: entry.event.name,
       date: formatDateShort(entry.created_at),
     }))
 
   return {
-    total: scopedFeedback.length,
+    total: feedback.length,
     items,
   }
-}
-
-function teamSportName(team: Team): string | undefined {
-  return team.sport
 }
 
 function buildSportsSections(sports: Sport[], teams: Team[]): DashboardSportSection[] {
   const teamsBySport = new Map<string, Team[]>()
 
   for (const team of teams) {
-    const sportName = teamSportName(team)
-    if (!sportName) continue
+    const sportId = team.sport.id
+    if (!sportId) continue
 
-    teamsBySport.set(sportName, [...(teamsBySport.get(sportName) ?? []), team])
+    teamsBySport.set(sportId, [...(teamsBySport.get(sportId) ?? []), team])
   }
 
   return sports.map((sport) => ({
     name: sport.name,
     description: sport.description,
     directors: sport.directors.map(memberRefName).join(', ') || '--',
-    teams: (teamsBySport.get(sport.name) ?? []).map((team) => ({
+    teams: (teamsBySport.get(sport.id) ?? []).map((team) => ({
       id: team.id,
       name: team.name,
       trainers: team.trainers.map(memberRefName).join(', ') || '--',
@@ -200,55 +188,120 @@ function buildAdminCounts(sports: Sport[], teams: Team[]): DashboardAdminCountsS
 export function useDashboardViewModel(): DashboardViewModel {
   const { user } = useAuth()
   const dashboardQuery = useDashboard()
+  const data = dashboardQuery.data
+
+  // The admin envelope is counts-only; the sports-with-teams breakdown comes from the real
+  // organization queries (§9.3). Fetch only when the caller is an admin.
+  const isAdmin = data?.role === 'admin'
+  const sportsQuery = useSportsList(isAdmin)
+  const teamsQuery = useTeamsList(isAdmin)
+
+  // The dashboard payload carries only an upcoming-events count, so the preview list for the
+  // trainee/trainer/director branches comes from the server-scoped events query (Option A).
+  const isNonAdmin = !!data && data.role !== 'admin'
+  const eventsQuery = useEventsList(isNonAdmin)
+
+  // Single-role collapse of the (unordered, possibly multi-value) member_roles claim.
+  const role = highestRole(user.roles)
 
   return useMemo(() => {
     const view: DashboardView = {
-      role: user.role,
+      role,
       userName: user.name,
     }
     const states: DashboardViewModel['states'] = {}
-    const data = dashboardQuery.data
     const state: DashboardSectionState = {
       isLoading: dashboardQuery.isLoading,
       error: dashboardQuery.error,
     }
 
-    if (shouldShowEvents(user.role)) {
-      view.myEvents = buildEventsSection(data?.events ?? [])
-      states.myEvents = state
-    }
-
-    if (shouldShowBalance(user.role) && data?.balance) {
-      view.myBalance = buildBalanceSection(data.balance)
-      states.myBalance = state
-    } else if (shouldShowBalance(user.role)) {
-      states.myBalance = state
-    }
-
-    if (shouldShowFeedback(user.role)) {
-      view.myFeedback = buildFeedbackSection(
-        data?.feedback ?? [],
-        data?.events ?? [],
-        user.role,
-        user.id,
-      )
-      states.myFeedback = state
-    }
-
-    if (shouldShowSports(user.role)) {
-      view.adminCounts = buildAdminCounts(data?.sports ?? [], data?.teams ?? [])
-      view.sports = buildSportsSections(data?.sports ?? [], data?.teams ?? [])
-      states.adminCounts = state
-      states.sports = state
-    }
+    fillSections(view, states, data, state, {
+      sports: sportsQuery.data ?? [],
+      teams: teamsQuery.data ?? [],
+      orgState: {
+        isLoading: dashboardQuery.isLoading || sportsQuery.isLoading || teamsQuery.isLoading,
+        error: dashboardQuery.error ?? sportsQuery.error ?? teamsQuery.error,
+      },
+      events: eventsQuery.data ?? [],
+      eventsState: {
+        isLoading: dashboardQuery.isLoading || eventsQuery.isLoading,
+        error: dashboardQuery.error ?? eventsQuery.error,
+      },
+    })
 
     return { view, states }
   }, [
-    dashboardQuery.data,
+    data,
     dashboardQuery.error,
     dashboardQuery.isLoading,
-    user.id,
+    sportsQuery.data,
+    sportsQuery.error,
+    sportsQuery.isLoading,
+    teamsQuery.data,
+    teamsQuery.error,
+    teamsQuery.isLoading,
+    eventsQuery.data,
+    eventsQuery.error,
+    eventsQuery.isLoading,
     user.name,
-    user.role,
+    role,
   ])
+}
+
+interface OrgData {
+  sports: Sport[]
+  teams: Team[]
+  orgState: DashboardSectionState
+  events: EventSummary[]
+  eventsState: DashboardSectionState
+}
+
+// The envelope's `role` is authoritative for which sections show — not the token role.
+function fillSections(
+  view: DashboardView,
+  states: DashboardViewModel['states'],
+  data: Dashboard | undefined,
+  state: DashboardSectionState,
+  org: OrgData,
+): void {
+  if (!data) {
+    // Still loading/errored: wire the sections the token role expects so skeletons render.
+    if (view.role === 'admin') {
+      states.adminCounts = org.orgState
+      states.sports = org.orgState
+    } else {
+      states.myEvents = state
+    }
+    return
+  }
+
+  switch (data.role) {
+    case 'trainee':
+      view.myBalance = buildBalanceSection(data.balance_cents)
+      view.myEvents = buildEventsSection(data.upcoming_events, data.next_event, org.events)
+      view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      states.myBalance = state
+      states.myEvents = org.eventsState
+      states.myFeedback = state
+      break
+
+    case 'trainer':
+      view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
+      view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      states.myEvents = org.eventsState
+      states.myFeedback = state
+      break
+
+    case 'director':
+      view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
+      states.myEvents = org.eventsState
+      break
+
+    case 'admin':
+      view.adminCounts = buildAdminCounts(org.sports, org.teams)
+      view.sports = buildSportsSections(org.sports, org.teams)
+      states.adminCounts = org.orgState
+      states.sports = org.orgState
+      break
+  }
 }
