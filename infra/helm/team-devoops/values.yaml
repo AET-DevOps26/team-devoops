@@ -255,11 +255,11 @@ services:
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
     resources:
       requests:
-        cpu: 100m
+        cpu: 250m
         memory: 256Mi
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 768Mi
   web-client:
     path: /
     port: 8080
