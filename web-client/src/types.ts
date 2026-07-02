@@ -96,10 +96,10 @@ export interface AuthUser {
   id: string
   name: string
   email: string
-  role: Role
+  // Membership roles from the Keycloak `member_roles` claim — a subset of
+  // 'Trainee' | 'Coach' | 'Director' | 'Admin'.
+  roles: string[]
 }
-
-/** Render a resolved member reference as a display name. */
 export function memberRefName(ref: MemberRef): string {
   return `${ref.first_name} ${ref.last_name}`
 }

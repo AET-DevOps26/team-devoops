@@ -30,7 +30,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organization/sports/{sport_name}": {
+    "/organization/sports/{sport_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -143,6 +143,29 @@ export interface paths {
          *     - Admins: can create members.
          */
         post: operations["createMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the caller's dashboard
+         * @description Returns dashboard data tailored to the caller's highest role
+         *     (admin > director > trainer > trainee). The `role` field discriminates the
+         *     concrete shape of the response.
+         *     - All authenticated users: can access their own dashboard.
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -438,10 +461,25 @@ export interface paths {
         put?: never;
         /**
          * Send mail
-         * @description Sends an email based on the provided HTML template.
-         *     - Trainers: can send mail to members of their team.
-         *     - Directors: can send mail to members related to their sport.
-         *     - Admins: can send mail to any member.
+         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
+         *     template's placeholder tokens are replaced with each receiver's data, and one email is sent
+         *     per receiver.
+         *
+         *     Receivers are determined from the caller's highest role:
+         *     - **Admin**: all members.
+         *     - **Director**: all directors, trainers, and trainees in their sport.
+         *     - **Trainer**: all trainers and trainees of their team.
+         *     - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+         *
+         *     Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+         *     trainee belongs to exactly one team.
+         *
+         *     Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+         *     empty string):
+         *     - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+         *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+         *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+         *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
          */
         post: operations["sendMail"];
         delete?: never;
@@ -461,10 +499,26 @@ export interface paths {
         put?: never;
         /**
          * Get pdf
-         * @description Generates and returns a PDF document from the provided HTML template.
-         *     - Trainers: can generate PDFs related to their team.
-         *     - Directors: can generate PDFs related to their sport.
-         *     - Admins: can generate PDFs related to any member.
+         * @description Generates a personalized mass-letter PDF. The body carries an HTML `template` whose
+         *     placeholder tokens are replaced with each receiver's data. One letter is rendered per
+         *     receiver — a layout block with the recipient's name and address followed by the
+         *     token-substituted template — and all letters are concatenated into a single PDF.
+         *
+         *     Receivers are determined from the caller's highest role:
+         *     - **Admin**: all members.
+         *     - **Director**: all directors, trainers, and trainees in their sport.
+         *     - **Trainer**: all trainers and trainees of their team.
+         *     - **Trainee / member-only**: forbidden — cannot use the letter service (`403`).
+         *
+         *     Assumes a director directs exactly one sport, a trainer trains exactly one team, and a
+         *     trainee belongs to exactly one team.
+         *
+         *     Supported placeholder tokens (`{{snake_case}}`; an unknown or empty value resolves to an
+         *     empty string):
+         *     - Member: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{email}}`, `{{address}}`,
+         *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
+         *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
+         *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
          */
         post: operations["getPdf"];
         delete?: never;
@@ -473,7 +527,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/helper/report/{member_id}": {
+    "/helper/reports/member/{member_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -481,16 +535,80 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Generate report
-         * @description Generates an AI-based report for a member. Members can only generate reports for themselves.
-         *     - All authenticated users: can generate a report for themselves.
-         *     - Trainers: can generate reports for members of their team.
+         * List member reports
+         * @description Lists the stored report summaries (without text) for a member, newest first.
+         *     - The member themselves: can list their own reports.
+         *     - Admin: can list reports for any member.
+         */
+        get: operations["listMemberReports"];
+        put?: never;
+        /**
+         * Generate member report
+         * @description Kicks off asynchronous generation of an AI report for a member. Returns immediately; the
+         *     finished report is persisted and can later be fetched via the report endpoints.
+         *     - The member themselves: can generate their own report.
          *     - Admin: can generate a report for any member.
          */
-        get: operations["generateReport"];
+        post: operations["generateMemberReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/helper/reports/team/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List team reports
+         * @description Lists the stored report summaries (without text) for a team, newest first.
+         *     - Trainers of the team: can list the team's reports.
+         *     - Admin: can list reports for any team.
+         */
+        get: operations["listTeamReports"];
+        put?: never;
+        /**
+         * Generate team report
+         * @description Kicks off asynchronous generation of an AI report for a team. Returns immediately; the
+         *     finished report is persisted and can later be fetched via the report endpoints.
+         *     - Trainers of the team: can generate the team's report.
+         *     - Admin: can generate a report for any team.
+         */
+        post: operations["generateTeamReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/helper/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get report
+         * @description Returns a single stored report including its full text. Works for both member and team
+         *     reports; the `kind` field indicates which, and the matching reference is populated.
+         *     - Member reports: the member themselves or an admin.
+         *     - Team reports: a trainer of the team or an admin.
+         */
+        get: operations["getReport"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete report
+         * @description Deletes a single stored report (member or team).
+         *     - Member reports: the member themselves or an admin.
+         *     - Team reports: a trainer of the team or an admin.
+         */
+        delete: operations["deleteReport"];
         options?: never;
         head?: never;
         patch?: never;
@@ -507,13 +625,117 @@ export interface components {
             message: string;
             errors?: components["schemas"]["ErrorResponse"][];
         };
+        /** @description A lightweight reference to another entity — its id plus a display name. */
+        Reference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @description Summary of a stored member report, without its generated text. */
+        MemberReportSummary: {
+            /** Format: uuid */
+            id: string;
+            member: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Summary of a stored team report, without its generated text. */
+        TeamReportSummary: {
+            /** Format: uuid */
+            id: string;
+            team: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description A stored report including its generated text. `kind` indicates whether it is a member or
+         *     team report; the matching `member`/`team` reference is populated accordingly.
+         */
+        Report: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "member" | "team";
+            member?: components["schemas"]["Reference"];
+            team?: components["schemas"]["Reference"];
+            /** Format: date-time */
+            created_at: string;
+            text: string;
+        };
+        /**
+         * @description Role-specific dashboard payload. The `role` property discriminates which concrete
+         *     shape is returned, following the caller's highest role (admin > director > trainer > trainee).
+         */
+        Dashboard: components["schemas"]["AdminDashboard"] | components["schemas"]["DirectorDashboard"] | components["schemas"]["TrainerDashboard"] | components["schemas"]["TraineeDashboard"];
+        /** @description Club-wide aggregates shown to administrators. */
+        AdminDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "admin";
+            total_members: number;
+            total_sports: number;
+            total_teams: number;
+            total_directors: number;
+            total_trainers: number;
+            total_balance_cents: number;
+            events_this_week: number;
+        };
+        /** @description Aggregates for the sport a director manages. */
+        DirectorDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "director";
+            sport: components["schemas"]["Reference"];
+            total_teams: number;
+            total_members: number;
+            sport_balance_cents: number;
+            upcoming_events: number;
+            teams: components["schemas"]["TeamBalanceSummary"][];
+        };
+        /** @description Per-team rollup of trainee count and aggregate balance. */
+        TeamBalanceSummary: {
+            team: components["schemas"]["Reference"];
+            member_count: number;
+            balance_cents: number;
+        };
+        /** @description Aggregates for the team a trainer manages, including feedback they authored. */
+        TrainerDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "trainer";
+            team: components["schemas"]["Reference"];
+            total_members: number;
+            upcoming_events: number;
+            recent_feedback: components["schemas"]["FeedbackSummary"][];
+        };
+        /** @description Personal aggregates shown to a trainee/member. */
+        TraineeDashboard: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "trainee";
+            balance_cents: number;
+            next_event: components["schemas"]["EventSummary"] | null;
+            upcoming_events: number;
+            recent_feedback: components["schemas"]["FeedbackSummary"][];
+            recent_reports: components["schemas"]["MemberReportSummary"][];
+        };
         /** @description The object representation of a Sport within the organization. */
         Sport: {
+            /** Format: uuid */
+            id: string;
             name: string;
             description: string;
             /** Format: date */
             created_at: string;
-            directors: string[];
+            directors: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for creating a new Sport. */
         SportCreate: {
@@ -536,15 +758,19 @@ export interface components {
             /** Format: date */
             created_at: string;
             address: string;
-            sport: string;
-            trainers: string[];
-            trainees: string[];
+            sport: components["schemas"]["Reference"];
+            trainers: components["schemas"]["Reference"][];
+            trainees: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for creating a new Team. */
         TeamCreate: {
             name: string;
             description?: string;
             address?: string;
+            /**
+             * Format: uuid
+             * @description ID of the sport this team belongs to.
+             */
             sport: string;
             trainers?: string[];
             trainees?: string[];
@@ -554,6 +780,10 @@ export interface components {
             name?: string;
             description?: string;
             address?: string;
+            /**
+             * Format: uuid
+             * @description ID of the sport this team belongs to.
+             */
             sport?: string;
             trainers?: string[];
             trainees?: string[];
@@ -605,6 +835,26 @@ export interface components {
             address?: string;
             information?: string;
         };
+        /** @description Request body for generating a personalized mass-letter PDF for the caller's receivers. */
+        PdfRequest: {
+            /**
+             * @description HTML letter body. Supports per-receiver placeholder tokens (see the operation
+             *     description); each token is replaced with that receiver's data. One personalized letter
+             *     — a name and address layout block followed by the substituted template — is rendered per
+             *     receiver and concatenated into a single PDF.
+             */
+            template: string;
+        };
+        /** @description Request body for sending a personalized mass email to the caller's receivers. */
+        MailRequest: {
+            /** @description Subject line of the email. */
+            subject: string;
+            /**
+             * @description HTML email body. Supports per-receiver placeholder tokens (see the operation
+             *     description); each token is replaced with that receiver's data before the email is sent.
+             */
+            template: string;
+        };
         /** @description The object representation of an Event (e.g., a training session or a match). */
         Event: {
             /** Format: uuid */
@@ -615,12 +865,12 @@ export interface components {
             start_time: string;
             /** Format: date-time */
             end_time: string;
-            attendees?: string[];
-            /** @description Names of the sports associated with this event. */
-            sports_linked?: string[];
-            /** @description IDs of the teams associated with this event. */
-            teams_linked?: string[];
-            creator: string;
+            attendees?: components["schemas"]["Reference"][];
+            /** @description Sports associated with this event. */
+            sports_linked?: components["schemas"]["Reference"][];
+            /** @description Teams associated with this event. */
+            teams_linked?: components["schemas"]["Reference"][];
+            creator: components["schemas"]["Reference"] | null;
         };
         /** @description A simplified representation of a Event, typically used in list views. */
         EventSummary: {
@@ -631,6 +881,7 @@ export interface components {
             start_time: string;
             /** Format: date-time */
             end_time: string;
+            attendees?: components["schemas"]["Reference"][];
         };
         /** @description Data transfer object for partially updating an existing Event (PATCH operation). */
         EventPartialUpdate: {
@@ -641,6 +892,7 @@ export interface components {
             /** Format: date-time */
             end_time?: string;
             attendees?: string[];
+            /** @description IDs of the sports associated with this event. */
             sports_linked?: string[];
             teams_linked?: string[];
         };
@@ -653,6 +905,7 @@ export interface components {
             /** Format: date-time */
             end_time: string;
             attendees?: string[];
+            /** @description IDs of the sports associated with this event. */
             sports_linked?: string[];
             teams_linked?: string[];
         };
@@ -660,41 +913,49 @@ export interface components {
         Feedback: {
             /** Format: uuid */
             id: string;
-            event: string;
-            member: string;
-            creator: string;
+            event: components["schemas"]["Reference"];
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             /** Format: date-time */
             created_at: string;
             feedback: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description A simplified representation of a Feedback, typically used in list views. */
         FeedbackSummary: {
             /** Format: uuid */
             id: string;
-            event: string;
-            member: string;
-            creator: string;
+            event: components["schemas"]["Reference"];
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             /** Format: date-time */
             created_at: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description Data transfer object for partially updating an existing Feedback (PATCH operation). */
         FeedbackPartialUpdate: {
             event?: string;
             member?: string;
             feedback?: string;
+            /** Format: int32 */
+            rating?: number;
         };
         /** @description Data transfer object for creating a new Feedback. */
         FeedbackCreate: {
             event: string;
             member: string;
             feedback: string;
+            /** Format: int32 */
+            rating: number;
         };
         /** @description The object representation of a Transaction, which includes details such as the member, creator, amount, and timestamps. */
         Transaction: {
             /** Format: uuid */
             id: string;
-            member: string;
-            creator: string;
+            member: components["schemas"]["Reference"];
+            creator: components["schemas"]["Reference"] | null;
             amount_cents: number;
             /** Format: date-time */
             created_at: string;
@@ -717,7 +978,7 @@ export interface components {
         };
         /** @description The object representation of a Member's Balance, which includes the total balance in cents. */
         Balance: {
-            member: string;
+            member: components["schemas"]["Reference"];
             balance_cents: number;
         };
     };
@@ -785,12 +1046,13 @@ export interface components {
         };
     };
     parameters: {
-        sport_name: string;
+        sport_id: string;
         team_id: string;
         member_id: string;
         event_id: string;
         feedback_id: string;
         transaction_id: string;
+        report_id: string;
     };
     requestBodies: never;
     headers: never;
@@ -856,7 +1118,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };
@@ -882,7 +1144,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };
@@ -906,7 +1168,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                sport_name: components["parameters"]["sport_name"];
+                sport_id: components["parameters"]["sport_id"];
             };
             cookie?: never;
         };
@@ -1118,6 +1380,29 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -1664,10 +1949,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The request body for sending mail. It will be used in the email content. It must be a valid HTML string using the template format with placeholders for dynamic content. */
+        /** @description The subject and HTML template for the personalized mass email. */
         requestBody: {
             content: {
-                "text/html": string;
+                "application/json": components["schemas"]["MailRequest"];
             };
         };
         responses: {
@@ -1685,10 +1970,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The request body for generating a pdf from a template. It must be a valid HTML string using the template format with placeholders for dynamic content. */
+        /** @description The HTML template for the personalized mass-letter PDF. */
         requestBody: {
             content: {
-                "text/html": string;
+                "application/json": components["schemas"]["PdfRequest"];
             };
         };
         responses: {
@@ -1707,7 +1992,7 @@ export interface operations {
             500: components["responses"]["InternalServerError"];
         };
     };
-    generateReport: {
+    listMemberReports: {
         parameters: {
             query?: never;
             header?: never;
@@ -1724,11 +2009,126 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": string;
+                    "application/json": components["schemas"]["MemberReportSummary"][];
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    generateMemberReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                member_id: components["parameters"]["member_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was accepted and report generation has been started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    listTeamReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: components["parameters"]["team_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReportSummary"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    generateTeamReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: components["parameters"]["team_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was accepted and report generation has been started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: components["parameters"]["report_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request was successful, and the server has returned the requested resource in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    deleteReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: components["parameters"]["report_id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: components["responses"]["NoContent"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
         };
     };

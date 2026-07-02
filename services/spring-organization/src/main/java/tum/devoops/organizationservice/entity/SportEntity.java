@@ -2,9 +2,12 @@ package tum.devoops.organizationservice.entity;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
@@ -19,7 +22,11 @@ import lombok.Setter;
 public class SportEntity {
 
     @Id
-    @Column(name = "name", nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
+
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -30,6 +37,6 @@ public class SportEntity {
 
     // Each Director row links this sport to a member (director role).
     @OneToMany
-    @JoinColumn(name = "sport_name", referencedColumnName = "name", insertable = false, updatable = false)
+    @JoinColumn(name = "sport_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<DirectorEntity> directors;
 }

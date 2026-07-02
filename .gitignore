@@ -2,3 +2,4 @@ settings.json
 AGENTS.md
 debug.log
 web-client/.env.development
+services/spring-letter/.env

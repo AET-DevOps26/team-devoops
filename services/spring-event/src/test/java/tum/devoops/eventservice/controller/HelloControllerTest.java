@@ -1,4 +1,4 @@
-package tum.devoops.eventservice;
+package tum.devoops.eventservice.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,20 +23,20 @@ class HelloControllerTest {
     @Test
     @WithMockUser
     void helloReturnsExpectedMessage() throws Exception {
-        mockMvc.perform(get("/hello"))
+        mockMvc.perform(get("/events/hello"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello world from event-service!"));
     }
 
     @Test
     void helloRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/hello"))
+        mockMvc.perform(get("/events/hello"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void helloWithValidJwtReturns200() throws Exception {
-        mockMvc.perform(get("/hello").with(jwt()))
+        mockMvc.perform(get("/events/hello").with(jwt()))
                 .andExpect(status().isOk());
     }
 

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -31,13 +32,13 @@ public class TeamCreate {
 
   private @Nullable String address;
 
-  private String sport;
+  private UUID sport;
 
   @Valid
-  private List<String> trainers = new ArrayList<>();
+  private @Nullable List<String> trainers;
 
   @Valid
-  private List<String> trainees = new ArrayList<>();
+  private @Nullable List<String> trainees;
 
   public TeamCreate() {
     super();
@@ -46,7 +47,7 @@ public class TeamCreate {
   /**
    * Constructor with only required parameters
    */
-  public TeamCreate(String name, String sport) {
+  public TeamCreate(String name, UUID sport) {
     this.name = name;
     this.sport = sport;
   }
@@ -111,27 +112,27 @@ public class TeamCreate {
     this.address = address;
   }
 
-  public TeamCreate sport(String sport) {
+  public TeamCreate sport(UUID sport) {
     this.sport = sport;
     return this;
   }
 
   /**
-   * Get sport
+   * ID of the sport this team belongs to.
    * @return sport
    */
-  @NotNull 
-  @Schema(name = "sport", requiredMode = Schema.RequiredMode.REQUIRED)
+  @NotNull @Valid 
+  @Schema(name = "sport", description = "ID of the sport this team belongs to.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("sport")
-  public String getSport() {
+  public UUID getSport() {
     return sport;
   }
 
-  public void setSport(String sport) {
+  public void setSport(UUID sport) {
     this.sport = sport;
   }
 
-  public TeamCreate trainers(List<String> trainers) {
+  public TeamCreate trainers(@Nullable List<String> trainers) {
     this.trainers = trainers;
     return this;
   }
@@ -151,15 +152,15 @@ public class TeamCreate {
   
   @Schema(name = "trainers", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("trainers")
-  public List<String> getTrainers() {
+  public @Nullable List<String> getTrainers() {
     return trainers;
   }
 
-  public void setTrainers(List<String> trainers) {
+  public void setTrainers(@Nullable List<String> trainers) {
     this.trainers = trainers;
   }
 
-  public TeamCreate trainees(List<String> trainees) {
+  public TeamCreate trainees(@Nullable List<String> trainees) {
     this.trainees = trainees;
     return this;
   }
@@ -179,11 +180,11 @@ public class TeamCreate {
   
   @Schema(name = "trainees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("trainees")
-  public List<String> getTrainees() {
+  public @Nullable List<String> getTrainees() {
     return trainees;
   }
 
-  public void setTrainees(List<String> trainees) {
+  public void setTrainees(@Nullable List<String> trainees) {
     this.trainees = trainees;
   }
 

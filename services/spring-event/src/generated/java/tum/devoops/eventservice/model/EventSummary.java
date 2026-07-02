@@ -5,9 +5,13 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.eventservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -34,6 +38,9 @@ public class EventSummary {
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime endTime;
+
+  @Valid
+  private @Nullable List<@Valid Reference> attendees;
 
   public EventSummary() {
     super();
@@ -129,6 +136,34 @@ public class EventSummary {
     this.endTime = endTime;
   }
 
+  public EventSummary attendees(@Nullable List<@Valid Reference> attendees) {
+    this.attendees = attendees;
+    return this;
+  }
+
+  public EventSummary addAttendeesItem(Reference attendeesItem) {
+    if (this.attendees == null) {
+      this.attendees = new ArrayList<>();
+    }
+    this.attendees.add(attendeesItem);
+    return this;
+  }
+
+  /**
+   * Get attendees
+   * @return attendees
+   */
+  @Valid 
+  @Schema(name = "attendees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("attendees")
+  public @Nullable List<@Valid Reference> getAttendees() {
+    return attendees;
+  }
+
+  public void setAttendees(@Nullable List<@Valid Reference> attendees) {
+    this.attendees = attendees;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -141,12 +176,13 @@ public class EventSummary {
     return Objects.equals(this.id, eventSummary.id) &&
         Objects.equals(this.name, eventSummary.name) &&
         Objects.equals(this.startTime, eventSummary.startTime) &&
-        Objects.equals(this.endTime, eventSummary.endTime);
+        Objects.equals(this.endTime, eventSummary.endTime) &&
+        Objects.equals(this.attendees, eventSummary.attendees);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, name, startTime, endTime);
+    return Objects.hash(id, name, startTime, endTime, attendees);
   }
 
   @Override
@@ -157,6 +193,7 @@ public class EventSummary {
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    startTime: ").append(toIndentedString(startTime)).append("\n");
     sb.append("    endTime: ").append(toIndentedString(endTime)).append("\n");
+    sb.append("    attendees: ").append(toIndentedString(attendees)).append("\n");
     sb.append("}");
     return sb.toString();
   }

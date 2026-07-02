@@ -9,6 +9,6 @@ import tum.devoops.organizationservice.entity.TeamEntity;
 
 public interface TeamRepository extends JpaRepository<TeamEntity, UUID> {
 
-    // SELECT * FROM organization.teams WHERE sport_name = ?
-    List<TeamEntity> findAllBySportName(String sportName);
+    // SELECT * FROM organization.teams WHERE sport_id = ?
+    List<TeamEntity> findAllBySportId(UUID sportId);
 }

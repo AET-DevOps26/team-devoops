@@ -2,3 +2,5 @@ tum/devoops/letterservice/api/ApiUtil.java
 tum/devoops/letterservice/api/LettersApi.java
 tum/devoops/letterservice/model/BadRequestResponse.java
 tum/devoops/letterservice/model/ErrorResponse.java
+tum/devoops/letterservice/model/MailRequest.java
+tum/devoops/letterservice/model/PdfRequest.java

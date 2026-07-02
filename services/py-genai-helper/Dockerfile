@@ -2,8 +2,8 @@
 FROM python:3.12.9-alpine3.21 AS builder
 WORKDIR /code
 
-# Installs gcc and other dependencies
-RUN apk add --no-cache gcc musl-dev linux-headers
+# Installs gcc and other dependencies (postgresql-dev provides libpq + pg_config for psycopg2)
+RUN apk add --no-cache gcc musl-dev linux-headers postgresql-dev
 
 # Install dependencies
 COPY requirements.txt requirements.txt
@@ -12,6 +12,9 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # Stage 2: run
 FROM python:3.12.9-alpine3.21
 WORKDIR /code
+
+# Runtime shared library for psycopg2 (libpq)
+RUN apk add --no-cache libpq
 
 # Copy installed python packages from builder stage
 COPY --from=builder /install /usr/local

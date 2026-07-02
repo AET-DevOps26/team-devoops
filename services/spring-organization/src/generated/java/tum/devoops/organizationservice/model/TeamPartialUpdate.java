@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -31,13 +32,13 @@ public class TeamPartialUpdate {
 
   private @Nullable String address;
 
-  private @Nullable String sport;
+  private @Nullable UUID sport;
 
   @Valid
-  private List<String> trainers = new ArrayList<>();
+  private @Nullable List<String> trainers;
 
   @Valid
-  private List<String> trainees = new ArrayList<>();
+  private @Nullable List<String> trainees;
 
   public TeamPartialUpdate name(@Nullable String name) {
     this.name = name;
@@ -99,27 +100,27 @@ public class TeamPartialUpdate {
     this.address = address;
   }
 
-  public TeamPartialUpdate sport(@Nullable String sport) {
+  public TeamPartialUpdate sport(@Nullable UUID sport) {
     this.sport = sport;
     return this;
   }
 
   /**
-   * Get sport
+   * ID of the sport this team belongs to.
    * @return sport
    */
-  
-  @Schema(name = "sport", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Valid 
+  @Schema(name = "sport", description = "ID of the sport this team belongs to.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sport")
-  public @Nullable String getSport() {
+  public @Nullable UUID getSport() {
     return sport;
   }
 
-  public void setSport(@Nullable String sport) {
+  public void setSport(@Nullable UUID sport) {
     this.sport = sport;
   }
 
-  public TeamPartialUpdate trainers(List<String> trainers) {
+  public TeamPartialUpdate trainers(@Nullable List<String> trainers) {
     this.trainers = trainers;
     return this;
   }
@@ -139,15 +140,15 @@ public class TeamPartialUpdate {
   
   @Schema(name = "trainers", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("trainers")
-  public List<String> getTrainers() {
+  public @Nullable List<String> getTrainers() {
     return trainers;
   }
 
-  public void setTrainers(List<String> trainers) {
+  public void setTrainers(@Nullable List<String> trainers) {
     this.trainers = trainers;
   }
 
-  public TeamPartialUpdate trainees(List<String> trainees) {
+  public TeamPartialUpdate trainees(@Nullable List<String> trainees) {
     this.trainees = trainees;
     return this;
   }
@@ -167,11 +168,11 @@ public class TeamPartialUpdate {
   
   @Schema(name = "trainees", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("trainees")
-  public List<String> getTrainees() {
+  public @Nullable List<String> getTrainees() {
     return trainees;
   }
 
-  public void setTrainees(List<String> trainees) {
+  public void setTrainees(@Nullable List<String> trainees) {
     this.trainees = trainees;
   }
 

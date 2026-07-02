@@ -30,7 +30,7 @@ public class SportPartialUpdate {
   private @Nullable String description;
 
   @Valid
-  private List<String> directors = new ArrayList<>();
+  private @Nullable List<String> directors;
 
   public SportPartialUpdate name(@Nullable String name) {
     this.name = name;
@@ -72,7 +72,7 @@ public class SportPartialUpdate {
     this.description = description;
   }
 
-  public SportPartialUpdate directors(List<String> directors) {
+  public SportPartialUpdate directors(@Nullable List<String> directors) {
     this.directors = directors;
     return this;
   }
@@ -92,11 +92,11 @@ public class SportPartialUpdate {
   
   @Schema(name = "directors", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("directors")
-  public List<String> getDirectors() {
+  public @Nullable List<String> getDirectors() {
     return directors;
   }
 
-  public void setDirectors(List<String> directors) {
+  public void setDirectors(@Nullable List<String> directors) {
     this.directors = directors;
   }
 

@@ -6,3 +6,4 @@ tum/devoops/eventservice/model/Event.java
 tum/devoops/eventservice/model/EventCreate.java
 tum/devoops/eventservice/model/EventPartialUpdate.java
 tum/devoops/eventservice/model/EventSummary.java
+tum/devoops/eventservice/model/Reference.java

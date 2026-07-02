@@ -1,4 +1,4 @@
-package tum.devoops.memberservice;
+package tum.devoops.memberservice.service;
 
 import java.util.List;
 import java.util.Map;

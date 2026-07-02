@@ -12,8 +12,8 @@ public interface SportEventRepository extends JpaRepository<SportEventEntity, Sp
     // SELECT * FROM event.sport_events WHERE event_id = ?
     List<SportEventEntity> findAllById_EventId(UUID eventId);
 
-    // SELECT * FROM event.sport_events WHERE sport_name = ?
-    List<SportEventEntity> findAllById_SportName(String sportName);
+    // SELECT * FROM event.sport_events WHERE sport_id = ?
+    List<SportEventEntity> findAllById_SportId(UUID sportId);
 
     // DELETE FROM event.sport_events WHERE event_id = ?
     void deleteAllById_EventId(UUID eventId);

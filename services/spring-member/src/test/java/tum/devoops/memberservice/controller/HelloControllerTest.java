@@ -1,4 +1,4 @@
-package tum.devoops.memberservice;
+package tum.devoops.memberservice.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ class HelloControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void helloReturnsExpectedMessage() throws Exception {
-        mockMvc.perform(get("/hello"))
+        mockMvc.perform(get("/members/hello"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello world from member-service!"));
     }
@@ -32,7 +32,7 @@ class HelloControllerTest {
     @Test
     @WithMockUser(roles = "admin")
     void helloAdminReturnsExpectedMessage() throws Exception {
-        mockMvc.perform(get("/helloAdmin"))
+        mockMvc.perform(get("/members/helloAdmin"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello world to admin from member-service!"));
     }
@@ -40,13 +40,13 @@ class HelloControllerTest {
     @Test
     @WithMockUser(roles = "member")
     void helloAdminForbiddenForMember() throws Exception {
-        mockMvc.perform(get("/helloAdmin"))
+        mockMvc.perform(get("/members/helloAdmin"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void helloWithJwtMemberRoleReturns200() throws Exception {
-        mockMvc.perform(get("/hello")
+        mockMvc.perform(get("/members/hello")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_member"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello world from member-service!"));
@@ -54,7 +54,7 @@ class HelloControllerTest {
 
     @Test
     void helloAdminWithJwtAdminRoleReturns200() throws Exception {
-        mockMvc.perform(get("/helloAdmin")
+        mockMvc.perform(get("/members/helloAdmin")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello world to admin from member-service!"));
@@ -62,7 +62,7 @@ class HelloControllerTest {
 
     @Test
     void helloAdminWithJwtMemberRoleReturns403() throws Exception {
-        mockMvc.perform(get("/helloAdmin")
+        mockMvc.perform(get("/members/helloAdmin")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_member"))))
                 .andExpect(status().isForbidden());
     }

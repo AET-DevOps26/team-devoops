@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import tum.devoops.feedbackservice.model.Reference;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -27,16 +28,18 @@ public class Feedback {
 
   private UUID id;
 
-  private String event;
+  private Reference event;
 
-  private String member;
+  private Reference member;
 
-  private String creator;
+  private Reference creator = null;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;
 
   private String feedback;
+
+  private Integer rating;
 
   public Feedback() {
     super();
@@ -45,13 +48,14 @@ public class Feedback {
   /**
    * Constructor with only required parameters
    */
-  public Feedback(UUID id, String event, String member, String creator, OffsetDateTime createdAt, String feedback) {
+  public Feedback(UUID id, Reference event, Reference member, Reference creator, OffsetDateTime createdAt, String feedback, Integer rating) {
     this.id = id;
     this.event = event;
     this.member = member;
     this.creator = creator;
     this.createdAt = createdAt;
     this.feedback = feedback;
+    this.rating = rating;
   }
 
   public Feedback id(UUID id) {
@@ -74,7 +78,7 @@ public class Feedback {
     this.id = id;
   }
 
-  public Feedback event(String event) {
+  public Feedback event(Reference event) {
     this.event = event;
     return this;
   }
@@ -83,18 +87,18 @@ public class Feedback {
    * Get event
    * @return event
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "event", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("event")
-  public String getEvent() {
+  public Reference getEvent() {
     return event;
   }
 
-  public void setEvent(String event) {
+  public void setEvent(Reference event) {
     this.event = event;
   }
 
-  public Feedback member(String member) {
+  public Feedback member(Reference member) {
     this.member = member;
     return this;
   }
@@ -103,18 +107,18 @@ public class Feedback {
    * Get member
    * @return member
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "member", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("member")
-  public String getMember() {
+  public Reference getMember() {
     return member;
   }
 
-  public void setMember(String member) {
+  public void setMember(Reference member) {
     this.member = member;
   }
 
-  public Feedback creator(String creator) {
+  public Feedback creator(Reference creator) {
     this.creator = creator;
     return this;
   }
@@ -123,14 +127,14 @@ public class Feedback {
    * Get creator
    * @return creator
    */
-  @NotNull 
+  @NotNull @Valid 
   @Schema(name = "creator", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("creator")
-  public String getCreator() {
+  public Reference getCreator() {
     return creator;
   }
 
-  public void setCreator(String creator) {
+  public void setCreator(Reference creator) {
     this.creator = creator;
   }
 
@@ -174,6 +178,28 @@ public class Feedback {
     this.feedback = feedback;
   }
 
+  public Feedback rating(Integer rating) {
+    this.rating = rating;
+    return this;
+  }
+
+  /**
+   * Get rating
+   * minimum: 0
+   * maximum: 10
+   * @return rating
+   */
+  @NotNull @Min(0) @Max(10) 
+  @Schema(name = "rating", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("rating")
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -188,12 +214,13 @@ public class Feedback {
         Objects.equals(this.member, feedback.member) &&
         Objects.equals(this.creator, feedback.creator) &&
         Objects.equals(this.createdAt, feedback.createdAt) &&
-        Objects.equals(this.feedback, feedback.feedback);
+        Objects.equals(this.feedback, feedback.feedback) &&
+        Objects.equals(this.rating, feedback.rating);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, event, member, creator, createdAt, feedback);
+    return Objects.hash(id, event, member, creator, createdAt, feedback, rating);
   }
 
   @Override
@@ -206,6 +233,7 @@ public class Feedback {
     sb.append("    creator: ").append(toIndentedString(creator)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("    feedback: ").append(toIndentedString(feedback)).append("\n");
+    sb.append("    rating: ").append(toIndentedString(rating)).append("\n");
     sb.append("}");
     return sb.toString();
   }
