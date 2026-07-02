@@ -12,7 +12,7 @@ terraform {
   # Bootstrap (run once, manually) — see infra/README or commit history for details.
   backend "azurerm" {
     resource_group_name  = "rg-team-devoops-tfstate"
-    storage_account_name = "stteamdevoopstfstate"
+    storage_account_name = "stdevoops26tfstate"
     container_name       = "tfstate"
     key                  = "team-devoops.tfstate"
     use_oidc             = true

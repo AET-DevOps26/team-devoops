@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "uaenorth"
+  default     = "germanywestcentral"
 }
 
 variable "vm_size" {
