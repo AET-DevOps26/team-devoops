@@ -32,6 +32,19 @@ def health():
     return {"status": "ok"}, 200
 
 
+def _parse_bool(value):
+    """Parse a JSON bool or "true"/"false" string; None means unparseable."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.lower()
+        if lowered == "true":
+            return True
+        if lowered == "false":
+            return False
+    return None
+
+
 @app.route("/rag-response", methods=["POST"])
 @require_auth
 def rag_response():
@@ -42,7 +55,15 @@ def rag_response():
     if not question:
         return {"error": "Missing required field: 'question'"}, 400
 
-    response = generate_rag_response(question)
+    # Optional per-request provider switch: true forces the local Ollama model, false forces
+    # OpenAI. Absent means the env-configured LLM_PROVIDER decides.
+    use_local = data.get("uselocal")
+    if use_local is not None:
+        use_local = _parse_bool(use_local)
+        if use_local is None:
+            return {"error": "Invalid value for 'uselocal': expected true or false"}, 400
+
+    response = generate_rag_response(question, use_local)
     return {"response": response}, 200
 
 

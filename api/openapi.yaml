@@ -1299,6 +1299,40 @@ paths:
         - $ref: "#/components/parameters/report_id"
       security:
         - BearerJwt: []
+  /helper/rag-response:
+    post:
+      operationId: generateRagResponse
+      tags:
+        - helper
+      summary: Generate RAG response
+      description: |
+        Answers a question using retrieval-augmented generation over the helper's PDF knowledge
+        base. The optional `uselocal` flag switches the chat model for this request: `true` forces
+        the local Ollama model, `false` forces OpenAI. When omitted, the service's configured
+        default provider is used.
+      responses:
+        "200":
+          description: The request was successful, and the server has returned the
+            generated answer in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RagResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: The request body containing the question to answer.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RagRequest"
 components:
   responses:
     InternalServerError:
@@ -1897,6 +1931,29 @@ components:
         - subject
         - template
       description: Request body for sending a personalized mass email to the caller's receivers.
+    RagRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          description: The question to answer from the PDF knowledge base.
+        uselocal:
+          type: boolean
+          description: |
+            Optional per-request model switch: `true` forces the local Ollama model, `false`
+            forces OpenAI. When omitted, the service's configured default provider is used.
+      required:
+        - question
+      description: Request body for generating a retrieval-augmented answer.
+    RagResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          description: The generated answer.
+      required:
+        - response
+      description: Response body containing the generated retrieval-augmented answer.
     Event:
       type: object
       properties:

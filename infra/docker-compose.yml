@@ -1,6 +1,18 @@
 name: team-devoops
 
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./ollama/entrypoint_ollama.sh:/entrypoint_ollama.sh
+    networks:
+      - ollama
+    entrypoint: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
+
   py-genai-helper:
     build: ../services/py-genai-helper/
     container_name: py-genai-helper
@@ -10,12 +22,16 @@ services:
     depends_on:
       app-database:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       - KEYCLOAK_ISSUER_URL=https://team-devoops.uaenorth.cloudapp.azure.com/auth/realms/devops
       - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=reports_user
       - SPRING_DATASOURCE_PASSWORD=reports_password
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
     expose:
       - 5000
     labels:
@@ -30,6 +46,7 @@ services:
     networks:
       - proxy
       - data
+      - ollama
 
   organization-service:
     build: ../services/spring-organization
@@ -390,6 +407,7 @@ volumes:
   app_db_data:
   keycloak_db_data:
   letsencrypt:
+  ollama_data:
 
 networks:
   proxy:
@@ -398,3 +416,5 @@ networks:
     name: data
   keycloak:
     name: keycloak
+  ollama:
+    name: ollama

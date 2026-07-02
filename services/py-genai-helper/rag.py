@@ -5,12 +5,13 @@ from langchain.agents import create_agent
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from llm import get_chat_model, get_embeddings
 
 load_dotenv()
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+embeddings = get_embeddings()
 
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
@@ -32,7 +33,7 @@ def _load_pdfs() -> FAISS | None:
 vector_store = _load_pdfs()
 
 
-def get_rag_agent():
+def get_rag_agent(use_local: bool | None = None):
     if vector_store is None:
         raise RuntimeError("No PDFs found in file-storage/")
 
@@ -45,7 +46,7 @@ def get_rag_agent():
     )
 
     rag_agent = create_agent(
-        model="gpt-4.1-mini",
+        model=get_chat_model(use_local),
         tools=[retriever_tool],
         system_prompt=(
             "You are a helpful assistant."

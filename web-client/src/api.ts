@@ -15,6 +15,7 @@ export interface paths {
          * Get all sports
          * @description Returns a list of all sports registered in the organization.
          *     - All authenticated users: can access this endpoint.
+         *
          */
         get: operations["getAllSports"];
         put?: never;
@@ -22,6 +23,7 @@ export interface paths {
          * Create sport
          * @description Creates a new sport in the organization.
          *     - Admins: can create sports.
+         *
          */
         post: operations["createSport"];
         delete?: never;
@@ -41,6 +43,7 @@ export interface paths {
          * Get sport
          * @description Returns the details of a specific sport.
          *     - All authenticated users: can access this endpoint.
+         *
          */
         get: operations["getSport"];
         put?: never;
@@ -49,6 +52,7 @@ export interface paths {
          * Delete sport
          * @description Deletes a sport from the organization.
          *     - Admins: can delete sports.
+         *
          */
         delete: operations["deleteSport"];
         options?: never;
@@ -58,6 +62,7 @@ export interface paths {
          * @description Partially updates an existing sport's details.
          *     - Directors: can update all fields except directors.
          *     - Admins: can update all fields.
+         *
          */
         patch: operations["updateSport"];
         trace?: never;
@@ -73,6 +78,7 @@ export interface paths {
          * Get all teams
          * @description Returns a list of all teams in the organization.
          *     - All authenticated users: can access this endpoint.
+         *
          */
         get: operations["getAllTeams"];
         put?: never;
@@ -81,6 +87,7 @@ export interface paths {
          * @description Creates a new team in the organization.
          *     - Directors: can create teams for their own sport.
          *     - Admins: can create teams for any sport.
+         *
          */
         post: operations["createTeam"];
         delete?: never;
@@ -100,6 +107,7 @@ export interface paths {
          * Get team
          * @description Returns the details of a specific team.
          *     - All authenticated users: can access this endpoint.
+         *
          */
         get: operations["getTeam"];
         put?: never;
@@ -109,6 +117,7 @@ export interface paths {
          * @description Deletes a team from the organization.
          *     - Directors: can delete teams in their sport.
          *     - Admins: can delete any team.
+         *
          */
         delete: operations["deleteTeam"];
         options?: never;
@@ -119,6 +128,7 @@ export interface paths {
          *     - Trainers: can update all fields except sport and trainers.
          *     - Directors: can update all fields except sport.
          *     - Admins: can update all fields.
+         *
          */
         patch: operations["updateTeam"];
         trace?: never;
@@ -134,6 +144,7 @@ export interface paths {
          * Get all members
          * @description Returns a list of all members in the organization.
          *     - All authenticated users: can access this endpoint.
+         *
          */
         get: operations["getAllMembers"];
         put?: never;
@@ -141,6 +152,7 @@ export interface paths {
          * Create member
          * @description Creates a new member in the organization. Includes a password field for setting initial credentials.
          *     - Admins: can create members.
+         *
          */
         post: operations["createMember"];
         delete?: never;
@@ -162,6 +174,7 @@ export interface paths {
          *     (admin > director > trainer > trainee). The `role` field discriminates the
          *     concrete shape of the response.
          *     - All authenticated users: can access their own dashboard.
+         *
          */
         get: operations["getDashboard"];
         put?: never;
@@ -187,6 +200,7 @@ export interface paths {
          *     - Trainers: can view details of members in their team.
          *     - Directors: can view details of members in their sport.
          *     - Admins: can view any member's details.
+         *
          */
         get: operations["getMemberDetails"];
         put?: never;
@@ -195,6 +209,7 @@ export interface paths {
          * Delete member
          * @description Deletes a member from the organization.
          *     - Admins: can delete members.
+         *
          */
         delete: operations["deleteMember"];
         options?: never;
@@ -204,6 +219,7 @@ export interface paths {
          * @description Partially updates the details of a specific member.
          *     - Members themselves: can update their own details.
          *     - Admins: can update any member's details.
+         *
          */
         patch: operations["updateMemberDetails"];
         trace?: never;
@@ -221,6 +237,7 @@ export interface paths {
          *     - All authenticated users: can see events linked to their team or sport, or events where they are an attendee.
          *     - Creators: can see all events they created.
          *     - Admins: can see all events.
+         *
          */
         get: operations["getAllEvents"];
         put?: never;
@@ -230,6 +247,7 @@ export interface paths {
          *     - Directors: can create events for their sport.
          *     - Trainers: can create events for their team.
          *     - Admins: can create any event.
+         *
          */
         post: operations["createEvent"];
         delete?: never;
@@ -251,6 +269,7 @@ export interface paths {
          *     - All authenticated users: can access events linked to their team or sport, or events where they are an attendee.
          *     - Creators: can view events they created.
          *     - Admins: can view any event.
+         *
          */
         get: operations["getEventDetails"];
         put?: never;
@@ -261,6 +280,7 @@ export interface paths {
          *     - Creators: can delete events they created.
          *     - Directors: can delete events linked to their sport.
          *     - Admins: can delete any event.
+         *
          */
         delete: operations["deleteEvent"];
         options?: never;
@@ -271,6 +291,7 @@ export interface paths {
          *     - Creators: can update events they created.
          *     - Directors: can update events linked to their sport.
          *     - Admins: can update any event.
+         *
          */
         patch: operations["updateEventDetails"];
         trace?: never;
@@ -288,6 +309,7 @@ export interface paths {
          *     - Creators: can see feedback they submitted.
          *     - Members: can see feedback about themselves.
          *     - Admins: can see all feedback.
+         *
          */
         get: operations["getAllFeedback"];
         put?: never;
@@ -296,6 +318,7 @@ export interface paths {
          * @description Creates a new feedback entry for a member.
          *     - Trainers: can create feedback for their trainees.
          *     - Admins: can create feedback for any member.
+         *
          */
         post: operations["createFeedback"];
         delete?: never;
@@ -317,6 +340,7 @@ export interface paths {
          *     - Creators: can view feedback they submitted.
          *     - Members: can view feedback about themselves.
          *     - Admins: can view any feedback.
+         *
          */
         get: operations["getFeedbackDetails"];
         put?: never;
@@ -326,6 +350,7 @@ export interface paths {
          * @description Deletes a specific feedback entry.
          *     - Creators: can delete feedback they submitted.
          *     - Admins: can delete any feedback.
+         *
          */
         delete: operations["deleteFeedback"];
         options?: never;
@@ -335,6 +360,7 @@ export interface paths {
          * @description Partially updates a specific feedback entry.
          *     - Creators: can update feedback they submitted.
          *     - Admins: can update any feedback.
+         *
          */
         patch: operations["updateFeedbackDetails"];
         trace?: never;
@@ -351,6 +377,7 @@ export interface paths {
          * @description Returns a list of all member balances.
          *     - Directors: can view balances of members in their sport.
          *     - Admins: can view all balances.
+         *
          */
         get: operations["getAllBalances"];
         put?: never;
@@ -374,6 +401,7 @@ export interface paths {
          *     - Members themselves: can view their own balance.
          *     - Directors: can view balances of members in their sport.
          *     - Admins: can view any member's balance.
+         *
          */
         get: operations["getMemberBalance"];
         put?: never;
@@ -398,6 +426,7 @@ export interface paths {
          *     - Creators: can see transactions they created.
          *     - Directors: can see transactions for members in their sport.
          *     - Admins: can see all transactions.
+         *
          */
         get: operations["getAllTransactions"];
         put?: never;
@@ -406,6 +435,7 @@ export interface paths {
          * @description Creates a new financial transaction for a member.
          *     - Directors: can create transactions for members in their sport.
          *     - Admins: can create transactions for any member.
+         *
          */
         post: operations["createTransaction"];
         delete?: never;
@@ -428,6 +458,7 @@ export interface paths {
          *     - Creators: can view transactions they created.
          *     - Directors: can view transactions for members in their sport.
          *     - Admins: can view any transaction.
+         *
          */
         get: operations["getTransaction"];
         put?: never;
@@ -437,6 +468,7 @@ export interface paths {
          * @description Deletes a specific transaction.
          *     - Creators: can delete transactions they created.
          *     - Admins: can delete any transaction.
+         *
          */
         delete: operations["deleteTransaction"];
         options?: never;
@@ -446,6 +478,7 @@ export interface paths {
          * @description Partially updates a specific transaction. The member field can only be changed by admins.
          *     - Creators: can update transactions they created (except the member field).
          *     - Admins: can update any transaction including the member field.
+         *
          */
         patch: operations["updateTransaction"];
         trace?: never;
@@ -461,9 +494,9 @@ export interface paths {
         put?: never;
         /**
          * Send mail
-         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
-         *     template's placeholder tokens are replaced with each receiver's data, and one email is sent
-         *     per receiver.
+         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`;
+         *     placeholder tokens in both the subject and the template are replaced with each receiver's
+         *     data, and one email is sent per receiver.
          *
          *     Receivers are determined from the caller's highest role:
          *     - **Admin**: all members.
@@ -480,6 +513,7 @@ export interface paths {
          *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
          *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
          *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
+         *
          */
         post: operations["sendMail"];
         delete?: never;
@@ -519,6 +553,7 @@ export interface paths {
          *       `{{phone_number}}`, `{{birthday}}`, `{{joining_date}}`.
          *     - Organization: `{{team_name}}`, `{{sport_name}}` — the receiver's team/sport, blank if none.
          *     - Finance: `{{balance}}` — the receiver's current balance, formatted (e.g. `€12.50`).
+         *
          */
         post: operations["getPdf"];
         delete?: never;
@@ -539,6 +574,7 @@ export interface paths {
          * @description Lists the stored report summaries (without text) for a member, newest first.
          *     - The member themselves: can list their own reports.
          *     - Admin: can list reports for any member.
+         *
          */
         get: operations["listMemberReports"];
         put?: never;
@@ -548,6 +584,7 @@ export interface paths {
          *     finished report is persisted and can later be fetched via the report endpoints.
          *     - The member themselves: can generate their own report.
          *     - Admin: can generate a report for any member.
+         *
          */
         post: operations["generateMemberReport"];
         delete?: never;
@@ -568,6 +605,7 @@ export interface paths {
          * @description Lists the stored report summaries (without text) for a team, newest first.
          *     - Trainers of the team: can list the team's reports.
          *     - Admin: can list reports for any team.
+         *
          */
         get: operations["listTeamReports"];
         put?: never;
@@ -577,6 +615,7 @@ export interface paths {
          *     finished report is persisted and can later be fetched via the report endpoints.
          *     - Trainers of the team: can generate the team's report.
          *     - Admin: can generate a report for any team.
+         *
          */
         post: operations["generateTeamReport"];
         delete?: never;
@@ -598,6 +637,7 @@ export interface paths {
          *     reports; the `kind` field indicates which, and the matching reference is populated.
          *     - Member reports: the member themselves or an admin.
          *     - Team reports: a trainer of the team or an admin.
+         *
          */
         get: operations["getReport"];
         put?: never;
@@ -607,8 +647,33 @@ export interface paths {
          * @description Deletes a single stored report (member or team).
          *     - Member reports: the member themselves or an admin.
          *     - Team reports: a trainer of the team or an admin.
+         *
          */
         delete: operations["deleteReport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/helper/rag-response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate RAG response
+         * @description Answers a question using retrieval-augmented generation over the helper's PDF knowledge
+         *     base. The optional `uselocal` flag switches the chat model for this request: `true` forces
+         *     the local Ollama model, `false` forces OpenAI. When omitted, the service's configured
+         *     default provider is used.
+         *
+         */
+        post: operations["generateRagResponse"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -647,10 +712,9 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        /**
-         * @description A stored report including its generated text. `kind` indicates whether it is a member or
+        /** @description A stored report including its generated text. `kind` indicates whether it is a member or
          *     team report; the matching `member`/`team` reference is populated accordingly.
-         */
+         *      */
         Report: {
             /** Format: uuid */
             id: string;
@@ -662,10 +726,9 @@ export interface components {
             created_at: string;
             text: string;
         };
-        /**
-         * @description Role-specific dashboard payload. The `role` property discriminates which concrete
+        /** @description Role-specific dashboard payload. The `role` property discriminates which concrete
          *     shape is returned, following the caller's highest role (admin > director > trainer > trainee).
-         */
+         *      */
         Dashboard: components["schemas"]["AdminDashboard"] | components["schemas"]["DirectorDashboard"] | components["schemas"]["TrainerDashboard"] | components["schemas"]["TraineeDashboard"];
         /** @description Club-wide aggregates shown to administrators. */
         AdminDashboard: {
@@ -837,23 +900,37 @@ export interface components {
         };
         /** @description Request body for generating a personalized mass-letter PDF for the caller's receivers. */
         PdfRequest: {
-            /**
-             * @description HTML letter body. Supports per-receiver placeholder tokens (see the operation
+            /** @description HTML letter body. Supports per-receiver placeholder tokens (see the operation
              *     description); each token is replaced with that receiver's data. One personalized letter
              *     — a name and address layout block followed by the substituted template — is rendered per
              *     receiver and concatenated into a single PDF.
-             */
+             *      */
             template: string;
         };
         /** @description Request body for sending a personalized mass email to the caller's receivers. */
         MailRequest: {
-            /** @description Subject line of the email. */
+            /** @description Subject line of the email. Supports the same per-receiver placeholder tokens as the
+             *     template; each token is replaced with that receiver's data before the email is sent.
+             *      */
             subject: string;
-            /**
-             * @description HTML email body. Supports per-receiver placeholder tokens (see the operation
+            /** @description HTML email body. Supports per-receiver placeholder tokens (see the operation
              *     description); each token is replaced with that receiver's data before the email is sent.
-             */
+             *      */
             template: string;
+        };
+        /** @description Request body for generating a retrieval-augmented answer. */
+        RagRequest: {
+            /** @description The question to answer from the PDF knowledge base. */
+            question: string;
+            /** @description Optional per-request model switch: `true` forces the local Ollama model, `false`
+             *     forces OpenAI. When omitted, the service's configured default provider is used.
+             *      */
+            uselocal?: boolean;
+        };
+        /** @description Response body containing the generated retrieval-augmented answer. */
+        RagResponse: {
+            /** @description The generated answer. */
+            response: string;
         };
         /** @description The object representation of an Event (e.g., a training session or a match). */
         Event: {
@@ -2129,6 +2206,34 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    generateRagResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The request body containing the question to answer. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RagRequest"];
+            };
+        };
+        responses: {
+            /** @description The request was successful, and the server has returned the generated answer in the response body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RagResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalServerError"];
         };
     };
