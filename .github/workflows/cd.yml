@@ -123,7 +123,7 @@ jobs:
   deploy-k8s:
     name: deploy (Kubernetes/Helm)
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     needs: docker-push
     env:
       NAMESPACE: ge83mom-devops26
@@ -181,4 +181,4 @@ jobs:
             --set global.image.tag=${{ github.sha }} \
             --set keycloak.hostname=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth \
             --set forwardAuth.cookieSecret="${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}" \
-            --rollback-on-failure --timeout 25m
+            --rollback-on-failure --timeout 15m

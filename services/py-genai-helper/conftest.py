@@ -1,8 +1,8 @@
 """Test setup shared across the suite.
 
-Importing ``app`` pulls in ``service``/``rag``, which at import time build an LLM agent and a FAISS
-vector store from the bundled PDFs (real OpenAI calls). Tests stub ``service`` out before ``app`` is
-imported, and neutralise the startup DB initialisation so no live database is required.
+Importing ``app`` pulls in ``service``/``rag``, which at import time construct an LLM agent client
+(no network calls). Tests still stub ``service`` out before ``app`` is imported to avoid requiring
+an API key, and neutralise the startup DB initialisation so no live database is required.
 """
 
 import sys

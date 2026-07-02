@@ -247,19 +247,16 @@ services:
     health: /health
     stripPrefix: true
     envFromSecret: genai-env
-    # LangChain/FAISS init is slow to become ready; give it more room than the
-    # 600s Kubernetes default before the rollout is considered stuck.
-    progressDeadlineSeconds: 1200
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
     resources:
       requests:
-        cpu: 250m
+        cpu: 100m
         memory: 256Mi
       limits:
-        cpu: 1000m
-        memory: 768Mi
+        cpu: 200m
+        memory: 512Mi
   web-client:
     path: /
     port: 8080
