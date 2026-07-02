@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { sportFixtures, sportsByName, teamFixtures } from '@/mocks/fixtures'
+import { sportFixtures, sportsById, teamFixtures } from '@/mocks/fixtures'
 import { mockOr } from '@/mocks/mockSwitch'
 import { organizationClient } from './client'
 import type {
@@ -46,17 +46,17 @@ export function useSportsList(enabled = true) {
 
 export function useSport(id: string) {
   return useQuery<Sport>({
-    queryKey: organizationKeys.sport(name),
+    queryKey: organizationKeys.sport(id),
     queryFn: () =>
       mockOr(
         () => {
-          const found = sportsByName[name]
+          const found = sportsById[id]
           if (!found) throw new Error('Sport not found')
           return Promise.resolve(found)
         },
-        () => organizationClient.get<Sport>(`/sports/${name}`).then(r => r.data),
+        () => organizationClient.get<Sport>(`/sports/${id}`).then(r => r.data),
       ),
-    enabled: !!name,
+    enabled: !!id,
   })
 }
 

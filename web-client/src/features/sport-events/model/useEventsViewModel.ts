@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 
 import { useAuth } from '@/features/auth'
-import { useTeamsList } from '@/features/organization/api/queries'
+import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
 import { formatDateTime, formatDuration } from '@/lib/format'
-import type { AuthUser, Team } from '@/types'
-import type { EventSummary, SportEvent } from '../types'
+import type { AuthUser, EventListItem, Team } from '@/types'
+import type { SportEvent } from '../types'
 import { useEvent, useEventsList } from '../api/queries'
 import type { EventsFilters } from './eventsUiStore'
 import { useEventsUiStore } from './eventsUiStore'
@@ -14,7 +14,7 @@ type AttendanceUser = Pick<AuthUser, 'id'> & {
   teamIds?: ReadonlySet<string>
 }
 
-export interface EventRow extends EventSummary {
+export interface EventRow extends EventListItem {
   status: EventStatus
   formattedWhen: string
   duration: string
@@ -35,12 +35,14 @@ export interface EventDetailView {
   detail: SportEvent | undefined
   status: EventStatus | undefined
   missed: boolean
+  // sports_linked resolved to display names for the detail view.
+  sportNames: string[]
   isLoading: boolean
   error: Error | null
 }
 
 export function eventAttendanceStatus(
-  event: EventSummary | SportEvent,
+  event: EventListItem | SportEvent,
   user: AttendanceUser,
   now: Date,
 ): EventStatus {
@@ -77,7 +79,7 @@ export function userTeamIds(teams: Team[], userId: string): ReadonlySet<string> 
 }
 
 export function buildEventsView(
-  summaries: EventSummary[],
+  summaries: EventListItem[],
   now: Date,
   user: AttendanceUser,
   filters: EventsFilters = {
@@ -169,6 +171,7 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
   const { user } = useAuth()
   const eventQuery = useEvent(id)
   const teamsQuery = useTeamsList()
+  const sportsQuery = useSportsList()
   const detail = eventQuery.data
   const status = detail
     ? eventAttendanceStatus(
@@ -181,11 +184,17 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
       )
     : undefined
   const missed = status === 'missed'
+  // sports_linked are resolved refs { id, name }; fall back to the sports list if a name is missing.
+  const sportNamesById = new Map((sportsQuery.data ?? []).map((sport) => [sport.id, sport.name]))
+  const sportNames = (detail?.sports_linked ?? []).map(
+    (sport) => sport.name || sportNamesById.get(sport.id) || sport.id,
+  )
 
   return {
     detail,
     status,
     missed,
+    sportNames,
     isLoading: eventQuery.isLoading || teamsQuery.isLoading,
     error: eventQuery.error ?? teamsQuery.error,
   }

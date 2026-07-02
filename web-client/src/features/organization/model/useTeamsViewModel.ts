@@ -36,11 +36,11 @@ export function buildTeamsView(
   teams: Team[],
   currentUserId: string,
 ): TeamsView {
-  const teamsBySportName = new Map<string, TeamView[]>()
+  const teamsBySportId = new Map<string, TeamView[]>()
 
   for (const team of teams) {
-    const sportName = team.sport
-    if (!sportName) continue
+    const sportId = team.sport.id
+    if (!sportId) continue
 
     const teamView: TeamView = {
       id: team.id,
@@ -51,16 +51,16 @@ export function buildTeamsView(
       trainees: team.trainees,
     }
 
-    const sportTeams = teamsBySportName.get(sportName) ?? []
+    const sportTeams = teamsBySportId.get(sportId) ?? []
     sportTeams.push(teamView)
-    teamsBySportName.set(sportName, sportTeams)
+    teamsBySportId.set(sportId, sportTeams)
   }
 
   const joinedSports = sports.map((sport) => ({
     name: sport.name,
     description: sport.description,
     directors: sport.directors,
-    teams: teamsBySportName.get(sport.name) ?? [],
+    teams: teamsBySportId.get(sport.id) ?? [],
   }))
 
   const myTeams = joinedSports.flatMap((sport) =>

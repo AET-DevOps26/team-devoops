@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { eventSummaryFixtures, teamFixtures } from '@/mocks/fixtures'
 import { MOCK_PERSONAS } from '@/mocks/personas'
 import { scopeEvents } from '@/mocks/scope'
-import type { EventSummary } from '@/types'
+import type { EventListItem } from '@/types'
 import { buildEventsView, eventAttendanceStatus, userTeamIds } from './useEventsViewModel'
 
 const now = new Date('2026-06-26T12:00:00.000Z')
@@ -14,7 +14,7 @@ const user = {
   teamIds: new Set([teamId]),
 }
 
-function event(overrides: Partial<EventSummary>): EventSummary {
+function event(overrides: Partial<EventListItem>): EventListItem {
   return {
     id: 'event-1',
     name: 'Training',
@@ -29,7 +29,7 @@ describe('eventAttendanceStatus', () => {
     expect(
       eventAttendanceStatus(
         event({
-          attendees: [{ id: memberId, first_name: 'Lena', last_name: 'Roth' }],
+          attendees: [{ id: memberId, name: 'Lena Roth' }],
           teams_linked: [{ id: teamId, name: 'Juniors' }],
         }),
         user,

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useTeamsList } from '@/features/organization/api/queries'
-import { memberRefName, type MemberSummary, type Team } from '@/types'
+import { type MemberSummary, type Team } from '@/types'
 import { useMembers } from '../api/queries'
 import type { MembersFilters } from './membersUiStore'
 import { useMembersUiStore } from './membersUiStore'
@@ -22,8 +22,9 @@ export interface MembersView {
   sportOptions: { value: string; label: string }[]
 }
 
+// MemberSummary is the list model with split names (not an FK ref) — combine them here.
 function memberName(member: MemberSummary): string {
-  return memberRefName(member)
+  return `${member.first_name} ${member.last_name}`
 }
 
 function memberTeamRows(members: MemberSummary[], teams: Team[]): MemberRow[] {
@@ -40,7 +41,7 @@ function memberTeamRows(members: MemberSummary[], teams: Team[]): MemberRow[] {
       email: member.email,
       teamIds: memberTeams.map((team) => team.id),
       teamNames: memberTeams.map((team) => team.name),
-      sports: Array.from(new Set(memberTeams.map((team) => team.sport))).toSorted(),
+      sports: Array.from(new Set(memberTeams.map((team) => team.sport.name))).toSorted(),
     }
   })
 }
@@ -71,7 +72,7 @@ export function buildMembersView(
   const teamOptions = teams
     .map((team) => ({ value: team.id, label: team.name }))
     .toSorted((a, b) => a.label.localeCompare(b.label))
-  const sportOptions = Array.from(new Set(teams.map((team) => team.sport)), (sport) => ({
+  const sportOptions = Array.from(new Set(teams.map((team) => team.sport.name)), (sport) => ({
     value: sport,
     label: sport,
   })).toSorted((a, b) => a.label.localeCompare(b.label))

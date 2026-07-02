@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import { useAuth } from '@/features/auth'
 import { formatDateShort, formatEuroCents } from '@/lib/format'
-import { memberRefName } from '@/types'
+import { creatorName } from '@/types'
 import { useTransactions } from '../api/queries'
 import type { Transaction } from '../types'
 import type { PaymentsFilters } from './paymentsUiStore'
@@ -109,7 +109,7 @@ export function buildPaymentsView(
         : transaction.title,
       amountFormatted: `${transaction.amount_cents > 0 ? '+' : ''}${formatEuroCents(transaction.amount_cents)}`,
       kind: transaction.amount_cents < 0 ? 'charge' : 'payment',
-      creatorName: memberRefName(transaction.creator),
+      creatorName: creatorName(transaction.creator),
     })), filters), filters.sort),
     totalRows: memberTransactions.length,
   }

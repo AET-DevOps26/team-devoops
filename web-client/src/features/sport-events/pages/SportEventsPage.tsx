@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
 import { formatDateShort, formatTime } from '@/lib/format'
-import { memberRefName } from '@/types'
+import { creatorName, memberRefName } from '@/types'
 import { useEventsUiStore } from '../model/eventsUiStore'
 import {
   type EventStatus,
@@ -180,7 +180,7 @@ export function SportEventsPage() {
 }
 
 function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEventDetailView> }) {
-  const { detail, isLoading, error, missed } = detailView
+  const { detail, isLoading, error, missed, sportNames } = detailView
 
   if (isLoading) {
     return (
@@ -228,13 +228,13 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
             value={`${formatDateShort(detail.start_time)}, ${formatTime(detail.start_time)}`}
           />
           <Field label="End" value={formatTime(detail.end_time)} />
-          <Field label="Created by" value={memberRefName(detail.creator)} />
+          <Field label="Created by" value={creatorName(detail.creator)} />
         </div>
 
         <div>
           <FieldLabel>Sports</FieldLabel>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {detail.sports_linked?.map((sport) => (
+            {sportNames.map((sport) => (
               <Badge key={sport} tone="accent">
                 {sport}
               </Badge>
