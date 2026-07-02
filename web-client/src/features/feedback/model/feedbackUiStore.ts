@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type FeedbackRatingFilter = 'all' | 'high' | 'medium' | 'low' | 'none'
+export type FeedbackRatingFilter = 'all' | 'high' | 'medium' | 'low'
 export type FeedbackSort = 'date-desc' | 'date-asc' | 'event-asc' | 'event-desc' | 'rating-desc' | 'rating-asc'
 
 export interface FeedbackFilters {

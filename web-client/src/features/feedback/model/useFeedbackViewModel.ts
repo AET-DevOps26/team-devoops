@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
 
-import { useEventsList } from '@/features/sport-events/api/queries'
 import { formatDateShort } from '@/lib/format'
-import { memberRefName } from '@/types'
+import { creatorName, memberRefName } from '@/types'
 import { useFeedback, useFeedbackList } from '../api/queries'
 import type { Feedback, FeedbackSummary } from '../types'
 import type { FeedbackFilters, FeedbackRatingFilter } from './feedbackUiStore'
@@ -16,18 +15,16 @@ export interface FeedbackRow {
   creatorName: string
   eventName: string
   createdAt: string
-  rating?: number
+  rating: number
 }
 
 export interface FeedbackView {
   rows: FeedbackRow[]
   totalRows: number
-  hasRatings: boolean
   eventOptions: { value: string; label: string }[]
   coachOptions: { value: string; label: string }[]
   stats: {
     total: number
-    ratedCount: number
     avgRatingLabel: string
     latestLabel: string
   }
@@ -40,23 +37,16 @@ export interface FeedbackDetailView {
   creatorName: string | undefined
   rating: number | undefined
   isLoading: boolean
+  // rating is undefined only while detail is unloaded; every loaded feedback has one.
   error: Error | null
-}
-
-function optionalRating(feedback: object): number | undefined {
-  const rating = (feedback as { rating?: unknown }).rating
-
-  return typeof rating === 'number' ? rating : undefined
 }
 
 function includesSearch(value: string, search: string): boolean {
   return value.toLocaleLowerCase().includes(search)
 }
 
-function matchesRating(rating: number | undefined, filter: FeedbackRatingFilter): boolean {
+function matchesRating(rating: number, filter: FeedbackRatingFilter): boolean {
   if (filter === 'all') return true
-  if (filter === 'none') return rating === undefined
-  if (rating === undefined) return false
   if (filter === 'high') return rating >= 7
   if (filter === 'medium') return rating >= 4 && rating <= 6
   return rating <= 3
@@ -101,10 +91,10 @@ function sortFeedbackRows(rows: FeedbackRow[], sort: FeedbackFilters['sort']): F
       return b.eventName.localeCompare(a.eventName)
     }
     if (sort === 'rating-desc') {
-      return (b.rating ?? -1) - (a.rating ?? -1)
+      return b.rating - a.rating
     }
     if (sort === 'rating-asc') {
-      return (a.rating ?? 11) - (b.rating ?? 11)
+      return a.rating - b.rating
     }
 
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -113,18 +103,17 @@ function sortFeedbackRows(rows: FeedbackRow[], sort: FeedbackFilters['sort']): F
 
 export function buildFeedbackView(
   summaries: FeedbackSummary[],
-  eventNamesById: Map<string, string>,
   filters: FeedbackFilters,
 ): FeedbackView {
   const rows = summaries.map((feedback) => ({
     id: feedback.id,
-    eventId: feedback.event,
-    coachId: feedback.creator.id,
+    eventId: feedback.event.id,
+    coachId: feedback.creator?.id ?? 'unknown',
     memberName: memberRefName(feedback.member),
-    creatorName: memberRefName(feedback.creator),
-    eventName: eventNamesById.get(feedback.event) ?? 'Unknown event',
+    creatorName: creatorName(feedback.creator),
+    eventName: feedback.event.name,
     createdAt: feedback.created_at,
-    rating: optionalRating(feedback),
+    rating: feedback.rating,
   }))
   const eventOptions = Array.from(
     new Map(rows.map((row) => [row.eventId, row.eventName])).entries(),
@@ -136,11 +125,10 @@ export function buildFeedbackView(
   ).toSorted((a, b) => a.label.localeCompare(b.label))
   const filteredRows = sortFeedbackRows(filterFeedbackRows(rows, filters), filters.sort)
 
-  const ratedRows = rows.filter((feedback) => feedback.rating !== undefined)
   const avgRating =
-    ratedRows.length === 0
+    rows.length === 0
       ? null
-      : ratedRows.reduce((sum, feedback) => sum + (feedback.rating ?? 0), 0) / ratedRows.length
+      : rows.reduce((sum, feedback) => sum + feedback.rating, 0) / rows.length
   const latestCreatedAt = rows.reduce<string | null>(
     (latest, feedback) =>
       latest === null || new Date(feedback.createdAt).getTime() > new Date(latest).getTime()
@@ -152,12 +140,10 @@ export function buildFeedbackView(
   return {
     rows: filteredRows,
     totalRows: rows.length,
-    hasRatings: ratedRows.length > 0,
     eventOptions,
     coachOptions,
     stats: {
       total: rows.length,
-      ratedCount: ratedRows.length,
       avgRatingLabel: avgRating === null ? '--' : `${avgRating.toFixed(1)} / 10`,
       latestLabel: latestCreatedAt === null ? '--' : formatDateShort(latestCreatedAt),
     },
@@ -166,42 +152,31 @@ export function buildFeedbackView(
 
 export function useFeedbackViewModel() {
   const feedbackQuery = useFeedbackList()
-  const eventsQuery = useEventsList()
   const filters = useFeedbackUiStore((state) => state.filters)
 
-  const eventNamesById = useMemo(
-    () => new Map((eventsQuery.data ?? []).map((event) => [event.id, event.name])),
-    [eventsQuery.data],
-  )
-
   const view = useMemo(
-    () => buildFeedbackView(feedbackQuery.data ?? [], eventNamesById, filters),
-    [feedbackQuery.data, eventNamesById, filters],
+    () => buildFeedbackView(feedbackQuery.data ?? [], filters),
+    [feedbackQuery.data, filters],
   )
 
   return {
     view,
-    isLoading: feedbackQuery.isLoading || eventsQuery.isLoading,
-    error: feedbackQuery.error ?? eventsQuery.error,
+    isLoading: feedbackQuery.isLoading,
+    error: feedbackQuery.error,
   }
 }
 
 export function useFeedbackDetailView(id: string | null): FeedbackDetailView {
   const feedbackQuery = useFeedback(id ?? '')
-  const eventsQuery = useEventsList()
   const detail = feedbackQuery.data
-  const eventName = detail
-    ? eventsQuery.data?.find((event) => event.id === detail.event)?.name ?? 'Unknown event'
-    : undefined
 
   return {
     detail,
-    eventName,
+    eventName: detail?.event.name,
     memberName: detail ? memberRefName(detail.member) : undefined,
-    creatorName: detail ? memberRefName(detail.creator) : undefined,
-    rating: detail ? optionalRating(detail) : undefined,
-    isLoading:
-      feedbackQuery.isLoading || (feedbackQuery.data !== undefined && eventsQuery.isLoading),
-    error: feedbackQuery.error ?? eventsQuery.error,
+    creatorName: detail ? creatorName(detail.creator) : undefined,
+    rating: detail ? detail.rating : undefined,
+    isLoading: feedbackQuery.isLoading,
+    error: feedbackQuery.error,
   }
 }

@@ -31,7 +31,6 @@ const ratingOptions = [
   { value: 'high', label: '7+' },
   { value: 'medium', label: '4-6' },
   { value: 'low', label: '0-3' },
-  { value: 'none', label: 'No rating' },
 ] as const
 
 export function FeedbackPage() {
@@ -64,7 +63,7 @@ export function FeedbackPage() {
         <StatCard
           label="Avg Rating"
           value={view.stats.avgRatingLabel}
-          meta={view.stats.ratedCount === 0 ? 'No ratings' : `${view.stats.ratedCount} rated`}
+          meta={view.stats.total === 0 ? 'No feedback' : `${view.stats.total} rated`}
         />
         <StatCard label="Latest" value={view.stats.latestLabel} meta="Newest" />
       </div>
@@ -162,7 +161,7 @@ export function FeedbackPage() {
                   <THead>Event</THead>
                   <THead>Trainee</THead>
                   <THead>From</THead>
-                  {view.hasRatings && <THead>Rating</THead>}
+                  <THead>Rating</THead>
                   <THead className="text-right" />
                 </tr>
               </thead>
@@ -175,15 +174,9 @@ export function FeedbackPage() {
                     <TCell className="font-medium">{feedback.eventName}</TCell>
                     <TCell>{feedback.memberName}</TCell>
                     <TCell>{feedback.creatorName}</TCell>
-                    {view.hasRatings && (
-                      <TCell>
-                        {feedback.rating === undefined ? (
-                          <span className="text-text-tertiary">--</span>
-                        ) : (
-                          <Badge size="sm">{feedback.rating}/10</Badge>
-                        )}
-                      </TCell>
-                    )}
+                    <TCell>
+                      <Badge size="sm">{feedback.rating}/10</Badge>
+                    </TCell>
                     <TCell className="text-right">
                       <Button
                         variant="link"
@@ -219,7 +212,7 @@ function FeedbackDetailSheet({
 }: {
   detailView: ReturnType<typeof useFeedbackDetailView>
 }) {
-  const { detail, eventName, memberName, creatorName, rating, isLoading, error } = detailView
+  const { detail, eventName, memberName, creatorName, isLoading, error } = detailView
 
   if (isLoading) {
     return (
@@ -263,7 +256,7 @@ function FeedbackDetailSheet({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="From" value={creatorName ?? '--'} />
           <Field label="Date" value={formatDate(detail.created_at)} />
-          {rating !== undefined && <Field label="Rating" value={`${rating}/10`} />}
+          <Field label="Rating" value={`${detail.rating}/10`} />
         </div>
 
         <Separator />
