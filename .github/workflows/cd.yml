@@ -139,6 +139,13 @@ jobs:
           printf '%s' "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Verify cluster auth
+        run: |
+          kubectl get --raw /apis >/dev/null || {
+            echo "::error::KUBECONFIG appears invalid/expired (system:unauthenticated) — rotate the secret."
+            exit 1
+          }
+
       - name: Create/refresh genai-env secret
         env:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
@@ -146,7 +153,7 @@ jobs:
           printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
           kubectl -n "$NAMESPACE" create secret generic genai-env \
             --from-env-file=/tmp/genai.env \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)
         run: |
