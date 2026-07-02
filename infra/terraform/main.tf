@@ -53,6 +53,13 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = azurerm_resource_group.main.name
   address_space       = ["10.0.0.0/16"]
   tags                = local.tags
+
+  # Subnets are managed via the separate azurerm_subnet.main resource below.
+  # Without this, the provider's computed `subnet` list can drift and attempt
+  # to delete the in-use subnet on unrelated applies.
+  lifecycle {
+    ignore_changes = [subnet]
+  }
 }
 
 resource "azurerm_subnet" "main" {
