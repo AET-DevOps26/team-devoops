@@ -1,7 +1,11 @@
 package tum.devoops.letterservice.service;
 
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Entities;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Service;
 import tum.devoops.letterservice.entity.MemberEntity;
 import tum.devoops.letterservice.entity.TeamEntity;
 import tum.devoops.letterservice.exception.MailDeliveryException;
+import tum.devoops.letterservice.exception.PdfGenerationException;
 import tum.devoops.letterservice.model.MailRequest;
 import tum.devoops.letterservice.model.PdfRequest;
 import tum.devoops.letterservice.repository.DirectorRepository;
@@ -25,6 +30,8 @@ import tum.devoops.letterservice.repository.TraineeRepository;
 import tum.devoops.letterservice.repository.TrainerRepository;
 import tum.devoops.letterservice.repository.TransactionRepository;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,9 +45,8 @@ import java.util.regex.Pattern;
 @Service
 public class LetterService {
 
-    private static final byte[] DUMMY_PDF = "%PDF-1.4 dummy".getBytes();
-
-    private static final Pattern TAG_PATTERN = Pattern.compile("\\{\\{\\s*([\\w.]+)\\s*\\}\\}");
+    // Tokens are {{snake_case}} per the API description; anything else is left as literal text.
+    private static final Pattern TAG_PATTERN = Pattern.compile("\\{\\{([a-z0-9_]+)\\}\\}");
 
     private final JavaMailSender mailSender;
     private final String from;
@@ -77,9 +83,11 @@ public class LetterService {
         String template = mailRequest.getTemplate();
 
         for (MemberEntity receiver : resolveReceivers()) {
-            String html = replaceTags(template, tokensFor(receiver));
+            Map<String, String> tokens = tokensFor(receiver);
+            String personalizedSubject = replaceTags(subject, tokens);
+            String html = replaceTags(template, tokens);
             try {
-                sendHtml(receiver.getEmail(), subject, html);
+                sendHtml(receiver.getEmail(), personalizedSubject, html);
             } catch (MessagingException e) {
                 throw new MailDeliveryException("Failed to send mail to " + receiver.getEmail(), e);
             }
@@ -87,7 +95,61 @@ public class LetterService {
     }
 
     public Resource getPdf(PdfRequest pdfRequest) {
-        return new ByteArrayResource(DUMMY_PDF);
+        String template = pdfRequest.getTemplate();
+
+        StringBuilder letters = new StringBuilder();
+        for (MemberEntity receiver : resolveReceivers()) {
+            Map<String, String> tokens = tokensFor(receiver);
+            letters.append(renderLetter(tokens.get("full_name"), receiver.getAddress(), replaceTags(template, tokens)));
+        }
+
+        String html = """
+                <html>
+                <head>
+                <style>
+                @page { size: A4; margin: 2.5cm 2cm; }
+                body { font-family: sans-serif; font-size: 11pt; }
+                .letter + .letter { page-break-before: always; }
+                .address-block { margin-bottom: 2.5cm; }
+                </style>
+                </head>
+                <body>%s</body>
+                </html>
+                """.formatted(letters);
+        return new ByteArrayResource(renderPdf(html));
+    }
+
+    private static String renderLetter(String fullName, String address, String body) {
+        return """
+                <div class="letter">
+                <div class="address-block">
+                <div>%s</div>
+                <div>%s</div>
+                </div>
+                <div class="letter-body">%s</div>
+                </div>
+                """.formatted(escapeHtml(fullName), escapeHtml(nullToEmpty(address)), body);
+    }
+
+    private static byte[] renderPdf(String html) {
+        // openhtmltopdf needs well-formed XHTML; jsoup tolerantly parses whatever the template is.
+        Document document = Jsoup.parse(html);
+        document.outputSettings()
+                .syntax(Document.OutputSettings.Syntax.xml)
+                .escapeMode(Entities.EscapeMode.xhtml);
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            new PdfRendererBuilder()
+                    .withHtmlContent(document.html(), null)
+                    .toStream(out)
+                    .run();
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new PdfGenerationException("Failed to generate PDF", e);
+        }
+    }
+
+    private static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private void sendHtml(String to, String subject, String html) throws MessagingException {

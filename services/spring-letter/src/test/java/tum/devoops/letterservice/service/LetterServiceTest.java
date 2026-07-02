@@ -17,6 +17,8 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -202,6 +204,42 @@ class LetterServiceTest {
     }
 
     @Test
+    void sendMailReplacesTokensInSubject() throws Exception {
+        authenticateAs(UUID.randomUUID(), "admin");
+
+        UUID memberId = UUID.randomUUID();
+        MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
+        when(memberRepository.findAll()).thenReturn(List.of(carol));
+        when(transactionRepository.findAllByMemberId(memberId)).thenReturn(List.of());
+        stubMimeMessages();
+
+        letterService.sendMail(new MailRequest("Hello {{first_name}}, your balance is {{balance}}", "Body"));
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("Hello Carol, your balance is €0.00");
+    }
+
+    @Test
+    void sendMailLeavesNonSnakeCaseTagsAsLiteralText() throws Exception {
+        authenticateAs(UUID.randomUUID(), "admin");
+
+        UUID memberId = UUID.randomUUID();
+        MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
+        when(memberRepository.findAll()).thenReturn(List.of(carol));
+        when(transactionRepository.findAllByMemberId(memberId)).thenReturn(List.of());
+        stubMimeMessages();
+
+        letterService.sendMail(new MailRequest("Subject",
+                "{{ first_name }} {{FIRST_NAME}} {{first.name}} {{first_name}}"));
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertThat(extractHtml(captor.getValue()))
+                .isEqualTo("{{ first_name }} {{FIRST_NAME}} {{first.name}} Carol");
+    }
+
+    @Test
     void sendMailWithMemberWithoutTeamOrSportLeavesTokensEmpty() throws Exception {
         authenticateAs(UUID.randomUUID(), "admin");
 
@@ -261,13 +299,83 @@ class LetterServiceTest {
     // --- getPdf ---
 
     @Test
-    void getPdfReturnsDummyPdfResource() throws Exception {
+    void getPdfRendersOneLetterPagePerReceiverInSinglePdf() throws Exception {
+        authenticateAs(UUID.randomUUID(), "admin");
+
+        MemberEntity alice = member(UUID.randomUUID(), "Alice", "Anderson", "alice@example.com",
+                "1 Apple Ave", null, null, null);
+        MemberEntity bob = member(UUID.randomUUID(), "Bob", "Brown", "bob@example.com",
+                "2 Berry Blvd", null, null, null);
+        when(memberRepository.findAll()).thenReturn(List.of(alice, bob));
+
         Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}</p>"));
 
-        assertThat(pdf.getContentAsByteArray()).isEqualTo("%PDF-1.4 dummy".getBytes());
+        byte[] bytes = pdf.getContentAsByteArray();
+        assertThat(new String(bytes, 0, 5)).isEqualTo("%PDF-");
+        try (PDDocument document = PDDocument.load(bytes)) {
+            assertThat(document.getNumberOfPages()).isEqualTo(2);
+            assertThat(pageText(document, 1))
+                    .contains("Alice Anderson", "1 Apple Ave", "Hi Alice")
+                    .doesNotContain("Bob");
+            assertThat(pageText(document, 2))
+                    .contains("Bob Brown", "2 Berry Blvd", "Hi Bob")
+                    .doesNotContain("Alice");
+        }
+    }
+
+    @Test
+    void getPdfReplacesTokensAndHandlesMissingAddress() throws Exception {
+        authenticateAs(UUID.randomUUID(), "admin");
+
+        UUID memberId = UUID.randomUUID();
+        MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
+        when(memberRepository.findAll()).thenReturn(List.of(carol));
+        when(transactionRepository.findAllByMemberId(memberId))
+                .thenReturn(List.of(transaction(memberId, 5000)));
+
+        Resource pdf = letterService.getPdf(
+                new PdfRequest("<p>Balance of {{full_name}}: {{balance}}</p><p>[{{unknown_token}}]</p>"));
+
+        try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
+            String text = pageText(document, 1);
+            assertThat(text).contains("Balance of Carol Clark: €50.00", "[]");
+        }
+    }
+
+    @Test
+    void getPdfWithMalformedTemplateHtmlStillProducesPdf() throws Exception {
+        authenticateAs(UUID.randomUUID(), "admin");
+
+        MemberEntity dan = member(UUID.randomUUID(), "Dan", "Doe", "dan@example.com");
+        when(memberRepository.findAll()).thenReturn(List.of(dan));
+
+        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}<br><div>unclosed"));
+
+        try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
+            assertThat(pageText(document, 1)).contains("Hi Dan", "unclosed");
+        }
+    }
+
+    @Test
+    void getPdfWithNoReceiversReturnsValidEmptyPdf() throws Exception {
+        authenticateAs(UUID.randomUUID(), "trainee");
+        when(memberRepository.findAllById(any())).thenReturn(List.of());
+
+        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi</p>"));
+
+        try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
+            assertThat(new PDFTextStripper().getText(document).trim()).isEmpty();
+        }
     }
 
     // --- helpers ---
+
+    private static String pageText(PDDocument document, int page) throws Exception {
+        PDFTextStripper stripper = new PDFTextStripper();
+        stripper.setStartPage(page);
+        stripper.setEndPage(page);
+        return stripper.getText(document);
+    }
 
     private void stubMimeMessages() {
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));

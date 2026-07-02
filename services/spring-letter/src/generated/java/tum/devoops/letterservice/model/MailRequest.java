@@ -44,11 +44,11 @@ public class MailRequest {
   }
 
   /**
-   * Subject line of the email.
+   * Subject line of the email. Supports the same per-receiver placeholder tokens as the template; each token is replaced with that receiver's data before the email is sent. 
    * @return subject
    */
   @NotNull 
-  @Schema(name = "subject", description = "Subject line of the email.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "subject", description = "Subject line of the email. Supports the same per-receiver placeholder tokens as the template; each token is replaced with that receiver's data before the email is sent. ", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("subject")
   public String getSubject() {
     return subject;

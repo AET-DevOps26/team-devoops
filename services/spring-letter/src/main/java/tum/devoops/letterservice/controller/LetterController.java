@@ -1,7 +1,8 @@
 package tum.devoops.letterservice.controller;
 
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +31,9 @@ public class LetterController implements LettersApi {
     @Override
     public ResponseEntity<Resource> getPdf(PdfRequest pdfRequest) {
         Resource pdf = letterService.getPdf(pdfRequest);
-        return ResponseEntity.status(HttpStatus.OK).body(pdf);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"letters.pdf\"")
+                .body(pdf);
     }
 }
