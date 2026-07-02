@@ -44,7 +44,8 @@
         "composite": true,
         "composites": {
           "client": {
-            "devops-client": ["Admin"]
+            "devops-client": ["Admin"],
+            "realm-management": ["manage-users"]
           }
         }
       },
