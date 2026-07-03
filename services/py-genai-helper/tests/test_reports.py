@@ -101,7 +101,9 @@ def test_generate_team_report_trainer_allowed(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_A)
     monkeypatch.setattr(db, "is_trainer_of_team", lambda member_id, team_id: True)
     calls = []
-    monkeypatch.setattr(reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local)))
+    monkeypatch.setattr(
+        reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local))
+    )
 
     resp = client.post(f"/reports/team/{TEAM_A}", headers=AUTH_HEADER)
 
@@ -123,7 +125,9 @@ def test_generate_team_report_uselocal_false_forces_remote(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_A)
     monkeypatch.setattr(db, "is_trainer_of_team", lambda member_id, team_id: True)
     calls = []
-    monkeypatch.setattr(reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local)))
+    monkeypatch.setattr(
+        reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local))
+    )
 
     resp = client.post(f"/reports/team/{TEAM_A}", json={"uselocal": False}, headers=AUTH_HEADER)
 
