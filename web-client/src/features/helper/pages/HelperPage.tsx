@@ -1,5 +1,15 @@
 import { useState } from 'react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
@@ -11,6 +21,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { serverErrorMessage } from '@/lib/server-error'
 import { useHelperUiStore } from '../model/helperUiStore'
 import {
   useDeleteReport,
@@ -39,6 +50,8 @@ export function HelperPage() {
   const deleteReport = useDeleteReport()
 
   const [generated, setGenerated] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const onGenerate = () => {
     setGenerated(false)
@@ -47,9 +60,23 @@ export function HelperPage() {
     setGenerated(true)
   }
 
-  const onDelete = (reportId: string) => {
-    if (reportId === openReportId) closeReport()
-    deleteReport.mutate({ reportId, listKey })
+  const requestDelete = (reportId: string) => {
+    setDeleteError(null)
+    setDeleteTargetId(reportId)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return
+    const reportId = deleteTargetId
+
+    try {
+      await deleteReport.mutateAsync({ reportId, listKey })
+      if (reportId === openReportId) closeReport()
+      setDeleteTargetId(null)
+    } catch (deleteFailure) {
+      setDeleteError(serverErrorMessage(deleteFailure))
+      setDeleteTargetId(null)
+    }
   }
 
   return (
@@ -63,6 +90,12 @@ export function HelperPage() {
             : 'Your progress reports from the coaching staff.'
         }
       />
+
+      {deleteError && (
+        <p className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
+          {deleteError}
+        </p>
+      )}
 
       <Card className="max-w-content-narrow">
         <CardContent className="space-y-4">
@@ -124,7 +157,7 @@ export function HelperPage() {
                       variant="ghost"
                       size="sm"
                       className="text-text-tertiary hover:text-destructive"
-                      onClick={() => onDelete(row.id)}
+                      onClick={() => requestDelete(row.id)}
                       disabled={deleteReport.isPending}
                     >
                       Delete
@@ -142,6 +175,27 @@ export function HelperPage() {
           <ReportDetailSheet detailView={detailView} />
         </SheetContent>
       </Sheet>
+
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {rows.find((row) => row.id === deleteTargetId)?.subject ?? 'this report'}?
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteReport.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteReport.isPending} onClick={confirmDelete}>
+              {deleteReport.isPending ? 'Deleting' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
