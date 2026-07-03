@@ -185,6 +185,7 @@ automated; no manual VM access is required for normal deploys.
 | Secret | `SSH_PRIVATE_KEY` | Matching private key for Ansible to SSH in |
 | Secret | `VM_HOST` | Host Ansible connects to — use the FQDN above |
 | Secret | `GENAI_ENV_CONTENT` | Contents of `services/py-genai-helper/.env` |
+| Secret | `LETTER_ENV_CONTENT` | Contents of `services/spring-letter/.env` (mail credentials) |
 | Secret | `KUBECONFIG` | Kubeconfig for the RKE2 cluster (used by the `deploy-k8s` job) |
 
 The OIDC service principal needs `Contributor` on the subscription (to manage

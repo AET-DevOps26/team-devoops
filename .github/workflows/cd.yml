@@ -35,6 +35,11 @@ jobs:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
         run: printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
 
+      - name: Write letter .env file
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+
       - name: Create inventory
         run: |
           cat > /tmp/inventory.yml << INVENTORY
@@ -54,7 +59,8 @@ jobs:
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
             -e "branch=${{ github.ref_name }}" \
-            -e "genai_env_file=/tmp/genai.env"
+            -e "genai_env_file=/tmp/genai.env" \
+            -e "letter_env_file=/tmp/letter.env"
 
   # ------------------------------------------------------------------
   # Build & push all service images to GitHub Container Registry.
