@@ -11,13 +11,11 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import tum.devoops.letterservice.entity.MemberEntity;
 import tum.devoops.letterservice.entity.TeamEntity;
+import tum.devoops.letterservice.exception.ForbiddenException;
 import tum.devoops.letterservice.exception.MailDeliveryException;
 import tum.devoops.letterservice.exception.PdfGenerationException;
 import tum.devoops.letterservice.model.MailRequest;
@@ -78,11 +76,11 @@ public class LetterService {
         this.transactionRepository = transactionRepository;
     }
 
-    public void sendMail(MailRequest mailRequest) {
+    public void sendMail(MailRequest mailRequest, UUID requesterId, boolean isAdmin) {
         String subject = mailRequest.getSubject();
         String template = mailRequest.getTemplate();
 
-        for (MemberEntity receiver : resolveReceivers()) {
+        for (MemberEntity receiver : resolveReceivers(requesterId, isAdmin)) {
             Map<String, String> tokens = tokensFor(receiver);
             String personalizedSubject = replaceTags(subject, tokens);
             String html = replaceTags(template, tokens);
@@ -94,11 +92,11 @@ public class LetterService {
         }
     }
 
-    public Resource getPdf(PdfRequest pdfRequest) {
+    public Resource getPdf(PdfRequest pdfRequest, UUID requesterId, boolean isAdmin) {
         String template = pdfRequest.getTemplate();
 
         StringBuilder letters = new StringBuilder();
-        for (MemberEntity receiver : resolveReceivers()) {
+        for (MemberEntity receiver : resolveReceivers(requesterId, isAdmin)) {
             Map<String, String> tokens = tokensFor(receiver);
             letters.append(renderLetter(tokens.get("full_name"), receiver.getAddress(), replaceTags(template, tokens)));
         }
@@ -162,28 +160,38 @@ public class LetterService {
         mailSender.send(message);
     }
 
-    private List<MemberEntity> resolveReceivers() {
-        if (hasRole("admin")) {
+    // Director/trainer/trainee aren't Spring Security roles here (see LetterController); membership
+    // is looked up directly against the organization-schema rows, same pattern as
+    // TransactionService.isDirectorOfMember/isTrainerOfMember and FeedbackService.assertTrainerOfMember.
+    private List<MemberEntity> resolveReceivers(UUID requesterId, boolean isAdmin) {
+        if (isAdmin) {
             return memberRepository.findAll();
         }
 
-        UUID senderId = currentMemberId();
-        Set<UUID> receiverIds = new LinkedHashSet<>();
-        if (hasRole("director")) {
-            for (UUID sportId : directorRepository.findSportIdsByMemberId(senderId)) {
+        List<UUID> directorSportIds = directorRepository.findSportIdsByMemberId(requesterId);
+        if (!directorSportIds.isEmpty()) {
+            Set<UUID> receiverIds = new LinkedHashSet<>();
+            for (UUID sportId : directorSportIds) {
                 receiverIds.addAll(directorRepository.findMemberIdsBySportId(sportId));
                 for (TeamEntity team : teamRepository.findAllBySportId(sportId)) {
                     receiverIds.addAll(trainerRepository.findMemberIdsByTeamId(team.getId()));
                     receiverIds.addAll(traineeRepository.findMemberIdsByTeamId(team.getId()));
                 }
             }
-        } else if (hasRole("trainer")) {
-            for (UUID teamId : trainerRepository.findTeamIdsByMemberId(senderId)) {
+            return memberRepository.findAllById(receiverIds);
+        }
+
+        List<UUID> trainerTeamIds = trainerRepository.findTeamIdsByMemberId(requesterId);
+        if (!trainerTeamIds.isEmpty()) {
+            Set<UUID> receiverIds = new LinkedHashSet<>();
+            for (UUID teamId : trainerTeamIds) {
                 receiverIds.addAll(trainerRepository.findMemberIdsByTeamId(teamId));
                 receiverIds.addAll(traineeRepository.findMemberIdsByTeamId(teamId));
             }
+            return memberRepository.findAllById(receiverIds);
         }
-        return memberRepository.findAllById(receiverIds);
+
+        throw new ForbiddenException("Only admins, directors, or trainers can use the letter service.");
     }
 
     private Map<String, String> tokensFor(MemberEntity member) {
@@ -252,15 +260,4 @@ public class LetterService {
         return result.toString();
     }
 
-    private static UUID currentMemberId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Jwt jwt = (Jwt) auth.getPrincipal();
-        return UUID.fromString(jwt.getSubject());
-    }
-
-    private static boolean hasRole(String role) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getAuthorities().stream()
-                .anyMatch(a -> ("ROLE_" + role).equals(a.getAuthority()));
-    }
 }

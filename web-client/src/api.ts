@@ -461,9 +461,9 @@ export interface paths {
         put?: never;
         /**
          * Send mail
-         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
-         *     template's placeholder tokens are replaced with each receiver's data, and one email is sent
-         *     per receiver.
+         * @description Sends a personalized mass email. The body carries a `subject` and an HTML `template`;
+         *     placeholder tokens in both the subject and the template are replaced with each receiver's
+         *     data, and one email is sent per receiver.
          *
          *     Receivers are determined from the caller's highest role:
          *     - **Admin**: all members.
@@ -847,7 +847,11 @@ export interface components {
         };
         /** @description Request body for sending a personalized mass email to the caller's receivers. */
         MailRequest: {
-            /** @description Subject line of the email. */
+            /**
+             * @description Subject line of the email. Must not be empty. Supports the same per-receiver
+             *     placeholder tokens as the template; each token is replaced with that receiver's data
+             *     before the email is sent.
+             */
             subject: string;
             /**
              * @description HTML email body. Supports per-receiver placeholder tokens (see the operation
