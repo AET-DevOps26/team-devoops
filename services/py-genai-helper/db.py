@@ -197,6 +197,20 @@ def resolve_team_name(team_id: str) -> str | None:
     return row[0] if row is not None else None
 
 
+def list_team_trainees(team_id: str) -> list[dict]:
+    """Return the team's trainees as {id, name} dicts, ordered by name."""
+    with get_engine().connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT m.id, m.first_name, m.last_name "
+                "FROM organization.trainees t JOIN member.members m ON m.id = t.member_id "
+                "WHERE t.team_id = :team_id ORDER BY m.first_name, m.last_name"
+            ),
+            {"team_id": team_id},
+        ).all()
+    return [{"id": str(row[0]), "name": f"{row[1]} {row[2]}"} for row in rows]
+
+
 def is_trainer_of_team(member_id: str, team_id: str) -> bool:
     with get_engine().connect() as conn:
         row = conn.execute(

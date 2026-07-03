@@ -32,6 +32,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=reports_password
       - LLM_PROVIDER=ollama
       - OLLAMA_BASE_URL=http://ollama:11434
+      - FEEDBACK_SERVICE_URL=http://feedback-service:8080
     expose:
       - 5000
     labels:

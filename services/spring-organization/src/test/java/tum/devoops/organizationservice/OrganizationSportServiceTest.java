@@ -187,9 +187,8 @@ class OrganizationSportServiceTest {
             s.setId(SPORT_ID);
             return s;
         });
-        when(sportRepository.findById(SPORT_ID))
-                .thenReturn(Optional.of(
-                        sportEntity(SPORT_ID, "soccer", List.of(directorEntity(SPORT_ID, MEMBER_ID)))));
+        when(memberRepository.findAllById(any()))
+                .thenReturn(List.of(memberNamed(MEMBER_ID, "Dana", "Director")));
 
         SportCreate body = new SportCreate("soccer");
         body.setDirectors(List.of(MEMBER_ID.toString()));
@@ -211,9 +210,6 @@ class OrganizationSportServiceTest {
             s.setId(SPORT_ID);
             return s;
         });
-        when(sportRepository.findById(SPORT_ID))
-                .thenReturn(Optional.of(sportEntity(SPORT_ID, "soccer", List.of())));
-
         Sport result = service.createSport(new SportCreate("soccer"));
 
         verify(sportRepository).save(any(SportEntity.class));

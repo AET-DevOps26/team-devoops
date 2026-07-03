@@ -79,7 +79,10 @@ public class OrganizationSportService {
 
         memberRoleSyncService.scheduleSync(new HashSet<>(directorIds));
 
-        return toSport(findSportOrThrow(entity.getId()));
+        // Build the response from the resolved ids: within this transaction findById returns
+        // the same managed instance, whose directors collection doesn't see the rows saved above.
+        return new Sport(entity.getId(), entity.getName(), entity.getDescription(),
+                entity.getCreatedAt(), memberReferences(directorIds));
     }
 
     @Transactional

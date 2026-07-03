@@ -56,3 +56,15 @@ flask --app app run
 | :------: | :---------- |
 | /hello | Returns a "Hello World" paragraph created by a LLM |
 | /rag-response | POST; answers `question` from the PDF knowledge base. Optional `uselocal` (`true`/`false`) forces the local Ollama model or OpenAI for that request; omitted means `LLM_PROVIDER` decides |
+| /reports/member/{member_id} | POST kicks off asynchronous report generation (202); GET lists the member's report summaries |
+| /reports/team/{team_id} | POST kicks off asynchronous report generation (202); GET lists the team's report summaries |
+| /reports/{report_id} | GET returns a stored report including its text; DELETE removes it |
+
+## Report generation
+
+Reports are generated in a background thread from the feedback stored in the feedback service.
+The feedback is fetched over that service's REST API with the requester's bearer token, so the
+feedback service's own visibility rules decide which entries feed the report. The configured
+`LLM_PROVIDER` chat model (Ollama in the docker-compose stack) writes the report text, which is
+then persisted to the `reports` schema. Configure the feedback service location via
+`FEEDBACK_SERVICE_URL` (default `http://feedback-service:8080`).
