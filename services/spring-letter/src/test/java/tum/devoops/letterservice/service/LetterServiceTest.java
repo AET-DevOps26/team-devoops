@@ -12,6 +12,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
@@ -66,12 +68,15 @@ class LetterServiceTest {
     @Mock
     private TransactionRepository transactionRepository;
 
+    private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
     private LetterService letterService;
 
     @BeforeEach
     void setUp() {
         letterService = new LetterService(mailSender, FROM, memberRepository, sportRepository,
-                teamRepository, directorRepository, trainerRepository, traineeRepository, transactionRepository);
+                teamRepository, directorRepository, trainerRepository, traineeRepository, transactionRepository,
+                meterRegistry);
     }
 
     // --- sendMail: role-based receiver resolution ---
@@ -92,6 +97,7 @@ class LetterServiceTest {
         assertThat(extractHtml(sent.get(0))).isEqualTo("<p>Hi Alice</p>");
         assertThat(sent.get(1).getAllRecipients()[0].toString()).isEqualTo("bob@example.com");
         assertThat(extractHtml(sent.get(1))).isEqualTo("<p>Hi Bob</p>");
+        assertThat(meterRegistry.counter("letters_sent_total", "status", "success").count()).isEqualTo(2.0);
     }
 
     @Test
@@ -256,7 +262,7 @@ class LetterServiceTest {
     void sendMailWrapsMessagingExceptionInMailDeliveryException() {
         LetterService brokenFromService = new LetterService(mailSender, "not a valid from address",
                 memberRepository, sportRepository, teamRepository, directorRepository,
-                trainerRepository, traineeRepository, transactionRepository);
+                trainerRepository, traineeRepository, transactionRepository, meterRegistry);
 
         MemberEntity frank = member("Frank", "Foster", "frank@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(frank));
@@ -267,6 +273,7 @@ class LetterServiceTest {
                 .isInstanceOf(MailDeliveryException.class)
                 .hasMessageContaining("frank@example.com")
                 .hasCauseInstanceOf(jakarta.mail.MessagingException.class);
+        assertThat(meterRegistry.counter("letters_sent_total", "status", "failure").count()).isEqualTo(1.0);
     }
 
     // --- getPdf ---
@@ -292,6 +299,7 @@ class LetterServiceTest {
                     .contains("Bob Brown", "2 Berry Blvd", "Hi Bob")
                     .doesNotContain("Alice");
         }
+        assertThat(meterRegistry.counter("letters_generated_total").count()).isEqualTo(2.0);
     }
 
     @Test

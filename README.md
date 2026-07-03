@@ -307,7 +307,8 @@ Kubernetes cluster) from the same underlying config.
 
 **Prometheus** scrapes request count, latency, and error-rate metrics from
 every Spring service (`/actuator/prometheus`, via Micrometer), the GenAI
-service (`/metrics`, via `prometheus-flask-exporter`), and Traefik itself
+service (`/metrics`, via `prometheus-flask-exporter`), Keycloak (`/metrics` on
+its management port, `KC_METRICS_ENABLED=true`), and Traefik itself
 (edge-level metrics; Kubernetes uses the cluster's own nginx ingress instead of
 Traefik, so this one is compose-only). Scrape targets are statically
 configured in [`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml)
@@ -340,8 +341,20 @@ Two dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/
 
 | Dashboard | Covers |
 |---|---|
-| `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status |
-| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service |
+| `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status, Keycloak login rate, and letters sent/generated |
+| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service, plus RAG query rate/latency and report-generation rate by kind/status |
+
+Beyond the generic per-request metrics above, a few **business-level custom
+metrics** are tracked so the dashboards reflect what the system is actually
+doing, not just HTTP noise:
+
+| Metric | Service | What it shows |
+|---|---|---|
+| `letters_sent_total{status}` | letter-service | Actual mail delivery outcomes — ties directly to the mail credentials/health-check work above |
+| `letters_generated_total` | letter-service | PDF letters generated |
+| `genai_rag_queries_total{status}`, `genai_rag_query_duration_seconds` | py-genai-helper | RAG question-answering usage and latency |
+| `genai_report_generation_total{kind,status}` | py-genai-helper | Member/team AI report generation attempts |
+| `http_server_requests_seconds_count{job="keycloak", uri=".../protocol/openid-connect/token"}` | Keycloak | Login rate — Keycloak already exposes Micrometer-style HTTP metrics on its management port (`KC_METRICS_ENABLED=true`), reused as-is rather than building a separate login-tracking mechanism |
 
 Two alert rules are provisioned in Grafana's unified alerting
 ([`infra/grafana/provisioning/alerting/rules.yaml`](infra/grafana/provisioning/alerting/rules.yaml))

@@ -114,10 +114,49 @@
       ]
     },
     {
+      "id": 6,
+      "title": "Login rate (Keycloak)",
+      "type": "timeseries",
+      "description": "Rate of completed OAuth token exchanges (POST .../protocol/openid-connect/token) -- a proxy for successful logins across all clients (web client, Grafana).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"keycloak\", method=\"POST\", uri=\"/realms/{realm}/protocol/{protocol}/token\", status=\"200\"}[5m]))",
+          "legendFormat": "logins/s"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Letters sent / generated",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (status) (rate(letters_sent_total{job=\"letter-service\"}[5m]))",
+          "legendFormat": "sent ({{status}})"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(letters_generated_total{job=\"letter-service\"}[5m]))",
+          "legendFormat": "generated"
+        }
+      ]
+    },
+    {
       "id": 5,
       "title": "Active alerts",
       "type": "alertlist",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
       "options": {
         "showOptions": "current",
         "maxItems": 20,

@@ -43,3 +43,11 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["py-genai-helper:5000"]
+
+  # Management port (KC_HTTP_MANAGEMENT_RELATIVE_PATH), same port the health probes use.
+  # Requires KC_METRICS_ENABLED=true. Proxy for login rate: request rate on the
+  # protocol/openid-connect/token and .../auth endpoints.
+  - job_name: keycloak
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["keycloak:9000"]

@@ -374,6 +374,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
       KC_HOSTNAME: https://team-devoops.polandcentral.cloudapp.azure.com/auth
