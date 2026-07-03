@@ -38,7 +38,7 @@ export function useSportsList(enabled = true) {
     queryKey: organizationKeys.sports,
     queryFn: () =>
       mockOr(
-        () => Promise.resolve(sportFixtures),
+        () => Promise.resolve(sportFixtures.map(cloneSport)),
         () => organizationClient.get<Sport[]>('/sports').then(r => r.data),
       ),
     enabled,
@@ -54,7 +54,7 @@ export function useSport(id: string) {
         () => {
           const found = sportsById[id]
           if (!found) throw new Error('Sport not found')
-          return Promise.resolve(found)
+          return Promise.resolve(cloneSport(found))
         },
         () => organizationClient.get<Sport>(`/sports/${encodeURIComponent(id)}`).then(r => r.data),
       ),
@@ -66,7 +66,11 @@ export function useCreateSport() {
   const qc = useQueryClient()
 
   return useMutation<Sport, Error, SportCreate>({
-    mutationFn: data => organizationClient.post<Sport>('/sports', data).then(r => r.data),
+    mutationFn: data =>
+      mockOr(
+        () => Promise.resolve(mockCreateSport(data)),
+        () => organizationClient.post<Sport>('/sports', data).then(r => r.data),
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: organizationKeys.sports }),
   })
 }
@@ -75,10 +79,15 @@ export function useUpdateSport() {
   const qc = useQueryClient()
 
   return useMutation<Sport, Error, { id: string } & SportPartialUpdate>({
-    mutationFn: ({ id, ...data }) => organizationClient.patch<Sport>(`/sports/${id}`, data).then(r => r.data),
+    mutationFn: ({ id, ...data }) =>
+      mockOr(
+        () => Promise.resolve(mockUpdateSport({ id, ...data })),
+        () => organizationClient.patch<Sport>(`/sports/${id}`, data).then(r => r.data),
+      ),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: organizationKeys.sports })
       qc.invalidateQueries({ queryKey: organizationKeys.sport(id) })
+      qc.invalidateQueries({ queryKey: organizationKeys.teams })
     },
   })
 }
@@ -87,9 +96,17 @@ export function useDeleteSport() {
   const qc = useQueryClient()
 
   return useMutation<void, Error, string>({
-    mutationFn: id => organizationClient.delete(`/sports/${id}`).then(() => undefined),
+    mutationFn: id =>
+      mockOr(
+        () => {
+          mockDeleteSport(id)
+          return Promise.resolve(undefined)
+        },
+        () => organizationClient.delete(`/sports/${id}`).then(() => undefined),
+      ),
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: organizationKeys.sports })
+      qc.invalidateQueries({ queryKey: organizationKeys.teams })
       qc.removeQueries({ queryKey: organizationKeys.sport(id) })
     },
   })
@@ -132,7 +149,11 @@ export function useCreateTeam() {
   const qc = useQueryClient()
 
   return useMutation<Team, Error, TeamCreate>({
-    mutationFn: data => organizationClient.post<Team>('/teams', data).then(r => r.data),
+    mutationFn: data =>
+      mockOr(
+        () => Promise.resolve(mockCreateTeam(data)),
+        () => organizationClient.post<Team>('/teams', data).then(r => r.data),
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: organizationKeys.teams }),
   })
 }
@@ -157,7 +178,14 @@ export function useDeleteTeam() {
   const qc = useQueryClient()
 
   return useMutation<void, Error, string>({
-    mutationFn: id => organizationClient.delete(`/teams/${id}`).then(() => undefined),
+    mutationFn: id =>
+      mockOr(
+        () => {
+          mockDeleteTeam(id)
+          return Promise.resolve(undefined)
+        },
+        () => organizationClient.delete(`/teams/${id}`).then(() => undefined),
+      ),
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: organizationKeys.teams })
       qc.removeQueries({ queryKey: organizationKeys.team(id) })
@@ -166,6 +194,106 @@ export function useDeleteTeam() {
 }
 
 const pendingTeamUpdates = new Set<string>()
+
+function mockCreateSport(data: SportCreate): Sport {
+  const user = getCurrentUser()
+  const name = data.name.trim()
+
+  if (user.role !== 'admin') {
+    throw mockHttpError(403, 'Only admins can create sports.')
+  }
+  if (!name) throw mockHttpError(400, 'Name is required.')
+  assertUniqueSportName(name)
+
+  const sport: Sport = {
+    id: mockSportId(),
+    name,
+    description: data.description?.trim() ?? '',
+    created_at: new Date().toISOString().slice(0, 10),
+    directors: memberRefsFromIds(data.directors ?? [], (id) => `Member not found: ${id}`),
+  }
+
+  sportFixtures.unshift(sport)
+  sportsById[sport.id] = sport
+  return cloneSport(sport)
+}
+
+function mockUpdateSport({ id, ...data }: { id: string } & SportPartialUpdate): Sport {
+  const user = getCurrentUser()
+  const index = sportFixtures.findIndex((sport) => sport.id === id)
+  const sport = sportFixtures[index]
+
+  if (!sport) throw mockHttpError(404, `Sport not found: ${id}`)
+  if (!canUpdateSport(sport, user)) {
+    throw mockHttpError(403, 'Access denied')
+  }
+
+  if (data.name !== undefined) {
+    const name = data.name.trim()
+    if (!name) throw mockHttpError(400, 'Name is required.')
+    if (name !== sport.name) assertUniqueSportName(name, id)
+  }
+
+  const updated: Sport = {
+    ...sport,
+    name: data.name !== undefined ? data.name.trim() : sport.name,
+    description: data.description !== undefined ? data.description : sport.description,
+    directors:
+      user.role === 'admin' && data.directors !== undefined
+        ? memberRefsFromIds(data.directors, (memberId) => `Member not found: ${memberId}`)
+        : sport.directors,
+  }
+
+  sportFixtures[index] = updated
+  sportsById[id] = updated
+  syncTeamSportNames(updated)
+  return cloneSport(updated)
+}
+
+function mockDeleteSport(id: string): void {
+  const user = getCurrentUser()
+  const index = sportFixtures.findIndex((sport) => sport.id === id)
+
+  if (user.role !== 'admin') {
+    throw mockHttpError(403, 'Only admins can delete sports.')
+  }
+  if (index === -1) throw mockHttpError(404, `Sport not found: ${id}`)
+
+  sportFixtures.splice(index, 1)
+  delete sportsById[id]
+
+  for (let teamIndex = teamFixtures.length - 1; teamIndex >= 0; teamIndex -= 1) {
+    if (teamFixtures[teamIndex].sport.id === id) {
+      teamFixtures.splice(teamIndex, 1)
+    }
+  }
+}
+
+function mockCreateTeam(data: TeamCreate): Team {
+  const user = getCurrentUser()
+  const name = data.name.trim()
+
+  if (!name) throw mockHttpError(400, 'Name is required.')
+  const sport = sportsById[data.sport]
+  if (!sport) throw mockHttpError(400, 'Sport not found.')
+  if (!canCreateTeam(data.sport, user)) {
+    throw mockHttpError(403, 'You are not allowed to create a team for this sport.')
+  }
+
+  const team: Team = {
+    id: mockTeamId(),
+    name,
+    description: data.description?.trim() ?? '',
+    address: data.address?.trim() ?? '',
+    created_at: new Date().toISOString().slice(0, 10),
+    sport: { id: sport.id, name: sport.name },
+    trainers: memberRefsFromIds(data.trainers ?? []),
+    trainees: memberRefsFromIds(data.trainees ?? []),
+  }
+
+  teamFixtures.unshift(team)
+  return cloneTeam(team)
+}
 
 function mockUpdateTeam({ id, ...data }: { id: string } & TeamPartialUpdate): Promise<Team> {
   if (pendingTeamUpdates.has(id)) {
@@ -218,14 +346,32 @@ function mockUpdateTeam({ id, ...data }: { id: string } & TeamPartialUpdate): Pr
   }
 }
 
+function mockDeleteTeam(id: string): void {
+  const user = getCurrentUser()
+  const index = teamFixtures.findIndex((team) => team.id === id)
+  const team = teamFixtures[index]
+
+  if (!team) throw mockHttpError(404, 'Team not found')
+  if (!canDeleteTeam(team, user)) {
+    throw mockHttpError(403, 'You are not allowed to delete this team.')
+  }
+
+  teamFixtures.splice(index, 1)
+}
+
+function canCreateTeam(sportId: string, user: AuthUser): boolean {
+  if (user.role === 'admin') return true
+  if (user.role !== 'director') return false
+
+  return isDirectorForSport(sportId, user.id)
+}
+
 function canUpdateTeam(team: Team, user: AuthUser): boolean {
   switch (user.role) {
     case 'admin':
       return true
     case 'director':
-      return sportFixtures
-        .find((sport) => sport.id === team.sport.id)
-        ?.directors.some((director) => director.id === user.id) ?? false
+      return isDirectorForSport(team.sport.id, user.id)
     case 'trainer':
       return isTeamCoach(team, user.id)
     case 'member':
@@ -233,12 +379,72 @@ function canUpdateTeam(team: Team, user: AuthUser): boolean {
   }
 }
 
-function memberRefsFromIds(ids: string[]): MemberRef[] {
+function canDeleteTeam(team: Team, user: AuthUser): boolean {
+  if (user.role === 'admin') return true
+  if (user.role === 'director') return isDirectorForSport(team.sport.id, user.id)
+  return false
+}
+
+function canUpdateSport(sport: Sport, user: AuthUser): boolean {
+  if (user.role === 'admin') return true
+  if (user.role === 'director') {
+    return sport.directors.some((director) => director.id === user.id)
+  }
+
+  return false
+}
+
+function isDirectorForSport(sportId: string, userId: string): boolean {
+  return (
+    sportFixtures
+      .find((sport) => sport.id === sportId)
+      ?.directors.some((director) => director.id === userId) ?? false
+  )
+}
+
+function assertUniqueSportName(name: string, excludeId?: string): void {
+  const duplicate = sportFixtures.some((sport) => sport.id !== excludeId && sport.name === name)
+  if (duplicate) throw mockHttpError(409, `Sport already exists: ${name}`)
+}
+
+function memberRefsFromIds(
+  ids: string[],
+  missingMessage: (id: string) => string = () => 'Member not found.',
+): MemberRef[] {
   return ids.map((id) => {
     const name = memberNamesById[id]
-    if (!name) throw mockHttpError(400, 'Member not found.')
+    if (!name) throw mockHttpError(400, missingMessage(id))
     return { id, name }
   })
+}
+
+function syncTeamSportNames(sport: Sport): void {
+  for (const team of teamFixtures) {
+    if (team.sport.id === sport.id) {
+      team.sport = { id: sport.id, name: sport.name }
+    }
+  }
+}
+
+function mockSportId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `cccccccc-cccc-4ccc-8ccc-${Date.now().toString(16).padStart(12, '0').slice(-12)}`
+  )
+}
+
+function mockTeamId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `bbbbbbbb-bbbb-4bbb-8bbb-${Date.now().toString(16).padStart(12, '0').slice(-12)}`
+  )
+}
+
+function cloneSport(sport: Sport): Sport {
+  return {
+    ...sport,
+    directors: sport.directors.map((director) => ({ ...director })),
+  }
 }
 
 function cloneTeam(team: Team): Team {

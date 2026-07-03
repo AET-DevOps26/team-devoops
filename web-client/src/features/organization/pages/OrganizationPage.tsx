@@ -1,6 +1,16 @@
 import { useState } from 'react'
-import { ChevronRight, Pencil } from 'lucide-react'
+import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
@@ -14,13 +24,16 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
+import { serverErrorMessage } from '@/lib/server-error'
 import { cn } from '@/lib/utils'
 import { isTeamCoach, memberRefName } from '@/types'
+import { useDeleteSport, useDeleteTeam } from '../api/queries'
 import {
   type SportTeamsView,
   type TeamView,
   useTeamsViewModel,
 } from '../model/useTeamsViewModel'
+import { SportEditorDialog } from '../components/SportEditorDialog'
 import { TeamEditorDialog } from '../components/TeamEditorDialog'
 import { useOrganizationUiStore } from '../model/organizationUiStore'
 
@@ -29,15 +42,80 @@ const nameList = (refs: Parameters<typeof memberRefName>[0][]) =>
 
 export function OrganizationPage() {
   const { view, currentUserId, currentUserRole, isLoading, error } = useTeamsViewModel()
+  const openCreateTeam = useOrganizationUiStore((state) => state.openCreateTeam)
   const openEditTeam = useOrganizationUiStore((state) => state.openEditTeam)
+  const openCreateSport = useOrganizationUiStore((state) => state.openCreateSport)
+  const openEditSport = useOrganizationUiStore((state) => state.openEditSport)
+  const openDeleteConfirm = useOrganizationUiStore((state) => state.openDeleteConfirm)
+  const closeDeleteConfirm = useOrganizationUiStore((state) => state.closeDeleteConfirm)
+  const openDeleteSportConfirm = useOrganizationUiStore((state) => state.openDeleteSportConfirm)
+  const closeDeleteSportConfirm = useOrganizationUiStore((state) => state.closeDeleteSportConfirm)
+  const deleteTargetId = useOrganizationUiStore((state) => state.deleteTargetId)
+  const sportDeleteTargetId = useOrganizationUiStore((state) => state.sportDeleteTargetId)
   const mutationNotice = useOrganizationUiStore((state) => state.mutationNotice)
-  const [openSport, setOpenSport] = useState<string | null>(null)
+  const setMutationNotice = useOrganizationUiStore((state) => state.setMutationNotice)
+  const deleteTeam = useDeleteTeam()
+  const deleteSport = useDeleteSport()
+  const [openSportId, setOpenSportId] = useState<string | null>(null)
   const [rosterTeamId, setRosterTeamId] = useState<string | null>(null)
-  const activeOpenSport = openSport ?? view.sports[0]?.name ?? ''
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [sportDeleteError, setSportDeleteError] = useState<string | null>(null)
+  const activeOpenSport = openSportId ?? view.sports[0]?.id ?? ''
   const rosterTeam = findRosterTeam(view.sports, rosterTeamId)
+  const rosterSport = rosterTeam
+    ? view.sports.find((sport) => sport.id === rosterTeam.sportId)
+    : undefined
+  const deleteTarget = findRosterTeam(view.sports, deleteTargetId)
+  const sportDeleteTarget =
+    view.sports.find((sport) => sport.id === sportDeleteTargetId) ?? null
+  const canCreateTeam =
+    currentUserRole === 'admin' ||
+    (currentUserRole === 'director' &&
+      view.sports.some((sport) => isSportDirector(sport, currentUserId)))
+  const canCreateSport = currentUserRole === 'admin'
+  const hasPageActions = canCreateSport || canCreateTeam
   const handleEditTeam = (teamId: string) => {
     setRosterTeamId(null)
     openEditTeam(teamId)
+  }
+  const handleEditSport = (sportId: string) => {
+    setRosterTeamId(null)
+    openEditSport(sportId)
+  }
+  const handleDeleteTeam = (teamId: string) => {
+    setDeleteError(null)
+    openDeleteConfirm(teamId)
+  }
+  const handleDeleteSport = (sportId: string) => {
+    setSportDeleteError(null)
+    openDeleteSportConfirm(sportId)
+  }
+  const confirmDeleteTeam = async () => {
+    if (!deleteTarget) return
+
+    try {
+      await deleteTeam.mutateAsync(deleteTarget.id)
+      setMutationNotice('Team deleted.')
+      if (rosterTeamId === deleteTarget.id) setRosterTeamId(null)
+      setDeleteError(null)
+      closeDeleteConfirm()
+    } catch (error) {
+      setDeleteError(serverErrorMessage(error))
+    }
+  }
+  const confirmDeleteSport = async () => {
+    if (!sportDeleteTarget) return
+
+    try {
+      await deleteSport.mutateAsync(sportDeleteTarget.id)
+      setMutationNotice('Sport deleted.')
+      if (rosterSport?.id === sportDeleteTarget.id) setRosterTeamId(null)
+      if (openSportId === sportDeleteTarget.id) setOpenSportId(null)
+      setSportDeleteError(null)
+      closeDeleteSportConfirm()
+    } catch (error) {
+      setSportDeleteError(serverErrorMessage(error))
+    }
   }
 
   return (
@@ -46,6 +124,28 @@ export function OrganizationPage() {
         eyebrow="My Club"
         title="Teams"
         subtitle="The sports your club runs and the teams within them."
+        action={
+          hasPageActions ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              {canCreateSport && (
+                <Button
+                  type="button"
+                  variant={canCreateTeam ? 'outline' : 'default'}
+                  onClick={openCreateSport}
+                >
+                  <Plus />
+                  New sport
+                </Button>
+              )}
+              {canCreateTeam && (
+                <Button type="button" onClick={openCreateTeam}>
+                  <Plus />
+                  New team
+                </Button>
+              )}
+            </div>
+          ) : undefined
+        }
       />
 
       {error && (
@@ -77,17 +177,23 @@ export function OrganizationPage() {
                 My Teams
               </h2>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {view.myTeams.map((team) => (
-                  <TeamSummaryCard
-                    key={team.id}
-                    team={team}
-                    sportName={team.sportName}
-                    currentUserId={currentUserId}
-                    currentUserRole={currentUserRole}
-                    onOpen={() => setRosterTeamId(team.id)}
-                    onEdit={() => handleEditTeam(team.id)}
-                  />
-                ))}
+                {view.myTeams.map((team) => {
+                  const sport = view.sports.find((candidate) => candidate.id === team.sportId)
+
+                  return (
+                    <TeamSummaryCard
+                      key={team.id}
+                      team={team}
+                      sport={sport}
+                      sportName={team.sportName}
+                      currentUserId={currentUserId}
+                      currentUserRole={currentUserRole}
+                      onOpen={() => setRosterTeamId(team.id)}
+                      onEdit={() => handleEditTeam(team.id)}
+                      onDelete={() => handleDeleteTeam(team.id)}
+                    />
+                  )
+                })}
               </div>
             </section>
           )}
@@ -98,19 +204,22 @@ export function OrganizationPage() {
             </h2>
             <div className="border bg-card">
               {view.sports.map((sport, index) => {
-                const expanded = activeOpenSport === sport.name
+                const expanded = activeOpenSport === sport.id
 
                 return (
                   <SportSection
-                    key={sport.name}
+                    key={sport.id}
                     sport={sport}
                     currentUserId={currentUserId}
                     currentUserRole={currentUserRole}
                     expanded={expanded}
                     withTopBorder={index > 0}
-                    onToggle={() => setOpenSport(expanded ? '' : sport.name)}
+                    onToggle={() => setOpenSportId(expanded ? '' : sport.id)}
                     onOpenTeam={setRosterTeamId}
+                    onEditSport={handleEditSport}
+                    onDeleteSport={handleDeleteSport}
                     onEditTeam={handleEditTeam}
+                    onDeleteTeam={handleDeleteTeam}
                   />
                 )
               })}
@@ -125,12 +234,78 @@ export function OrganizationPage() {
             <RosterSheet
               team={rosterTeam}
               currentUserId={currentUserId}
-              canEdit={currentUserRole === 'trainer' && isTeamCoach(rosterTeam, currentUserId)}
+              canEdit={
+                rosterSport ? canEditTeam(rosterTeam, rosterSport, currentUserRole, currentUserId) : false
+              }
+              canDelete={
+                rosterSport ? canDeleteTeam(rosterSport, currentUserRole, currentUserId) : false
+              }
               onEdit={() => handleEditTeam(rosterTeam.id)}
+              onDelete={() => handleDeleteTeam(rosterTeam.id)}
             />
           )}
         </SheetContent>
       </Sheet>
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteError(null)
+            closeDeleteConfirm()
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {deleteTarget?.name ?? 'this team'}? Team memberships will be removed with it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTeam.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteTeam.isPending} onClick={confirmDeleteTeam}>
+              {deleteTeam.isPending ? 'Deleting' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={sportDeleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSportDeleteError(null)
+            closeDeleteSportConfirm()
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete sport</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {sportDeleteTarget?.name ?? 'this sport'}? This permanently deletes the sport,
+              all of its teams, and every membership in those teams.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {sportDeleteError && (
+            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
+              {sportDeleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSport.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteSport.isPending} onClick={confirmDeleteSport}>
+              {deleteSport.isPending ? 'Deleting' : 'Delete sport'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <SportEditorDialog />
       <TeamEditorDialog />
     </div>
   )
@@ -192,7 +367,10 @@ function SportSection({
   withTopBorder,
   onToggle,
   onOpenTeam,
+  onEditSport,
+  onDeleteSport,
   onEditTeam,
+  onDeleteTeam,
 }: {
   sport: SportTeamsView
   currentUserId: string
@@ -201,43 +379,80 @@ function SportSection({
   withTopBorder: boolean
   onToggle: () => void
   onOpenTeam: (id: string) => void
+  onEditSport: (id: string) => void
+  onDeleteSport: (id: string) => void
   onEditTeam: (id: string) => void
+  onDeleteTeam: (id: string) => void
 }) {
   const isDirector = isSportDirector(sport, currentUserId)
+  const canEditSport = canEditSportDetails(sport, currentUserRole, currentUserId)
+  const canDeleteSport = canDeleteSportDetails(currentUserRole)
 
   return (
     <div className={withTopBorder ? 'border-t' : ''}>
-      <button
-        type="button"
-        onClick={onToggle}
+      <div
         className={cn(
-          'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-sunken',
+          'flex items-stretch transition-colors hover:bg-surface-sunken',
           isDirector && 'bg-primary/4 hover:bg-primary/8',
         )}
       >
-        <ChevronRight
-          className={`size-4 shrink-0 text-text-tertiary transition-transform ${
-            expanded ? 'rotate-90' : ''
-          }`}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="truncate text-body-sm font-medium text-text-primary">{sport.name}</p>
-            {isDirector && (
-              <Badge tone="positive" size="sm">
-                Director
-              </Badge>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+        >
+          <ChevronRight
+            className={`size-4 shrink-0 text-text-tertiary transition-transform ${
+              expanded ? 'rotate-90' : ''
+            }`}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-body-sm font-medium text-text-primary">{sport.name}</p>
+              {isDirector && (
+                <Badge tone="positive" size="sm">
+                  Director
+                </Badge>
+              )}
+            </div>
+            <p className="truncate text-caption text-text-tertiary">{sport.description}</p>
+            <p className="truncate text-caption text-text-tertiary">
+              Directors {nameList(sport.directors)}
+            </p>
+          </div>
+          <Badge tone="accent" size="sm">
+            {sport.teams.length} teams
+          </Badge>
+        </button>
+        {(canEditSport || canDeleteSport) && (
+          <div className="flex items-center gap-1 py-3 pr-4">
+            {canEditSport && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onEditSport(sport.id)}
+                title={`Edit ${sport.name}`}
+              >
+                <Pencil />
+                <span className="sr-only">Edit {sport.name}</span>
+              </Button>
+            )}
+            {canDeleteSport && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onDeleteSport(sport.id)}
+                title={`Delete ${sport.name}`}
+              >
+                <Trash2 />
+                <span className="sr-only">Delete {sport.name}</span>
+              </Button>
             )}
           </div>
-          <p className="truncate text-caption text-text-tertiary">{sport.description}</p>
-          <p className="truncate text-caption text-text-tertiary">
-            Directors {nameList(sport.directors)}
-          </p>
-        </div>
-        <Badge tone="accent" size="sm">
-          {sport.teams.length} teams
-        </Badge>
-      </button>
+        )}
+      </div>
 
       {expanded && (
         <ul className="border-t bg-surface-sunken/40">
@@ -249,7 +464,8 @@ function SportSection({
             sport.teams.map((team) => {
               const isCoach = isTeamCoach(team, currentUserId)
               const isTrainee = isTeamTrainee(team, currentUserId)
-              const canEdit = currentUserRole === 'trainer' && isCoach
+              const canEdit = canEditTeam(team, sport, currentUserRole, currentUserId)
+              const canDelete = canDeleteTeam(sport, currentUserRole, currentUserId)
 
               return (
                 <li key={team.id} className="border-b last:border-b-0">
@@ -280,18 +496,32 @@ function SportSection({
                         </div>
                       )}
                     </button>
-                    {canEdit && (
-                      <div className="flex items-center pr-4">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => onEditTeam(team.id)}
-                          title={`Edit ${team.name}`}
-                        >
-                          <Pencil />
-                          <span className="sr-only">Edit {team.name}</span>
-                        </Button>
+                    {(canEdit || canDelete) && (
+                      <div className="flex items-center gap-1 pr-4">
+                        {canEdit && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => onEditTeam(team.id)}
+                            title={`Edit ${team.name}`}
+                          >
+                            <Pencil />
+                            <span className="sr-only">Edit {team.name}</span>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => onDeleteTeam(team.id)}
+                            title={`Delete ${team.name}`}
+                          >
+                            <Trash2 />
+                            <span className="sr-only">Delete {team.name}</span>
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -307,22 +537,27 @@ function SportSection({
 
 function TeamSummaryCard({
   team,
+  sport,
   sportName,
   currentUserId,
   currentUserRole,
   onOpen,
   onEdit,
+  onDelete,
 }: {
   team: TeamView
+  sport?: SportTeamsView
   sportName: string
   currentUserId: string
   currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole']
   onOpen: () => void
   onEdit: () => void
+  onDelete: () => void
 }) {
   const isCoach = isTeamCoach(team, currentUserId)
   const isTrainee = isTeamTrainee(team, currentUserId)
-  const canEdit = currentUserRole === 'trainer' && isCoach
+  const canEdit = sport ? canEditTeam(team, sport, currentUserRole, currentUserId) : false
+  const canDelete = sport ? canDeleteTeam(sport, currentUserRole, currentUserId) : false
 
   return (
     <div className="border border-primary/30 bg-primary/4 p-4 transition-colors hover:bg-primary/8">
@@ -351,12 +586,20 @@ function TeamSummaryCard({
           Coach {nameList(team.trainers)} - {team.trainees.length} members
         </p>
       </button>
-      {canEdit && (
-        <div className="mt-3 flex justify-end">
-          <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-            <Pencil />
-            Edit
-          </Button>
+      {(canEdit || canDelete) && (
+        <div className="mt-3 flex justify-end gap-2">
+          {canEdit && (
+            <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+              <Pencil />
+              Edit
+            </Button>
+          )}
+          {canDelete && (
+            <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+              <Trash2 />
+              Delete
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -371,16 +614,58 @@ function isSportDirector(sport: SportTeamsView, currentUserId: string) {
   return sport.directors.some((member) => member.id === currentUserId)
 }
 
+function canEditSportDetails(
+  sport: SportTeamsView,
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole'],
+  currentUserId: string,
+) {
+  if (currentUserRole === 'admin') return true
+  if (currentUserRole === 'director') return isSportDirector(sport, currentUserId)
+  return false
+}
+
+function canDeleteSportDetails(
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole'],
+) {
+  return currentUserRole === 'admin'
+}
+
+function canEditTeam(
+  team: TeamView,
+  sport: SportTeamsView,
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole'],
+  currentUserId: string,
+) {
+  if (currentUserRole === 'admin') return true
+  if (currentUserRole === 'director') return isSportDirector(sport, currentUserId)
+  if (currentUserRole === 'trainer') return isTeamCoach(team, currentUserId)
+  return false
+}
+
+function canDeleteTeam(
+  sport: SportTeamsView,
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole'],
+  currentUserId: string,
+) {
+  if (currentUserRole === 'admin') return true
+  if (currentUserRole === 'director') return isSportDirector(sport, currentUserId)
+  return false
+}
+
 function RosterSheet({
   team,
   currentUserId,
   canEdit,
+  canDelete,
   onEdit,
+  onDelete,
 }: {
   team: TeamView & { sportName: string }
   currentUserId: string
   canEdit: boolean
+  canDelete: boolean
   onEdit: () => void
+  onDelete: () => void
 }) {
   return (
     <>
@@ -395,11 +680,21 @@ function RosterSheet({
             </SheetTitle>
             <SheetDescription>{team.description || 'No description provided.'}</SheetDescription>
           </div>
-          {canEdit && (
-            <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-              <Pencil />
-              Edit
-            </Button>
+          {(canEdit || canDelete) && (
+            <div className="flex shrink-0 items-center gap-2">
+              {canEdit && (
+                <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+                  <Pencil />
+                  Edit
+                </Button>
+              )}
+              {canDelete && (
+                <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+                  <Trash2 />
+                  Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </SheetHeader>

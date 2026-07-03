@@ -9,6 +9,7 @@ export interface TeamView {
   name: string
   description: string
   address: string
+  sportId: string
   trainers: MemberRef[]
   trainees: MemberRef[]
 }
@@ -49,6 +50,7 @@ export function buildTeamsView(
       name: team.name,
       description: team.description ?? '',
       address: team.address ?? '',
+      sportId,
       trainers: team.trainers,
       trainees: team.trainees,
     }
@@ -61,7 +63,7 @@ export function buildTeamsView(
   const joinedSports = sports.map((sport) => ({
     id: sport.id,
     name: sport.name,
-    description: sport.description,
+    description: sport.description ?? '',
     directors: sport.directors,
     teams: teamsBySportId.get(sport.id) ?? [],
   }))

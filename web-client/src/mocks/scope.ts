@@ -106,10 +106,13 @@ export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUs
     case 'admin':
       return rows
     case 'member':
-      return rows.filter((row) => row.member.id === user.id)
+      return rows.filter((row) => row.member.id === user.id || row.creator?.id === user.id)
     case 'director': {
       const memberIds = memberIdsInDirectorScope(user)
-      return rows.filter((row) => memberIds.has(row.member.id))
+      return rows.filter(
+        (row) =>
+          row.member.id === user.id || row.creator?.id === user.id || memberIds.has(row.member.id),
+      )
     }
     case 'trainer':
       return []
