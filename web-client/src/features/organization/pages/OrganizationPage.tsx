@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
+import { cn } from '@/lib/utils'
 import { isTeamCoach, memberRefName } from '@/types'
 import {
   type SportTeamsView,
@@ -162,7 +163,12 @@ function StatsRow({
       />
       <StatCard label="Sports" value={String(view.stats.sports)} meta="Offered by the club" />
       <StatCard label="Teams Total" value={String(view.stats.teams)} meta="Across all sports" />
-      <StatCard label="My Sports" value={String(view.stats.mySports)} meta="From my teams" />
+      <StatCard
+        label="My Sports"
+        value={String(view.stats.mySports)}
+        tone={view.stats.mySports > 0 ? 'positive' : 'default'}
+        meta="Teams and directed sports"
+      />
     </div>
   )
 }
@@ -197,12 +203,17 @@ function SportSection({
   onOpenTeam: (id: string) => void
   onEditTeam: (id: string) => void
 }) {
+  const isDirector = isSportDirector(sport, currentUserId)
+
   return (
     <div className={withTopBorder ? 'border-t' : ''}>
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-sunken"
+        className={cn(
+          'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-sunken',
+          isDirector && 'bg-primary/4 hover:bg-primary/8',
+        )}
       >
         <ChevronRight
           className={`size-4 shrink-0 text-text-tertiary transition-transform ${
@@ -210,7 +221,14 @@ function SportSection({
           }`}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-body-sm font-medium text-text-primary">{sport.name}</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="truncate text-body-sm font-medium text-text-primary">{sport.name}</p>
+            {isDirector && (
+              <Badge tone="positive" size="sm">
+                Director
+              </Badge>
+            )}
+          </div>
           <p className="truncate text-caption text-text-tertiary">{sport.description}</p>
           <p className="truncate text-caption text-text-tertiary">
             Directors {nameList(sport.directors)}
@@ -347,6 +365,10 @@ function TeamSummaryCard({
 
 function isTeamTrainee(team: TeamView, currentUserId: string) {
   return team.trainees.some((member) => member.id === currentUserId)
+}
+
+function isSportDirector(sport: SportTeamsView, currentUserId: string) {
+  return sport.directors.some((member) => member.id === currentUserId)
 }
 
 function RosterSheet({

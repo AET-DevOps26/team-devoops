@@ -14,6 +14,7 @@ export interface TeamView {
 }
 
 export interface SportTeamsView {
+  id: string
   name: string
   description: string
   directors: MemberRef[]
@@ -23,6 +24,7 @@ export interface SportTeamsView {
 export interface TeamsView {
   sports: SportTeamsView[]
   myTeams: Array<TeamView & { sportName: string }>
+  mySports: SportTeamsView[]
   stats: {
     myTeams: number
     sports: number
@@ -57,6 +59,7 @@ export function buildTeamsView(
   }
 
   const joinedSports = sports.map((sport) => ({
+    id: sport.id,
     name: sport.name,
     description: sport.description,
     directors: sport.directors,
@@ -73,14 +76,24 @@ export function buildTeamsView(
       .map((team) => ({ ...team, sportName: sport.name })),
   )
 
+  const mySports = joinedSports.filter((sport) =>
+    sport.directors.some((director) => director.id === user.id),
+  )
+
+  const mySportNames = new Set(myTeams.map((team) => team.sportName))
+  for (const sport of mySports) {
+    mySportNames.add(sport.name)
+  }
+
   return {
     sports: joinedSports,
     myTeams,
+    mySports,
     stats: {
       myTeams: myTeams.length,
       sports: joinedSports.length,
       teams: teams.length,
-      mySports: new Set(myTeams.map((team) => team.sportName)).size,
+      mySports: mySportNames.size,
     },
   }
 }
