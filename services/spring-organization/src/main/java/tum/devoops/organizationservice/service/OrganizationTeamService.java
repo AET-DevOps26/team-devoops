@@ -140,25 +140,40 @@ public class OrganizationTeamService {
         // null means the list was omitted (no change); a non-null list (including empty) replaces
         // the current members, so an empty list clears them.
         Set<UUID> affected = new HashSet<>();
+        List<UUID> trainerIds;
         if (body.getTrainers() != null) {
-            List<UUID> trainerIds = resolveAndValidateMemberUuids(body.getTrainers(), "trainer");
+            trainerIds = resolveAndValidateMemberUuids(body.getTrainers(), "trainer");
             trainerRepository.findAllById_TeamId(teamId)
                     .forEach(t -> affected.add(t.getId().getMemberId()));
             trainerRepository.deleteAllById_TeamId(teamId);
             saveTrainers(teamId, trainerIds);
             affected.addAll(trainerIds);
+        } else {
+            trainerIds = trainerRepository.findAllById_TeamId(teamId).stream()
+                    .map(t -> t.getId().getMemberId())
+                    .collect(Collectors.toList());
         }
+        List<UUID> traineeIds;
         if (body.getTrainees() != null) {
-            List<UUID> traineeIds = resolveAndValidateMemberUuids(body.getTrainees(), "trainee");
+            traineeIds = resolveAndValidateMemberUuids(body.getTrainees(), "trainee");
             traineeRepository.findAllById_TeamId(teamId)
                     .forEach(t -> affected.add(t.getId().getMemberId()));
             traineeRepository.deleteAllById_TeamId(teamId);
             saveTrainees(teamId, traineeIds);
             affected.addAll(traineeIds);
+        } else {
+            traineeIds = traineeRepository.findAllById_TeamId(teamId).stream()
+                    .map(t -> t.getId().getMemberId())
+                    .collect(Collectors.toList());
         }
         memberRoleSyncService.scheduleSync(affected);
 
-        return toTeam(findTeamOrThrow(teamId));
+        // Build the response from the resolved ids rather than re-reading the managed
+        // TeamEntity: within this transaction it's the same cached instance, whose
+        // trainers/trainees collections don't see the rows saved above (see createTeam).
+        return new Team(team.getId(), team.getName(), team.getDescription(), team.getCreatedAt(),
+                team.getAddress(), sportReference(team.getSportId()),
+                memberReferences(trainerIds), memberReferences(traineeIds));
     }
 
     @Transactional
