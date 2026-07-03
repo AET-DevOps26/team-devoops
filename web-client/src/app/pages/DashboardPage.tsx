@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import {
+  type DashboardDirectorSportSection,
   type DashboardFeedbackItem,
   type DashboardSectionState,
   type DashboardSportSection,
@@ -26,6 +27,7 @@ export function DashboardPage() {
   const { view, states } = useDashboardViewModel()
   const showBalanceCard = Boolean(view.myBalance || states.myBalance?.isLoading)
   const showTeamCard = Boolean(view.myTeam || states.myTeam?.isLoading)
+  const showSportCards = Boolean(view.mySport || states.mySport?.isLoading)
   const showEventsCards = Boolean(view.myEvents || states.myEvents?.isLoading)
   const showFeedbackStat = Boolean(view.myFeedback || states.myFeedback?.isLoading)
 
@@ -41,6 +43,8 @@ export function DashboardPage() {
         <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
       )}
 
+      {showSportCards && <DirectorSportCards sport={view.mySport} state={states.mySport} />}
+
       {(showBalanceCard || showTeamCard || showEventsCards || showFeedbackStat) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {showBalanceCard && <BalanceCard balance={view.myBalance} state={states.myBalance} />}
@@ -52,6 +56,7 @@ export function DashboardPage() {
         </div>
       )}
 
+      {view.mySport && <DirectorTeamsSection sport={view.mySport} state={states.mySport} />}
       {view.myEvents && <EventsSection events={view.myEvents} state={states.myEvents} />}
       {view.myFeedback && (
         <FeedbackSection feedback={view.myFeedback.items} state={states.myFeedback} />
@@ -70,8 +75,8 @@ function AdminCountsSection({
 }) {
   if (state?.isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {['teams', 'directors', 'trainers'].map((key) => (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {['teams', 'directors', 'trainers', 'balance', 'events'].map((key) => (
           <Skeleton key={key} className="h-32 border" />
         ))}
       </div>
@@ -79,10 +84,56 @@ function AdminCountsSection({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <StatCard label="Total Teams" value={String(counts.totalTeams)} meta="Across all sports" />
       <StatCard label="Directors" value={String(counts.directors)} meta="Unique directors" />
       <StatCard label="Trainers" value={String(counts.trainers)} meta="Unique trainers" />
+      <StatCard
+        label="Club Balance"
+        value={counts.totalBalanceFormatted}
+        meta="All member balances"
+      />
+      <StatCard
+        label="Events This Week"
+        value={String(counts.eventsThisWeek)}
+        meta="Scheduled this week"
+      />
+    </div>
+  )
+}
+
+function DirectorSportCards({
+  sport,
+  state,
+}: {
+  sport?: DashboardDirectorSportSection
+  state?: DashboardSectionState
+}) {
+  if (state?.isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {['sport', 'teams', 'members', 'balance'].map((key) => (
+          <Skeleton key={key} className="h-32 border" />
+        ))}
+      </div>
+    )
+  }
+  if (!sport) return null
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="My Sport" value={sport.sportName} meta="Director scope" />
+      <StatCard label="Total Teams" value={String(sport.totalTeams)} meta={sport.sportName} />
+      <StatCard
+        label="Total Members"
+        value={String(sport.totalMembers)}
+        meta="Roster members"
+      />
+      <StatCard
+        label="Sport Balance"
+        value={sport.sportBalanceFormatted}
+        meta="Current total"
+      />
     </div>
   )
 }
@@ -180,6 +231,63 @@ function FeedbackStat({
       tone={feedback.total > 0 ? 'positive' : 'default'}
       meta="Entries in scope"
     />
+  )
+}
+
+function DirectorTeamsSection({
+  sport,
+  state,
+}: {
+  sport: DashboardDirectorSportSection
+  state?: DashboardSectionState
+}) {
+  return (
+    <section className="border bg-card">
+      <SectionHeader title="Team Breakdown" to="/organization" />
+      {sectionBody(state, sport.teams.length === 0, 'No teams are listed for this sport yet.', (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[34rem] text-left">
+            <thead className="border-b bg-surface-sunken/40">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-caption font-semibold uppercase tracking-[0.12em] text-text-tertiary sm:px-5"
+                >
+                  Team
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-caption font-semibold uppercase tracking-[0.12em] text-text-tertiary sm:px-5"
+                >
+                  Members
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-caption font-semibold uppercase tracking-[0.12em] text-text-tertiary sm:px-5"
+                >
+                  Balance
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {sport.teams.map((team) => (
+                <tr key={team.id}>
+                  <td className="px-4 py-3 text-body-sm font-medium text-text-primary sm:px-5">
+                    {team.name}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-body-sm text-text-secondary sm:px-5">
+                    {team.memberCount} members
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-body-sm font-medium text-text-primary sm:px-5">
+                    {team.balanceFormatted}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </section>
   )
 }
 

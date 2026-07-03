@@ -8,7 +8,9 @@ import { formatCents, formatDateShort, formatTime } from '@/lib/format'
 import {
   creatorName,
   memberRefName,
+  type AdminDashboard,
   type Dashboard,
+  type DirectorDashboard,
   type EventSummary,
   type FeedbackSummary,
   type Role,
@@ -57,6 +59,23 @@ export interface DashboardAdminCountsSection {
   totalTeams: number
   directors: number
   trainers: number
+  totalBalanceFormatted: string
+  eventsThisWeek: number
+}
+
+export interface DashboardDirectorTeam {
+  id: string
+  name: string
+  memberCount: number
+  balanceFormatted: string
+}
+
+export interface DashboardDirectorSportSection {
+  sportName: string
+  totalTeams: number
+  totalMembers: number
+  sportBalanceFormatted: string
+  teams: DashboardDirectorTeam[]
 }
 
 export interface DashboardSportTeam {
@@ -80,6 +99,7 @@ export interface DashboardView {
   myBalance?: DashboardBalanceSection
   myFeedback?: DashboardFeedbackSection
   myTeam?: DashboardTeamSection
+  mySport?: DashboardDirectorSportSection
   adminCounts?: DashboardAdminCountsSection
   sports?: DashboardSportSection[]
 }
@@ -95,6 +115,7 @@ export interface DashboardViewModel {
     myEvents?: DashboardSectionState
     myBalance?: DashboardSectionState
     myTeam?: DashboardSectionState
+    mySport?: DashboardSectionState
     myFeedback?: DashboardSectionState
     adminCounts?: DashboardSectionState
     sports?: DashboardSectionState
@@ -170,6 +191,23 @@ function buildFeedbackSection(feedback: FeedbackSummary[]): DashboardFeedbackSec
   }
 }
 
+function buildDirectorSportSection(
+  dashboard: DirectorDashboard,
+): DashboardDirectorSportSection {
+  return {
+    sportName: dashboard.sport.name,
+    totalTeams: dashboard.total_teams,
+    totalMembers: dashboard.total_members,
+    sportBalanceFormatted: formatCents(dashboard.sport_balance_cents),
+    teams: dashboard.teams.map((entry) => ({
+      id: entry.team.id,
+      name: entry.team.name,
+      memberCount: entry.member_count,
+      balanceFormatted: formatCents(entry.balance_cents),
+    })),
+  }
+}
+
 function buildSportsSections(sports: Sport[], teams: Team[]): DashboardSportSection[] {
   const teamsBySport = new Map<string, Team[]>()
 
@@ -193,11 +231,17 @@ function buildSportsSections(sports: Sport[], teams: Team[]): DashboardSportSect
   }))
 }
 
-function buildAdminCounts(sports: Sport[], teams: Team[]): DashboardAdminCountsSection {
+function buildAdminCounts(
+  dashboard: AdminDashboard,
+  sports: Sport[],
+  teams: Team[],
+): DashboardAdminCountsSection {
   return {
     totalTeams: teams.length,
     directors: new Set(sports.flatMap((sport) => sport.directors.map((director) => director.id))).size,
     trainers: new Set(teams.flatMap((team) => team.trainers.map((trainer) => trainer.id))).size,
+    totalBalanceFormatted: formatCents(dashboard.total_balance_cents),
+    eventsThisWeek: dashboard.events_this_week,
   }
 }
 
@@ -291,6 +335,9 @@ function fillSections(
       if (view.role === 'trainer') {
         states.myTeam = state
       }
+      if (view.role === 'director') {
+        states.mySport = state
+      }
       states.myEvents = state
     }
     return
@@ -319,12 +366,14 @@ function fillSections(
       break
 
     case 'director':
+      view.mySport = buildDirectorSportSection(data)
       view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
+      states.mySport = state
       states.myEvents = org.eventsState
       break
 
     case 'admin':
-      view.adminCounts = buildAdminCounts(org.sports, org.teams)
+      view.adminCounts = buildAdminCounts(data, org.sports, org.teams)
       view.sports = buildSportsSections(org.sports, org.teams)
       states.adminCounts = org.orgState
       states.sports = org.orgState
