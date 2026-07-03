@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { eventSummaryFixtures, teamFixtures } from '@/mocks/fixtures'
+import { eventDetailsById, eventSummaryFixtures, teamFixtures } from '@/mocks/fixtures'
 import { MOCK_PERSONAS } from '@/mocks/personas'
 import { scopeEvents } from '@/mocks/scope'
 import type { EventListItem } from '@/types'
@@ -83,11 +83,51 @@ describe('eventAttendanceStatus', () => {
     const member = MOCK_PERSONAS.member
     const view = buildEventsView(scopeEvents(eventSummaryFixtures, member), now, {
       id: member.id,
+      role: member.role,
       teamIds: userTeamIds(teamFixtures, member.id),
     })
 
     expect(view.rows.filter((row) => row.status === 'missed')).toHaveLength(2)
     expect(view.rows.some((row) => row.status === 'attended')).toBe(true)
     expect(view.rows.some((row) => row.status === 'upcoming')).toBe(true)
+  })
+
+  it("collapses a coach's own past event to a role-agnostic past status", () => {
+    const coach = MOCK_PERSONAS.coach
+    const coachOwnedPastEvent = Object.values(eventDetailsById).find(
+      (eventDetail) =>
+        eventDetail.creator?.id === coach.id && new Date(eventDetail.start_time) < now,
+    )
+    const view = buildEventsView(scopeEvents(eventSummaryFixtures, coach), now, {
+      id: coach.id,
+      role: coach.role,
+      teamIds: userTeamIds(teamFixtures, coach.id),
+    })
+    const staleMissedFilterView = buildEventsView(
+      scopeEvents(eventSummaryFixtures, coach),
+      now,
+      {
+        id: coach.id,
+        role: coach.role,
+        teamIds: userTeamIds(teamFixtures, coach.id),
+      },
+      {
+        search: '',
+        status: 'missed',
+        fromDate: '',
+        toDate: '',
+        sort: 'date-asc',
+      },
+    )
+    const row = view.rows.find((eventRow) => eventRow.id === coachOwnedPastEvent?.id)
+
+    expect(coachOwnedPastEvent).toBeDefined()
+    expect(row?.status).toBe('past')
+    expect(
+      view.rows.every(
+        (eventRow) => eventRow.status !== 'attended' && eventRow.status !== 'missed',
+      ),
+    ).toBe(true)
+    expect(staleMissedFilterView.rows).toHaveLength(view.rows.length)
   })
 })

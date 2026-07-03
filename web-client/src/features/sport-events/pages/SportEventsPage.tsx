@@ -1,5 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { CalendarPlus, Pencil, Trash2 } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
@@ -23,8 +34,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { useAuth } from '@/features/auth'
 import { formatDateShort, formatTime } from '@/lib/format'
+import { serverErrorMessage } from '@/lib/server-error'
 import { creatorName, memberRefName } from '@/types'
+import { useDeleteSportEvent } from '../api/queries'
+import { SportEventEditorDialog } from '../components/SportEventEditorDialog'
 import { useEventsUiStore } from '../model/eventsUiStore'
 import {
   type EventStatus,
@@ -47,6 +62,7 @@ const statusTone: Record<EventStatus, React.ComponentProps<typeof Badge>['tone']
 }
 
 export function SportEventsPage() {
+  const { user } = useAuth()
   const { view, isLoading, error } = useEventsViewModel()
   const filters = useEventsUiStore((state) => state.filters)
   const setSearch = useEventsUiStore((state) => state.setSearch)
@@ -57,9 +73,22 @@ export function SportEventsPage() {
   const openEventId = useEventsUiStore((state) => state.openEventId)
   const openEvent = useEventsUiStore((state) => state.open)
   const closeEvent = useEventsUiStore((state) => state.close)
+  const openCreate = useEventsUiStore((state) => state.openCreate)
+  const mutationNotice = useEventsUiStore((state) => state.mutationNotice)
   const detailView = useEventDetailView(openEventId)
+  const canCreateEvent = user.role === 'trainer' || user.role === 'director' || user.role === 'admin'
+  const showAttendanceStatusFilters = user.role === 'member'
 
   useEffect(() => resetFilters, [resetFilters])
+
+  useEffect(() => {
+    if (
+      !showAttendanceStatusFilters &&
+      (filters.status === 'attended' || filters.status === 'missed')
+    ) {
+      setStatus('all')
+    }
+  }, [filters.status, setStatus, showAttendanceStatusFilters])
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6">
@@ -67,7 +96,24 @@ export function SportEventsPage() {
         eyebrow="My Club"
         title="Events"
         subtitle="Training sessions and matches in your club calendar."
+        action={
+          canCreateEvent ? (
+            <Button onClick={openCreate}>
+              <CalendarPlus />
+              New event
+            </Button>
+          ) : undefined
+        }
       />
+
+      {mutationNotice && (
+        <p
+          role="status"
+          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
+        >
+          {mutationNotice}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Upcoming" value={String(view.stats.upcoming)} meta="Scheduled ahead" />
@@ -99,9 +145,14 @@ export function SportEventsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="attended">Attended</SelectItem>
-                <SelectItem value="missed">Missed</SelectItem>
+                {showAttendanceStatusFilters && (
+                  <>
+                    <SelectItem value="attended">Attended</SelectItem>
+                    <SelectItem value="missed">Missed</SelectItem>
+                  </>
+                )}
                 <SelectItem value="upcoming">Upcoming</SelectItem>
+                <SelectItem value="past">Past</SelectItem>
               </SelectContent>
             </Select>
 
@@ -175,12 +226,23 @@ export function SportEventsPage() {
           <EventDetailSheet detailView={detailView} />
         </SheetContent>
       </Sheet>
+
+      <SportEventEditorDialog />
     </div>
   )
 }
 
 function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEventDetailView> }) {
   const { detail, isLoading, error, missed, sportNames } = detailView
+  const { user } = useAuth()
+  const openEdit = useEventsUiStore((state) => state.openEdit)
+  const closeEvent = useEventsUiStore((state) => state.close)
+  const deleteTargetId = useEventsUiStore((state) => state.deleteTargetId)
+  const openDeleteConfirm = useEventsUiStore((state) => state.openDeleteConfirm)
+  const closeDeleteConfirm = useEventsUiStore((state) => state.closeDeleteConfirm)
+  const setMutationNotice = useEventsUiStore((state) => state.setMutationNotice)
+  const deleteEvent = useDeleteSportEvent()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   if (isLoading) {
     return (
@@ -209,6 +271,22 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
     )
   }
 
+  const canManage = user.role === 'admin' || detail.creator?.id === user.id
+  const confirmingDelete = deleteTargetId === detail.id
+
+  const handleDelete = async () => {
+    setDeleteError(null)
+
+    try {
+      await deleteEvent.mutateAsync(detail.id)
+      setMutationNotice('Event deleted.')
+      closeDeleteConfirm()
+      closeEvent()
+    } catch (deleteFailure) {
+      setDeleteError(serverErrorMessage(deleteFailure))
+    }
+  }
+
   return (
     <>
       <SheetHeader>
@@ -222,6 +300,48 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
       </SheetHeader>
 
       <div className="space-y-6 px-4 py-2">
+        {canManage && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => openEdit(detail.id)}>
+              <Pencil />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setDeleteError(null)
+                openDeleteConfirm(detail.id)
+              }}
+            >
+              <Trash2 />
+              Delete
+            </Button>
+          </div>
+        )}
+
+        {deleteError && <p className="text-body-sm text-destructive">{deleteError}</p>}
+
+        <AlertDialog
+          open={confirmingDelete}
+          onOpenChange={(open) => !open && closeDeleteConfirm()}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete event</AlertDialogTitle>
+              <AlertDialogDescription>
+                Delete {detail.name} permanently? This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteEvent.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction disabled={deleteEvent.isPending} onClick={handleDelete}>
+                {deleteEvent.isPending ? 'Deleting' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field
             label="Start"
