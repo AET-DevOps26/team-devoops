@@ -64,6 +64,45 @@ genai:
   secretName: genai-env
 
 # ---------------------------------------------------------------------------
+# Prometheus + Grafana. Like `genai` above, the scrape config / dashboards /
+# provisioning are plain files in infra/prometheus/ and infra/grafana/ (the
+# same ones docker-compose bind-mounts) — Helm can't reach outside its own
+# chart directory via .Files.Get, so the pipeline loads them into ConfigMaps
+# out-of-band (kubectl create configmap --from-file) and the chart only
+# references those ConfigMaps by name.
+monitoring:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    configMapName: prometheus-config
+    storageSize: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+  grafana:
+    image: grafana/grafana:11.4.0
+    storageSize: 2Gi
+    datasourcesConfigMapName: grafana-datasources
+    dashboardProvidersConfigMapName: grafana-dashboard-providers
+    dashboardsConfigMapName: grafana-dashboards
+    alertingConfigMapName: grafana-alerting
+    oauthClientId: grafana
+    # Matches the existing forwardAuth.clientSecret pattern: a hardcoded default
+    # for an internal-only confidential client, not treated as a rotated secret.
+    oauthClientSecret: grafana-oauth-secret
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 150m
+        memory: 256Mi
+
+# ---------------------------------------------------------------------------
 # Keycloak identity provider.
 #   path     -> sub-path Keycloak listens on (KC_HTTP_RELATIVE_PATH).
 #   hostname -> public-facing hostname Keycloak puts in issued tokens.

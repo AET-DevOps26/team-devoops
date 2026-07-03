@@ -140,6 +140,19 @@ spec:
                 port:
                   number: 80
           {{- end }}
+          {{- if .Values.monitoring.enabled }}
+          # Grafana enforces its own Keycloak-backed, admin-only login (see
+          # grafana-deployment.yaml) so it's excluded from oauth2-proxy the same
+          # way Keycloak itself is -- routing it through oauth2-proxy too would
+          # just be a redundant, weaker login gate in front of a stronger one.
+          - path: /dashboard
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          {{- end }}
           {{- range $name, $svc := .Values.services }}
           {{- if $svc.open }}
           - path: {{ $svc.path }}

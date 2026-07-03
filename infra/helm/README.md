@@ -19,6 +19,12 @@ infra/helm/team-devoops/
     secret-db.yaml            # SPRING_DATASOURCE_PASSWORD / POSTGRES_PASSWORD
     postgres-statefulset.yaml # Postgres + PVC (cluster default StorageClass)
     postgres-service.yaml
+    prometheus-deployment.yaml # Prometheus + PVC (scrape config from a ConfigMap
+    prometheus-service.yaml    #  created out-of-band, see "Monitoring" below)
+    prometheus-pvc.yaml
+    grafana-deployment.yaml    # Grafana + PVC (dashboards/datasources/alerting
+    grafana-service.yaml       #  from ConfigMaps created out-of-band)
+    grafana-pvc.yaml
 ```
 
 The `api-docs` (Swagger UI) image is built from [api/Dockerfile](../../api/Dockerfile),
@@ -90,6 +96,40 @@ kubectl -n ge83mom-devops26 get pods | grep keycloak
 # keycloak-database-0  1/1  Running
 
 curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops/.well-known/openid-configuration
+```
+
+### 4. Monitoring (Prometheus + Grafana)
+
+Same pattern as `genai-env`: the chart only references these ConfigMaps by
+name (Helm can't reach outside its own chart directory via `.Files.Get`), so
+the `deploy-k8s` pipeline job creates/refreshes them automatically from the
+canonical files in `infra/prometheus/` and `infra/grafana/` — the same ones
+docker-compose bind-mounts. For a manual deploy, create them the same way:
+
+```bash
+kubectl -n ge83mom-devops26 create configmap prometheus-config \
+  --from-file=infra/prometheus/prometheus.yml
+kubectl -n ge83mom-devops26 create configmap grafana-datasources \
+  --from-file=infra/grafana/provisioning/datasources
+kubectl -n ge83mom-devops26 create configmap grafana-dashboard-providers \
+  --from-file=infra/grafana/provisioning/dashboards
+kubectl -n ge83mom-devops26 create configmap grafana-alerting \
+  --from-file=infra/grafana/provisioning/alerting
+kubectl -n ge83mom-devops26 create configmap grafana-dashboards \
+  --from-file=infra/grafana/dashboards
+```
+
+Grafana is admin-only: it authenticates through its own Keycloak client
+(`grafana`, auto-imported with the realm above), not through `oauth2-proxy`.
+Only the realm `admin` role maps to Grafana's `Admin` org role
+(`GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true` rejects login for
+anyone else). Prometheus is never routed through the ingress at all.
+
+Validate:
+
+```bash
+kubectl -n ge83mom-devops26 get pods | grep -E "prometheus|grafana"
+curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard/login
 ```
 
 ## Manual deploy

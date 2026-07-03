@@ -227,6 +227,7 @@ push to `main`; the VM path is unchanged.
 | Ingress | cluster `nginx` ingress (path-prefix routing, prefix stripped per service) |
 | Images | built and pushed to `ghcr.io/aet-devops26/team-devoops/<service>` |
 | Database | in-cluster PostgreSQL `StatefulSet` + PVC (cluster default StorageClass) |
+| Monitoring | in-cluster Prometheus + Grafana, each with its own PVC (see [Monitoring](#monitoring)) |
 
 The `cd` workflow's `docker-push` job builds and pushes all service images to
 ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
@@ -234,7 +235,8 @@ ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
 `helm-validate` job lints and schema-validates the chart with `kubeconform`.
 
 See [`infra/helm/README.md`](infra/helm/README.md) for the chart layout, required
-one-time secrets (`genai-env`, `ghcr-pull`), and manual deploy instructions.
+one-time secrets (`genai-env`, `ghcr-pull`), the Prometheus/Grafana ConfigMaps,
+and manual deploy instructions.
 
 ## Database
 
@@ -299,18 +301,24 @@ These are set in each service's `src/main/resources/application.properties` as d
 
 ## Monitoring
 
+Monitoring runs in **all three environments** (local, Azure VM, and the
+Kubernetes cluster) from the same underlying config.
+
 **Prometheus** scrapes request count, latency, and error-rate metrics from
 every Spring service (`/actuator/prometheus`, via Micrometer), the GenAI
 service (`/metrics`, via `prometheus-flask-exporter`), and Traefik itself
-(edge-level metrics). Scrape targets are statically configured in
-[`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml) — the
-same file is used locally and on the Azure VM, since all targets are internal
-Docker service names. Prometheus itself is never exposed outside the internal
-network in any environment.
+(edge-level metrics; Kubernetes uses the cluster's own nginx ingress instead of
+Traefik, so this one is compose-only). Scrape targets are statically
+configured in [`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml)
+— the same file is used unchanged across all three environments, since
+Docker Compose service names and Kubernetes Service names are identical
+strings and both resolve the same way. Prometheus itself is never exposed
+outside the internal network/cluster in any environment.
 
 **Grafana** visualizes these metrics and is reachable at `/dashboard`
 (`http://localhost/dashboard` locally, `https://team-devoops.polandcentral.cloudapp.azure.com/dashboard`
-on the Azure VM). Dashboards and datasources are provisioned as code from
+on the Azure VM, `https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard`
+on Kubernetes). Dashboards and datasources are provisioned as code from
 [`infra/grafana/`](infra/grafana/) — nothing is configured by hand in the
 running instance.
 

@@ -155,6 +155,28 @@ jobs:
             --from-env-file=/tmp/genai.env \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
+      - name: Create/refresh monitoring ConfigMaps
+        # Same pattern as genai-env above: the chart only references these by name
+        # (Helm can't reach outside its own chart directory via .Files.Get), so the
+        # canonical files under infra/prometheus/ and infra/grafana/ -- the same
+        # ones docker-compose bind-mounts -- are loaded into ConfigMaps here.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap prometheus-config \
+            --from-file=infra/prometheus/prometheus.yml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-datasources \
+            --from-file=infra/grafana/provisioning/datasources \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboard-providers \
+            --from-file=infra/grafana/provisioning/dashboards \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-alerting \
+            --from-file=infra/grafana/provisioning/alerting \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboards \
+            --from-file=infra/grafana/dashboards \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
       - name: Unlock stuck Helm release (if any)
         run: |
           for secret in $(kubectl -n "$NAMESPACE" get secret \
