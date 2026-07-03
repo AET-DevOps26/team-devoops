@@ -236,6 +236,27 @@ services:
     environment:
       - GF_SERVER_ROOT_URL=https://team-devoops.polandcentral.cloudapp.azure.com/dashboard/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      # Keycloak is the only login option -- admin-only access is enforced entirely by
+      # ROLE_ATTRIBUTE_PATH/STRICT below, not by anything in front of Grafana.
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-oauth-secret
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/userinfo
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      # Only the Keycloak realm "admin" role maps to a valid Grafana org role; everyone
+      # else evaluates to an empty string, which -- combined with STRICT=true -- denies
+      # login outright. (Mapping the false branch to the literal string "None" instead
+      # does NOT deny login: Grafana treats "None" as a real, if content-less, org role
+      # and still creates a session -- verified locally, login succeeded with org role
+      # "None" and only THEN got blocked with 403s on every dashboard/search call. An
+      # empty string is what actually triggers role_attribute_strict's login rejection.)
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(realm_access.roles[*], 'admin') && 'Admin' || ''
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

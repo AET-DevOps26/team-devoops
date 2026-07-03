@@ -274,6 +274,7 @@ All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/J
 |---|---|---|
 | `devops-client` | public, PKCE S256 | React frontend |
 | `traefik-forward-auth` | confidential | Traefik forward-auth middleware |
+| `grafana` | confidential | Grafana's own generic-OAuth login (admin-only, see [Monitoring](#monitoring)) |
 
 ### Local login
 
@@ -312,6 +313,19 @@ network in any environment.
 on the Azure VM). Dashboards and datasources are provisioned as code from
 [`infra/grafana/`](infra/grafana/) — nothing is configured by hand in the
 running instance.
+
+Grafana is **admin-only**: it authenticates exclusively through its own
+Keycloak generic-OAuth login (client `grafana`, no local username/password
+form). `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` maps the realm `admin`
+role to Grafana's `Admin` org role and everything else to an empty string;
+combined with `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true`, logging in
+with any account that doesn't hold the `admin` realm role is rejected
+outright. (Mapping the non-admin branch to the literal string `"None"`
+instead does *not* reject the login — verified locally: Grafana treats
+`"None"` as a real, if content-less, org role and still creates a session;
+only an empty string actually triggers `role_attribute_strict`'s rejection.)
+Prometheus itself is never routed through Traefik/ingress at all, so it has
+no login of its own to configure.
 
 Two dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/dashboards/)):
 
