@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
 import { PageHeader } from '@/components/ui/page-header'
 import {
@@ -12,11 +13,14 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { FeedbackComposeDialog, FeedbackComposeNotice } from '@/features/feedback'
+import { useFeedbackUiStore } from '@/features/feedback/model/feedbackUiStore'
 import { useMembersUiStore } from '../model/membersUiStore'
 import { useMembersViewModel } from '../model/useMembersViewModel'
 
 export function MembersPage() {
   const { view, isLoading, error } = useMembersViewModel()
+  const openCompose = useFeedbackUiStore((state) => state.openCompose)
   const filters = useMembersUiStore((state) => state.filters)
   const setSearch = useMembersUiStore((state) => state.setSearch)
   const setTeamId = useMembersUiStore((state) => state.setTeamId)
@@ -32,6 +36,8 @@ export function MembersPage() {
         title="Members"
         subtitle="People in your visible teams and sports."
       />
+
+      <FeedbackComposeNotice />
 
       {isLoading ? (
         <MembersTableSkeleton />
@@ -92,26 +98,46 @@ export function MembersPage() {
                   <THead>Email</THead>
                   <THead>Teams</THead>
                   <THead>Sports</THead>
+                  {view.composableMemberIds.size > 0 && <THead className="text-right" />}
                 </tr>
               </thead>
               <tbody>
-                {view.rows.map((member) => (
-                  <TRow key={member.id}>
-                    <TCell className="font-medium">{member.name}</TCell>
-                    <TCell className="text-text-secondary">{member.email}</TCell>
-                    <TCell>
-                      <FacetBadges values={member.teamNames} emptyLabel="No team" />
-                    </TCell>
-                    <TCell>
-                      <FacetBadges values={member.sports} emptyLabel="No sport" />
-                    </TCell>
-                  </TRow>
-                ))}
+                {view.rows.map((member) => {
+                  const canGiveFeedback = view.composableMemberIds.has(member.id)
+
+                  return (
+                    <TRow key={member.id}>
+                      <TCell className="font-medium">{member.name}</TCell>
+                      <TCell className="text-text-secondary">{member.email}</TCell>
+                      <TCell>
+                        <FacetBadges values={member.teamNames} emptyLabel="No team" />
+                      </TCell>
+                      <TCell>
+                        <FacetBadges values={member.sports} emptyLabel="No sport" />
+                      </TCell>
+                      {view.composableMemberIds.size > 0 && (
+                        <TCell className="text-right">
+                          {canGiveFeedback && (
+                            <Button
+                              variant="link"
+                              className="h-auto p-0"
+                              onClick={() => openCompose({ id: member.id, name: member.name })}
+                            >
+                              Give feedback
+                            </Button>
+                          )}
+                        </TCell>
+                      )}
+                    </TRow>
+                  )
+                })}
               </tbody>
             </DataTable>
           )}
         </>
       )}
+
+      <FeedbackComposeDialog />
     </div>
   )
 }
