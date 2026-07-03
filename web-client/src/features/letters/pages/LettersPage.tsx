@@ -9,13 +9,17 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
-import { useTeamsList } from '@/features/organization/api/queries'
+import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
 import { serverErrorMessage } from '@/lib/server-error'
 import { cn } from '@/lib/utils'
-import { isTeamCoach, type Team } from '@/types'
+import { isTeamCoach, type Sport, type Team } from '@/types'
 import { useGeneratePdf, useSendMail } from '../api'
 
 type LetterMode = 'mail' | 'pdf'
+type Audience =
+  | { kind: 'coach'; teams: Team[] }
+  | { kind: 'director'; sports: Sport[] }
+  | { kind: 'admin' }
 
 const TEMPLATE_TOKENS = [
   '{{first_name}}',
@@ -36,40 +40,51 @@ const MODE_COPY = {
     label: 'Mail',
     submit: 'Send Mail',
     pending: 'Sending',
-    success: 'Mail sent to your team.',
+    success: (target: string) => `Mail sent to ${target}.`,
   },
   pdf: {
     label: 'PDF',
     submit: 'Download PDF',
     pending: 'Generating',
-    success: 'PDF generated for your team.',
+    success: (target: string) => `PDF generated for ${target}.`,
   },
 } as const satisfies Record<
   LetterMode,
-  { label: string; submit: string; pending: string; success: string }
+  { label: string; submit: string; pending: string; success: (target: string) => string }
 >
 
 export function LettersPage() {
   const { user } = useAuth()
-  const teamsQuery = useTeamsList(user.role === 'trainer')
+  const isCoach = user.role === 'trainer'
+  const isDirector = user.role === 'director'
+  const isAdmin = user.role === 'admin'
+  const teamsQuery = useTeamsList(isCoach)
+  const sportsQuery = useSportsList(isDirector)
 
   const coachedTeams = useMemo(
     () => (teamsQuery.data ?? []).filter((team) => isTeamCoach(team, user.id)),
     [teamsQuery.data, user.id],
   )
 
-  if (user.role !== 'trainer') {
+  const directedSports = useMemo(
+    () => (sportsQuery.data ?? []).filter((sport) => isSportDirector(sport, user.id)),
+    [sportsQuery.data, user.id],
+  )
+
+  if (!isCoach && !isDirector && !isAdmin) {
     return (
       <LettersFrame>
         <EmptyState
           title="Letters are not available for this role."
-          description="Coach letters are scoped to the coach's own team."
+          description="Letters are scoped to coaches, directors, and admins."
         />
       </LettersFrame>
     )
   }
 
-  if (teamsQuery.isLoading) {
+  const scopeQuery = isCoach ? teamsQuery : isDirector ? sportsQuery : null
+
+  if (scopeQuery?.isLoading) {
     return (
       <LettersFrame>
         <LoadingState />
@@ -77,17 +92,17 @@ export function LettersPage() {
     )
   }
 
-  if (teamsQuery.error) {
+  if (scopeQuery?.error) {
     return (
       <LettersFrame>
         <p className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
-          {serverErrorMessage(teamsQuery.error)}
+          {serverErrorMessage(scopeQuery.error)}
         </p>
       </LettersFrame>
     )
   }
 
-  if (coachedTeams.length === 0) {
+  if (isCoach && coachedTeams.length === 0) {
     return (
       <LettersFrame>
         <EmptyState
@@ -98,9 +113,26 @@ export function LettersPage() {
     )
   }
 
+  if (isDirector && directedSports.length === 0) {
+    return (
+      <LettersFrame>
+        <EmptyState
+          title="No directed sport found."
+          description="Letters are sent to your sport once a sport lists you as director."
+        />
+      </LettersFrame>
+    )
+  }
+
+  const audience: Audience = isCoach
+    ? { kind: 'coach', teams: coachedTeams }
+    : isDirector
+      ? { kind: 'director', sports: directedSports }
+      : { kind: 'admin' }
+
   return (
     <LettersFrame>
-      <LettersComposer coachedTeams={coachedTeams} />
+      <LettersComposer audience={audience} />
     </LettersFrame>
   )
 }
@@ -111,14 +143,14 @@ function LettersFrame({ children }: { children: React.ReactNode }) {
       <PageHeader
         eyebrow="My Club"
         title="Letters"
-        subtitle="Compose mail and PDF templates for your team."
+        subtitle="Compose mail and PDF templates for your audience."
       />
       {children}
     </div>
   )
 }
 
-function LettersComposer({ coachedTeams }: { coachedTeams: Team[] }) {
+function LettersComposer({ audience }: { audience: Audience }) {
   const sendMail = useSendMail()
   const generatePdf = useGeneratePdf()
   const templateRef = useRef<HTMLTextAreaElement>(null)
@@ -182,10 +214,10 @@ function LettersComposer({ coachedTeams }: { coachedTeams: Team[] }) {
         await sendMail.mutateAsync({ subject: subject.trim(), template })
       } else {
         const pdf = await generatePdf.mutateAsync({ template })
-        downloadBlob(pdf, pdfFileName(coachedTeams))
+        downloadBlob(pdf, pdfFileName(audience))
       }
 
-      setNotice(MODE_COPY[mode].success)
+      setNotice(MODE_COPY[mode].success(audienceTarget(audience)))
     } catch (error) {
       setFormError(serverErrorMessage(error))
     }
@@ -198,7 +230,7 @@ function LettersComposer({ coachedTeams }: { coachedTeams: Team[] }) {
           Audience
         </p>
         <p className="mt-1 text-body-sm text-text-primary">
-          {audienceSentence(coachedTeams)}
+          {audienceSentence(audience)}
         </p>
       </section>
 
@@ -224,7 +256,7 @@ function LettersComposer({ coachedTeams }: { coachedTeams: Team[] }) {
             </div>
 
             <Badge tone="accent" className="justify-start sm:justify-center">
-              {teamLabel(coachedTeams)}
+              {audienceLabel(audience)}
             </Badge>
           </div>
 
@@ -356,7 +388,27 @@ function EmptyState({ title, description }: { title: string; description: string
   )
 }
 
-function audienceSentence(teams: Team[]) {
+function isSportDirector(sport: Sport, userId: string): boolean {
+  return sport.directors.some((director) => director.id === userId)
+}
+
+function audienceSentence(audience: Audience) {
+  if (audience.kind === 'admin') {
+    return 'This will go to all members.'
+  }
+
+  if (audience.kind === 'director') {
+    const { sports } = audience
+
+    if (sports.length === 1) {
+      return `This will go to everyone in ${sports[0].name}.`
+    }
+
+    return `This will go to everyone in your directed sports: ${sports.map((sport) => sport.name).join(', ')}.`
+  }
+
+  const { teams } = audience
+
   if (teams.length === 1) {
     return `This will go to everyone on ${teams[0].name}.`
   }
@@ -364,19 +416,50 @@ function audienceSentence(teams: Team[]) {
   return `This will go to everyone on your coached teams: ${teams.map((team) => team.name).join(', ')}.`
 }
 
-function teamLabel(teams: Team[]) {
+function audienceLabel(audience: Audience) {
+  if (audience.kind === 'admin') return 'All members'
+
+  if (audience.kind === 'director') {
+    const { sports } = audience
+    if (sports.length === 1) return sports[0].name
+    return `${sports.length} sports`
+  }
+
+  const { teams } = audience
   if (teams.length === 1) return teams[0].name
   return `${teams.length} teams`
 }
 
-function pdfFileName(teams: Team[]) {
-  const base = teams.length === 1 ? teams[0].name : 'team-letter'
+function audienceTarget(audience: Audience) {
+  if (audience.kind === 'admin') return 'all members'
+
+  if (audience.kind === 'director') {
+    const { sports } = audience
+    return sports.length === 1 ? sports[0].name : 'your directed sports'
+  }
+
+  const { teams } = audience
+  return teams.length === 1 ? teams[0].name : 'your coached teams'
+}
+
+function pdfFileName(audience: Audience) {
+  const base =
+    audience.kind === 'admin'
+      ? 'all-members'
+      : audience.kind === 'director'
+        ? audience.sports.length === 1
+          ? audience.sports[0].name
+          : 'sport-letter'
+        : audience.teams.length === 1
+          ? audience.teams[0].name
+          : 'team-letter'
+
   const safeBase = base
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
 
-  return `${safeBase || 'team-letter'}.pdf`
+  return `${safeBase || 'letter'}.pdf`
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
