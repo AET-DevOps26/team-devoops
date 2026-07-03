@@ -3,6 +3,15 @@ package tum.devoops.letterservice;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import tum.devoops.letterservice.repository.DirectorRepository;
+import tum.devoops.letterservice.repository.MemberRepository;
+import tum.devoops.letterservice.repository.SportRepository;
+import tum.devoops.letterservice.repository.TeamRepository;
+import tum.devoops.letterservice.repository.TraineeRepository;
+import tum.devoops.letterservice.repository.TrainerRepository;
+import tum.devoops.letterservice.repository.TransactionRepository;
 
 /**
  * Context-load smoke test.
@@ -19,6 +28,14 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=none"
 })
 class LetterServiceApplicationTests {
+
+    @MockitoBean MemberRepository memberRepository;
+    @MockitoBean SportRepository sportRepository;
+    @MockitoBean TeamRepository teamRepository;
+    @MockitoBean DirectorRepository directorRepository;
+    @MockitoBean TrainerRepository trainerRepository;
+    @MockitoBean TraineeRepository traineeRepository;
+    @MockitoBean TransactionRepository transactionRepository;
 
     @Test
     void contextLoads() {

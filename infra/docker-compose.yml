@@ -170,6 +170,8 @@ services:
     build: ../services/spring-letter
     container_name: letter-service
     restart: on-failure
+    env_file:
+      - ../services/spring-letter/.env
     expose:
       - 8080
     depends_on:
