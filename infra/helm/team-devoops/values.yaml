@@ -101,6 +101,32 @@ monitoring:
       limits:
         cpu: 150m
         memory: 256Mi
+  # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
+  # is the same file docker-compose uses).
+  loki:
+    image: grafana/loki:3.2.0
+    configMapName: loki-config
+    storageSize: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+  # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
+  # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
+  # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
+  # loaded out-of-band.
+  alloy:
+    image: grafana/alloy:v1.5.1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 150m
+        memory: 256Mi
 
 # ---------------------------------------------------------------------------
 # Keycloak identity provider.

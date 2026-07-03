@@ -25,6 +25,13 @@ infra/helm/team-devoops/
     grafana-deployment.yaml    # Grafana + PVC (dashboards/datasources/alerting
     grafana-service.yaml       #  from ConfigMaps created out-of-band)
     grafana-pvc.yaml
+    loki-deployment.yaml       # Loki + PVC (config from a ConfigMap created
+    loki-service.yaml          #  out-of-band, same as prometheus-config)
+    loki-pvc.yaml
+    alloy-deployment.yaml      # Log shipper -- fetches pod logs via the k8s API
+    alloy-configmap.yaml       #  (loki.source.kubernetes), not a DaemonSet/hostPath;
+    alloy-rbac.yaml            #  config embedded via .Files.Get (k8s-specific, not
+                                #  shared with docker-compose, so no out-of-band step)
 ```
 
 The `api-docs` (Swagger UI) image is built from [api/Dockerfile](../../api/Dockerfile),
@@ -121,6 +128,8 @@ docker-compose bind-mounts. For a manual deploy, create them the same way:
 ```bash
 kubectl -n ge83mom-devops26 create configmap prometheus-config \
   --from-file=infra/prometheus/prometheus.yml
+kubectl -n ge83mom-devops26 create configmap loki-config \
+  --from-file=infra/loki/loki-config.yaml
 kubectl -n ge83mom-devops26 create configmap grafana-datasources \
   --from-file=infra/grafana/provisioning/datasources
 kubectl -n ge83mom-devops26 create configmap grafana-dashboard-providers \
@@ -135,7 +144,18 @@ Grafana is admin-only: it authenticates through its own Keycloak client
 (`grafana`, auto-imported with the realm above), not through `oauth2-proxy`.
 Only the realm `admin` role maps to Grafana's `Admin` org role
 (`GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true` rejects login for
-anyone else). Prometheus is never routed through the ingress at all.
+anyone else). Prometheus and Loki are never routed through the ingress at all.
+
+**Alloy** (log shipper) needs no manual setup — unlike Prometheus/Loki's
+config, `files/alloy-config.alloy` is Kubernetes-specific (not shared with
+docker-compose), so it's embedded straight into a ConfigMap via `.Files.Get`
+in `alloy-configmap.yaml`, the same way the Keycloak realm config is. It
+authenticates to the Kubernetes API as its own `alloy` ServiceAccount, bound
+to a namespaced `Role` (`list pods` / `get pods/log` only, scoped to
+`ge83mom-devops26`) rather than a `ClusterRole` + DaemonSet + hostPath — this
+identity cannot create `ClusterRole`/`ClusterRoleBinding` on this cluster
+(verified directly), and a hostPath-based DaemonSet would also be able to
+read every other team's pod logs sharing the same node regardless.
 
 Validate:
 

@@ -179,6 +179,9 @@ jobs:
           kubectl -n "$NAMESPACE" create configmap prometheus-config \
             --from-file=infra/prometheus/prometheus.yml \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap loki-config \
+            --from-file=infra/loki/loki-config.yaml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
           kubectl -n "$NAMESPACE" create configmap grafana-datasources \
             --from-file=infra/grafana/provisioning/datasources \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -

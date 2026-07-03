@@ -1,0 +1,59 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "loki" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "loki") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "loki") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: loki
+          image: {{ .Values.monitoring.loki.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          # ConfigMap key matches the source file's basename (infra/loki/loki-config.yaml),
+          # not Loki's own default "local-config.yaml" name -- must be spelled out explicitly.
+          args: ["-config.file=/etc/loki/loki-config.yaml"]
+          ports:
+            - containerPort: 3100
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: data
+              mountPath: /loki
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3100
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 3100
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.monitoring.loki.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.monitoring.loki.configMapName }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: loki-data
+{{- end }}

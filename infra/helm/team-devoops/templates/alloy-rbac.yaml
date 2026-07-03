@@ -1,0 +1,42 @@
+{{- if .Values.monitoring.enabled }}
+# Deliberately a namespaced Role/RoleBinding, not a ClusterRole -- this account only
+# ever needs to list pods and read pods/log within its own namespace (verified against
+# the target cluster: this identity can create Role/RoleBinding but not
+# ClusterRole/ClusterRoleBinding). loki.source.kubernetes fetches logs via the
+# Kubernetes API using exactly this scope, so no hostPath/DaemonSet/cluster-wide
+# access is needed -- see infra/helm/team-devoops/files/alloy-config.alloy.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "alloy" "root" $) | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy-pod-logs
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "alloy" "root" $) | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy-pod-logs
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "alloy" "root" $) | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+roleRef:
+  kind: Role
+  name: alloy-pod-logs
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

@@ -337,12 +337,13 @@ only an empty string actually triggers `role_attribute_strict`'s rejection.)
 Prometheus itself is never routed through Traefik/ingress at all, so it has
 no login of its own to configure.
 
-Two dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/dashboards/)):
+Three dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/dashboards/)):
 
 | Dashboard | Covers |
 |---|---|
 | `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status, Keycloak login rate, and letters sent/generated |
 | `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service, plus RAG query rate/latency and report-generation rate by kind/status |
+| `logs.json` | Centralized logs from every service (Loki), filterable by container, plus a log-volume graph |
 
 Beyond the generic per-request metrics above, a few **business-level custom
 metrics** are tracked so the dashboards reflect what the system is actually
@@ -363,6 +364,36 @@ channel is configured, by design:
 
 - **Service down** — any scraped target reporting `up == 0` for 1 minute
 - **High p95 latency** — a Spring service's p95 request latency above 1s for 5 minutes
+
+### Log aggregation
+
+**Loki** centralizes logs from every container/pod, browsable and searchable
+in Grafana's `logs.json` dashboard (or Grafana's Explore view) instead of
+`docker logs`/`kubectl logs` one container at a time. Same three-environment
+scope as everything else above, with **Grafana Alloy** as the log shipper —
+but the shipping mechanism deliberately differs by environment:
+
+- **Local/VM**: Alloy uses `discovery.docker` + `loki.source.docker`
+  ([`infra/alloy/config.alloy`](infra/alloy/config.alloy)), reading every
+  container's logs via the Docker socket.
+- **Kubernetes**: Alloy uses `loki.source.kubernetes`
+  ([`infra/helm/team-devoops/files/alloy-config.alloy`](infra/helm/team-devoops/files/alloy-config.alloy)),
+  which fetches pod logs **through the Kubernetes API** (the `pods/log`
+  subresource) rather than reading node-local log files. This is a deliberate
+  choice, not the more common Promtail-as-DaemonSet setup: a DaemonSet reading
+  `/var/log/pods` via hostPath needs a `ClusterRole` and would also be able to
+  read *every other team's* pod logs on the same shared node — neither is
+  appropriate (or, for the `ClusterRole` part, even possible: verified against
+  the actual cluster that this identity can create namespaced `Role`/
+  `RoleBinding` but not `ClusterRole`/`ClusterRoleBinding`). Alloy instead runs
+  as a plain namespace-scoped `Deployment` with a `Role` granting only
+  `list pods` / `get pods/log` inside `ge83mom-devops26`.
+
+Both variants need explicit relabeling (`discovery.relabel`) to turn
+`__meta_docker_container_name` / `__meta_kubernetes_pod_name` into real
+`container`/`pod` log labels — without it, every container's logs land in one
+indistinguishable `service_name="unknown_service"` stream, which was caught
+by actually querying Loki's label set while testing, not by inspection.
 
 ## Docs
 

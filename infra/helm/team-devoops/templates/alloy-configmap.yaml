@@ -1,0 +1,11 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "alloy-config" "root" $) | nindent 4 }}
+data:
+  config.alloy: |
+    {{ .Files.Get "files/alloy-config.alloy" | nindent 4 | trim }}
+{{- end }}
