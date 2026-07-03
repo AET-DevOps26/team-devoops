@@ -5,6 +5,7 @@
     {
       "username": "admin",
       "enabled": true,
+      "email": "admin@team-devoops.local",
       "emailVerified": true,
       "credentials": [
         {
@@ -18,6 +19,7 @@
     {
       "username": "user",
       "enabled": true,
+      "email": "user@team-devoops.local",
       "emailVerified": true,
       "credentials": [
         {
@@ -126,6 +128,40 @@
         "https://team-devoops.polandcentral.cloudapp.azure.com",
         "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
         "http://localhost"
+      ]
+    },
+    {
+      "clientId": "grafana",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "grafana-oauth-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://team-devoops.polandcentral.cloudapp.azure.com/dashboard/login/generic_oauth",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard/login/generic_oauth",
+        "http://localhost/dashboard/login/generic_oauth"
+      ],
+      "webOrigins": [
+        "https://team-devoops.polandcentral.cloudapp.azure.com",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
+        "http://localhost"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-for-oauth",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
       ]
     }
   ]

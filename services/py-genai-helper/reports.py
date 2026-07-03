@@ -11,9 +11,13 @@ the single seam to fill in later; the async + persistence scaffold around them i
 import logging
 import threading
 
+from prometheus_client import Counter
+
 import db
 
 logger = logging.getLogger(__name__)
+
+REPORT_GENERATION = Counter("genai_report_generation_total", "Total report generation attempts", ["kind", "status"])
 
 
 def generate_member_report_text(member_id: str, token: str) -> str:
@@ -30,16 +34,20 @@ def generate_and_store_member_report(member_id: str, token: str) -> None:
     try:
         report_text = generate_member_report_text(member_id, token)
         db.insert_member_report(member_id, report_text)
+        REPORT_GENERATION.labels(kind="member", status="success").inc()
     except Exception:
         logger.exception("Failed to generate member report for %s", member_id)
+        REPORT_GENERATION.labels(kind="member", status="failure").inc()
 
 
 def generate_and_store_team_report(team_id: str, token: str) -> None:
     try:
         report_text = generate_team_report_text(team_id, token)
         db.insert_team_report(team_id, report_text)
+        REPORT_GENERATION.labels(kind="team", status="success").inc()
     except Exception:
         logger.exception("Failed to generate team report for %s", team_id)
+        REPORT_GENERATION.labels(kind="team", status="failure").inc()
 
 
 def trigger_member_report(member_id: str, token: str) -> None:

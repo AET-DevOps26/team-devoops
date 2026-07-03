@@ -1,4 +1,5 @@
 from flask import Flask, g, jsonify, request
+from prometheus_flask_exporter import PrometheusMetrics
 
 import db
 import reports
@@ -12,6 +13,9 @@ from generated.models import (
 from service import generate_rag_response, hello
 
 app = Flask("genai-service")
+# Exposes /metrics with request count, latency, and status-code histograms for every
+# route below with no per-route instrumentation needed.
+metrics = PrometheusMetrics(app)
 
 # Ensure the report tables exist. This intentionally fails loudly: if the database (or the tables it
 # references) isn't ready yet, startup aborts and the container restarts and retries — the same

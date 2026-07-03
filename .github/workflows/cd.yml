@@ -35,6 +35,11 @@ jobs:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
         run: printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
 
+      - name: Write letter .env file
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+
       - name: Create inventory
         run: |
           cat > /tmp/inventory.yml << INVENTORY
@@ -54,7 +59,8 @@ jobs:
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
             -e "branch=${{ github.ref_name }}" \
-            -e "genai_env_file=/tmp/genai.env"
+            -e "genai_env_file=/tmp/genai.env" \
+            -e "letter_env_file=/tmp/letter.env"
 
   # ------------------------------------------------------------------
   # Build & push all service images to GitHub Container Registry.
@@ -153,6 +159,40 @@ jobs:
           printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
           kubectl -n "$NAMESPACE" create secret generic genai-env \
             --from-env-file=/tmp/genai.env \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh letter-env secret
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: |
+          printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+          kubectl -n "$NAMESPACE" create secret generic letter-env \
+            --from-env-file=/tmp/letter.env \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh monitoring ConfigMaps
+        # Same pattern as genai-env above: the chart only references these by name
+        # (Helm can't reach outside its own chart directory via .Files.Get), so the
+        # canonical files under infra/prometheus/ and infra/grafana/ -- the same
+        # ones docker-compose bind-mounts -- are loaded into ConfigMaps here.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap prometheus-config \
+            --from-file=infra/prometheus/prometheus.yml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap loki-config \
+            --from-file=infra/loki/loki-config.yaml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-datasources \
+            --from-file=infra/grafana/provisioning/datasources \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboard-providers \
+            --from-file=infra/grafana/provisioning/dashboards \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-alerting \
+            --from-file=infra/grafana/provisioning/alerting \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboards \
+            --from-file=infra/grafana/dashboards \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)

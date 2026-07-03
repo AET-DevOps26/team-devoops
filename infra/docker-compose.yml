@@ -215,6 +215,94 @@ services:
     networks:
       - proxy
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    restart: on-failure
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - 9090
+    networks:
+      - proxy
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    restart: on-failure
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    expose:
+      - 3100
+    networks:
+      - proxy
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: alloy
+    restart: on-failure
+    depends_on:
+      - loki
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    networks:
+      - proxy
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    restart: on-failure
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SERVER_ROOT_URL=https://team-devoops.polandcentral.cloudapp.azure.com/dashboard/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      # Keycloak is the only login option -- admin-only access is enforced entirely by
+      # ROLE_ATTRIBUTE_PATH/STRICT below, not by anything in front of Grafana.
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-oauth-secret
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/userinfo
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      # Only the Keycloak realm "admin" role maps to a valid Grafana org role; everyone
+      # else evaluates to an empty string, which -- combined with STRICT=true -- denies
+      # login outright. (Mapping the false branch to the literal string "None" instead
+      # does NOT deny login: Grafana treats "None" as a real, if content-less, org role
+      # and still creates a session -- verified locally, login succeeded with org role
+      # "None" and only THEN got blocked with 403s on every dashboard/search call. An
+      # empty string is what actually triggers role_attribute_strict's login rejection.)
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(realm_access.roles[*], 'admin') && 'Admin' || ''
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    expose:
+      - 3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=le"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - proxy
+
   web-client:
     build:
       context: ../web-client/
@@ -260,6 +348,9 @@ services:
       # Redirect all HTTP traffic to HTTPS
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Edge-level request/latency/error metrics, scraped by Prometheus on the
+      # internal "traefik" API entrypoint (same port as --api.insecure).
+      - "--metrics.prometheus=true"
       # Let's Encrypt (production CA) via HTTP-01 challenge
       - "--certificatesresolvers.le.acme.email=04.raphael.frank@tum.de"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
@@ -313,6 +404,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
       KC_HOSTNAME: https://team-devoops.polandcentral.cloudapp.azure.com/auth
@@ -390,6 +482,9 @@ volumes:
   app_db_data:
   keycloak_db_data:
   letsencrypt:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   proxy:

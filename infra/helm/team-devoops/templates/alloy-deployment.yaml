@@ -1,0 +1,57 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "alloy" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "alloy") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "alloy") | nindent 8 }}
+    spec:
+      serviceAccountName: alloy
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: alloy
+          image: {{ .Values.monitoring.alloy.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args:
+            - "run"
+            - "--server.http.listen-addr=0.0.0.0:12345"
+            - "--storage.path=/var/lib/alloy/data"
+            - "/etc/alloy/config.alloy"
+          env:
+            # discovery.kubernetes in files/alloy-config.alloy scopes to this namespace
+            # only (sys.env("NAMESPACE")) -- matches the namespaced Role above, not a
+            # ClusterRole watching every namespace on the cluster.
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+          ports:
+            - containerPort: 12345
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 12345
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.monitoring.alloy.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-config
+{{- end }}
