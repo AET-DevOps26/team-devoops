@@ -1,0 +1,102 @@
+{
+  "id": null,
+  "uid": "genai-service",
+  "title": "GenAI Service",
+  "description": "Request rate, p95 latency, and error rate for the Python/Flask GenAI service.",
+  "tags": ["team-devoops", "genai"],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (path, method) (rate(flask_http_request_duration_seconds_count[5m]))",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "p95 latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le, path) (rate(flask_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Error rate (5xx ratio)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[5m])) / sum(rate(flask_http_request_duration_seconds_count[5m]))",
+          "legendFormat": "error ratio"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Service up",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "up{job=\"py-genai-helper\"}",
+          "legendFormat": "py-genai-helper"
+        }
+      ]
+    }
+  ]
+}

@@ -313,6 +313,21 @@ on the Azure VM). Dashboards and datasources are provisioned as code from
 [`infra/grafana/`](infra/grafana/) — nothing is configured by hand in the
 running instance.
 
+Two dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/dashboards/)):
+
+| Dashboard | Covers |
+|---|---|
+| `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status |
+| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service |
+
+Two alert rules are provisioned in Grafana's unified alerting
+([`infra/grafana/provisioning/alerting/rules.yaml`](infra/grafana/provisioning/alerting/rules.yaml))
+and surface directly in the Grafana UI/dashboards — no notification
+channel is configured, by design:
+
+- **Service down** — any scraped target reporting `up == 0` for 1 minute
+- **High p95 latency** — a Spring service's p95 request latency above 1s for 5 minutes
+
 ## Docs
 
 - [Problem Statement](docs/problem-statement.md)

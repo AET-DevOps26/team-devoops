@@ -31,6 +31,7 @@ services:
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
+      - "--metrics.prometheus=true"
     ports: !override
       - "80:80"
       - "8080:8080"
