@@ -3,6 +3,12 @@ import { create } from 'zustand'
 export type FeedbackRatingFilter = 'all' | 'high' | 'medium' | 'low'
 export type FeedbackSort = 'date-desc' | 'date-asc' | 'event-asc' | 'event-desc' | 'rating-desc' | 'rating-asc'
 
+export interface FeedbackComposeTarget {
+  id: string
+  name: string
+  eventId?: string
+}
+
 export interface FeedbackFilters {
   search: string
   rating: FeedbackRatingFilter
@@ -25,9 +31,14 @@ const defaultFilters: FeedbackFilters = {
 
 interface FeedbackUiState {
   openFeedbackId: string | null
+  composeTarget: FeedbackComposeTarget | null
+  composeNotice: string | null
   filters: FeedbackFilters
   open: (id: string) => void
   close: () => void
+  openCompose: (target: FeedbackComposeTarget) => void
+  closeCompose: () => void
+  setComposeNotice: (notice: string | null) => void
   setSearch: (search: string) => void
   setRating: (rating: FeedbackRatingFilter) => void
   setEventId: (eventId: string) => void
@@ -39,9 +50,14 @@ interface FeedbackUiState {
 
 export const useFeedbackUiStore = create<FeedbackUiState>((set) => ({
   openFeedbackId: null,
+  composeTarget: null,
+  composeNotice: null,
   filters: defaultFilters,
   open: (id) => set({ openFeedbackId: id }),
   close: () => set({ openFeedbackId: null }),
+  openCompose: (target) => set({ composeTarget: target, composeNotice: null }),
+  closeCompose: () => set({ composeTarget: null }),
+  setComposeNotice: (notice) => set({ composeNotice: notice }),
   setSearch: (search) => set((state) => ({ filters: { ...state.filters, search } })),
   setRating: (rating) => set((state) => ({ filters: { ...state.filters, rating } })),
   setEventId: (eventId) => set((state) => ({ filters: { ...state.filters, eventId } })),
