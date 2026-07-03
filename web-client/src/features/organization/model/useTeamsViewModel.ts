@@ -45,8 +45,8 @@ export function buildTeamsView(
     const teamView: TeamView = {
       id: team.id,
       name: team.name,
-      description: team.description,
-      address: team.address,
+      description: team.description ?? '',
+      address: team.address ?? '',
       trainers: team.trainers,
       trainees: team.trainees,
     }
@@ -98,6 +98,7 @@ export function useTeamsViewModel() {
   return {
     view,
     currentUserId: user.id,
+    currentUserRole: user.role,
     isLoading: sportsQuery.isLoading || teamsQuery.isLoading,
     error: sportsQuery.error ?? teamsQuery.error,
   }

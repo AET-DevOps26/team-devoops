@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
+import { sameIds, toggleId } from '@/lib/id-selection'
 import { serverErrorMessage } from '@/lib/server-error'
 import { cn } from '@/lib/utils'
 import { memberRefName, type AuthUser, type Reference, type Sport, type Team } from '@/types'
@@ -690,20 +691,8 @@ function cleanedDescription(description: string): string | undefined {
   return cleaned.length > 0 ? cleaned : undefined
 }
 
-function toggleId(ids: string[], id: string): string[] {
-  return ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]
-}
-
 function unique(ids: string[]): string[] {
   return Array.from(new Set(ids))
-}
-
-function sameIds(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false
-
-  const sortedA = [...a].sort()
-  const sortedB = [...b].sort()
-  return sortedA.every((id, index) => id === sortedB[index])
 }
 
 function isoToLocalDateTime(iso: string): string {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Pencil } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -13,22 +14,30 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
-import { memberRefName } from '@/types'
+import { isTeamCoach, memberRefName } from '@/types'
 import {
   type SportTeamsView,
   type TeamView,
   useTeamsViewModel,
 } from '../model/useTeamsViewModel'
+import { TeamEditorDialog } from '../components/TeamEditorDialog'
+import { useOrganizationUiStore } from '../model/organizationUiStore'
 
 const nameList = (refs: Parameters<typeof memberRefName>[0][]) =>
   refs.map(memberRefName).join(', ') || '--'
 
 export function OrganizationPage() {
-  const { view, currentUserId, isLoading, error } = useTeamsViewModel()
+  const { view, currentUserId, currentUserRole, isLoading, error } = useTeamsViewModel()
+  const openEditTeam = useOrganizationUiStore((state) => state.openEditTeam)
+  const mutationNotice = useOrganizationUiStore((state) => state.mutationNotice)
   const [openSport, setOpenSport] = useState<string | null>(null)
   const [rosterTeamId, setRosterTeamId] = useState<string | null>(null)
   const activeOpenSport = openSport ?? view.sports[0]?.name ?? ''
   const rosterTeam = findRosterTeam(view.sports, rosterTeamId)
+  const handleEditTeam = (teamId: string) => {
+    setRosterTeamId(null)
+    openEditTeam(teamId)
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-5">
@@ -42,6 +51,15 @@ export function OrganizationPage() {
         <div className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
           Teams could not be loaded. Please try again later.
         </div>
+      )}
+
+      {mutationNotice && (
+        <p
+          role="status"
+          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
+        >
+          {mutationNotice}
+        </p>
       )}
 
       <StatsRow view={view} isLoading={isLoading} />
@@ -64,7 +82,9 @@ export function OrganizationPage() {
                     team={team}
                     sportName={team.sportName}
                     currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
                     onOpen={() => setRosterTeamId(team.id)}
+                    onEdit={() => handleEditTeam(team.id)}
                   />
                 ))}
               </div>
@@ -84,10 +104,12 @@ export function OrganizationPage() {
                     key={sport.name}
                     sport={sport}
                     currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
                     expanded={expanded}
                     withTopBorder={index > 0}
                     onToggle={() => setOpenSport(expanded ? '' : sport.name)}
                     onOpenTeam={setRosterTeamId}
+                    onEditTeam={handleEditTeam}
                   />
                 )
               })}
@@ -98,9 +120,17 @@ export function OrganizationPage() {
 
       <Sheet open={rosterTeamId !== null} onOpenChange={(open) => !open && setRosterTeamId(null)}>
         <SheetContent className="w-full gap-0 sm:max-w-md">
-          {rosterTeam && <RosterSheet team={rosterTeam} currentUserId={currentUserId} />}
+          {rosterTeam && (
+            <RosterSheet
+              team={rosterTeam}
+              currentUserId={currentUserId}
+              canEdit={currentUserRole === 'trainer' && isTeamCoach(rosterTeam, currentUserId)}
+              onEdit={() => handleEditTeam(rosterTeam.id)}
+            />
+          )}
         </SheetContent>
       </Sheet>
+      <TeamEditorDialog />
     </div>
   )
 }
@@ -151,17 +181,21 @@ function findRosterTeam(sports: SportTeamsView[], teamId: string | null) {
 function SportSection({
   sport,
   currentUserId,
+  currentUserRole,
   expanded,
   withTopBorder,
   onToggle,
   onOpenTeam,
+  onEditTeam,
 }: {
   sport: SportTeamsView
   currentUserId: string
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole']
   expanded: boolean
   withTopBorder: boolean
   onToggle: () => void
   onOpenTeam: (id: string) => void
+  onEditTeam: (id: string) => void
 }) {
   return (
     <div className={withTopBorder ? 'border-t' : ''}>
@@ -197,35 +231,52 @@ function SportSection({
             sport.teams.map((team) => {
               const isCoach = isTeamCoach(team, currentUserId)
               const isTrainee = isTeamTrainee(team, currentUserId)
+              const canEdit = currentUserRole === 'trainer' && isCoach
 
               return (
                 <li key={team.id} className="border-b last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => onOpenTeam(team.id)}
-                    className="flex w-full items-center gap-3 py-2.5 pl-11 pr-4 text-left transition-colors hover:bg-surface-sunken"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-body-sm font-medium text-text-primary">{team.name}</p>
-                      <p className="truncate text-caption text-text-tertiary">
-                        Coach {nameList(team.trainers)} - {team.trainees.length} members
-                      </p>
-                    </div>
-                    {(isCoach || isTrainee) && (
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {isCoach && (
-                          <Badge tone="accent" size="sm">
-                            Coach
-                          </Badge>
-                        )}
-                        {isTrainee && (
-                          <Badge tone="positive" size="sm">
-                            Trainee
-                          </Badge>
-                        )}
+                  <div className="flex items-stretch transition-colors hover:bg-surface-sunken">
+                    <button
+                      type="button"
+                      onClick={() => onOpenTeam(team.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-11 pr-4 text-left"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-body-sm font-medium text-text-primary">{team.name}</p>
+                        <p className="truncate text-caption text-text-tertiary">
+                          Coach {nameList(team.trainers)} - {team.trainees.length} members
+                        </p>
+                      </div>
+                      {(isCoach || isTrainee) && (
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {isCoach && (
+                            <Badge tone="accent" size="sm">
+                              Coach
+                            </Badge>
+                          )}
+                          {isTrainee && (
+                            <Badge tone="positive" size="sm">
+                              Trainee
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                    {canEdit && (
+                      <div className="flex items-center pr-4">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => onEditTeam(team.id)}
+                          title={`Edit ${team.name}`}
+                        >
+                          <Pencil />
+                          <span className="sr-only">Edit {team.name}</span>
+                        </Button>
                       </div>
                     )}
-                  </button>
+                  </div>
                 </li>
               )
             })
@@ -240,51 +291,58 @@ function TeamSummaryCard({
   team,
   sportName,
   currentUserId,
+  currentUserRole,
   onOpen,
+  onEdit,
 }: {
   team: TeamView
   sportName: string
   currentUserId: string
+  currentUserRole: ReturnType<typeof useTeamsViewModel>['currentUserRole']
   onOpen: () => void
+  onEdit: () => void
 }) {
   const isCoach = isTeamCoach(team, currentUserId)
   const isTrainee = isTeamTrainee(team, currentUserId)
+  const canEdit = currentUserRole === 'trainer' && isCoach
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="border border-primary/30 bg-primary/4 p-4 text-left transition-colors hover:bg-primary/8"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-caption uppercase tracking-[0.1em] text-primary">{sportName}</p>
-          <h3 className="mt-0.5 truncate text-h4">{team.name}</h3>
-        </div>
-        {(isCoach || isTrainee) && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            {isCoach && (
-              <Badge tone="accent" size="sm">
-                Coach
-              </Badge>
-            )}
-            {isTrainee && (
-              <Badge tone="positive" size="sm">
-                Trainee
-              </Badge>
-            )}
+    <div className="border border-primary/30 bg-primary/4 p-4 transition-colors hover:bg-primary/8">
+      <button type="button" onClick={onOpen} className="block w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-caption uppercase tracking-[0.1em] text-primary">{sportName}</p>
+            <h3 className="mt-0.5 truncate text-h4">{team.name}</h3>
           </div>
-        )}
-      </div>
-      <p className="mt-2 text-caption text-text-tertiary">
-        Coach {nameList(team.trainers)} - {team.trainees.length} members
-      </p>
-    </button>
+          {(isCoach || isTrainee) && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {isCoach && (
+                <Badge tone="accent" size="sm">
+                  Coach
+                </Badge>
+              )}
+              {isTrainee && (
+                <Badge tone="positive" size="sm">
+                  Trainee
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+        <p className="mt-2 text-caption text-text-tertiary">
+          Coach {nameList(team.trainers)} - {team.trainees.length} members
+        </p>
+      </button>
+      {canEdit && (
+        <div className="mt-3 flex justify-end">
+          <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+            <Pencil />
+            Edit
+          </Button>
+        </div>
+      )}
+    </div>
   )
-}
-
-function isTeamCoach(team: TeamView, currentUserId: string) {
-  return team.trainers.some((member) => member.id === currentUserId)
 }
 
 function isTeamTrainee(team: TeamView, currentUserId: string) {
@@ -294,26 +352,40 @@ function isTeamTrainee(team: TeamView, currentUserId: string) {
 function RosterSheet({
   team,
   currentUserId,
+  canEdit,
+  onEdit,
 }: {
   team: TeamView & { sportName: string }
   currentUserId: string
+  canEdit: boolean
+  onEdit: () => void
 }) {
   return (
     <>
       <SheetHeader>
-        <p className="text-caption font-semibold uppercase tracking-[0.2em] text-text-tertiary">
-          {team.sportName} team
-        </p>
-        <SheetTitle className="font-display text-h2 uppercase tracking-wide">
-          {team.name}
-        </SheetTitle>
-        <SheetDescription>{team.description}</SheetDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-caption font-semibold uppercase tracking-[0.2em] text-text-tertiary">
+              {team.sportName} team
+            </p>
+            <SheetTitle className="font-display text-h2 uppercase tracking-wide">
+              {team.name}
+            </SheetTitle>
+            <SheetDescription>{team.description || 'No description provided.'}</SheetDescription>
+          </div>
+          {canEdit && (
+            <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+              <Pencil />
+              Edit
+            </Button>
+          )}
+        </div>
       </SheetHeader>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-2">
         <div>
           <FieldLabel>Address</FieldLabel>
-          <p className="mt-0.5 text-body-sm">{team.address}</p>
+          <p className="mt-0.5 text-body-sm">{team.address || '--'}</p>
         </div>
 
         <div>

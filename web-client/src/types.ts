@@ -134,6 +134,13 @@ export function memberRefName(ref: Reference): string {
   return ref.name
 }
 
+export function isTeamCoach(
+  team: { trainers: readonly Reference[] },
+  currentUserId: string,
+): boolean {
+  return team.trainers.some((member) => member.id === currentUserId)
+}
+
 /** Render a possibly-null creator reference; falls back when the author was deleted. */
 export function creatorName(ref: Reference | null, fallback = 'Unknown'): string {
   return ref ? memberRefName(ref) : fallback
