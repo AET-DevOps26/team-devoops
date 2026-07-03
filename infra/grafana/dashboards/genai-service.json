@@ -97,6 +97,27 @@
           "legendFormat": "py-genai-helper"
         }
       ]
+    },
+    {
+      "id": 5,
+      "title": "Active alerts",
+      "type": "alertlist",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "options": {
+        "showOptions": "current",
+        "maxItems": 20,
+        "sortOrder": 1,
+        "dashboardAlerts": false,
+        "alertInstanceLabelFilter": "",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": false,
+          "normal": false,
+          "error": true
+        },
+        "folder": "Alerts"
+      }
     }
   ]
 }
