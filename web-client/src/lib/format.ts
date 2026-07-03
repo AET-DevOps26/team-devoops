@@ -35,25 +35,33 @@ const TIME = new Intl.DateTimeFormat('en-GB', {
 
 const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short' })
 
+function toValidDate(iso: string): Date | null {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 /** "18 Jun 2026" */
 export function formatDate(iso: string): string {
-  return DATE.format(new Date(iso))
+  const d = toValidDate(iso)
+  return d ? DATE.format(d) : '—'
 }
 
 /** "18 Jun" */
 export function formatDateShort(iso: string): string {
-  return DATE_SHORT.format(new Date(iso))
+  const d = toValidDate(iso)
+  return d ? DATE_SHORT.format(d) : '—'
 }
 
 /** "Sat 21 Jun · 10:00" */
 export function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  return `${WEEKDAY.format(d)} ${DATE_SHORT.format(d)} · ${TIME.format(d)}`
+  const d = toValidDate(iso)
+  return d ? `${WEEKDAY.format(d)} ${DATE_SHORT.format(d)} · ${TIME.format(d)}` : '—'
 }
 
 /** "10:00" */
 export function formatTime(iso: string): string {
-  return TIME.format(new Date(iso))
+  const d = toValidDate(iso)
+  return d ? TIME.format(d) : '—'
 }
 
 /** Whole minutes between two ISO timestamps, e.g. "90 min". */

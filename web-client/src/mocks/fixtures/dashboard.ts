@@ -67,12 +67,11 @@ function dashboardFor(key: MockPersonaKey): Dashboard {
       }
 
     case 'trainer': {
-      const teams = trainerTeams(user.id)
-      const team = teams[0]
+      const team = trainerTeams(user.id)[0]
       return {
         role: 'trainer',
         team: team ? { id: team.id, name: team.name } : { id: '', name: '' },
-        total_members: teams.reduce((sum, t) => sum + t.trainees.length, 0),
+        total_members: team ? team.trainees.length : 0,
         upcoming_events: upcomingEvents(user).length,
         recent_feedback: scopeFeedback(feedbackSummaryFixtures, user),
       }
@@ -80,13 +79,13 @@ function dashboardFor(key: MockPersonaKey): Dashboard {
 
     case 'director': {
       const sportIds = directorSportIds(user.id)
-      const teams = teamFixtures.filter((team) => sportIds.has(team.sport.id))
+      const firstSportId = [...sportIds][0] ?? ''
+      const teams = teamFixtures.filter((team) => team.sport.id === firstSportId)
       const teamSummaries: TeamBalanceSummary[] = teams.map((team) => ({
         team: { id: team.id, name: team.name },
         member_count: team.trainees.length,
         balance_cents: teamBalance(team),
       }))
-      const firstSportId = [...sportIds][0] ?? ''
       return {
         role: 'director',
         sport: sportRef(firstSportId),

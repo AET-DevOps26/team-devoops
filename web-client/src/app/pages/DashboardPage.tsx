@@ -25,7 +25,7 @@ const initials = (name: string) =>
 export function DashboardPage() {
   const { view, states } = useDashboardViewModel()
   const showBalanceCard = Boolean(view.myBalance || states.myBalance?.isLoading)
-  const showTeamCard = Boolean(view.myTeam)
+  const showTeamCard = Boolean(view.myTeam || states.myTeam?.isLoading)
   const showEventsCards = Boolean(view.myEvents || states.myEvents?.isLoading)
   const showFeedbackStat = Boolean(view.myFeedback || states.myFeedback?.isLoading)
 
@@ -44,7 +44,7 @@ export function DashboardPage() {
       {(showBalanceCard || showTeamCard || showEventsCards || showFeedbackStat) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {showBalanceCard && <BalanceCard balance={view.myBalance} state={states.myBalance} />}
-          {showTeamCard && <TeamCard team={view.myTeam} />}
+          {showTeamCard && <TeamCard team={view.myTeam} state={states.myTeam} />}
           {showEventsCards && <EventsCards events={view.myEvents} state={states.myEvents} />}
           {showFeedbackStat && (
             <FeedbackStat feedback={view.myFeedback} state={states.myFeedback} />
@@ -89,9 +89,12 @@ function AdminCountsSection({
 
 function TeamCard({
   team,
+  state,
 }: {
   team?: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myTeam']>
+  state?: DashboardSectionState
 }) {
+  if (state?.isLoading) return <Skeleton className="h-32 border" />
   if (!team) return null
 
   return (

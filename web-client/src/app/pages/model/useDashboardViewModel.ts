@@ -94,6 +94,7 @@ export interface DashboardViewModel {
   states: {
     myEvents?: DashboardSectionState
     myBalance?: DashboardSectionState
+    myTeam?: DashboardSectionState
     myFeedback?: DashboardSectionState
     adminCounts?: DashboardSectionState
     sports?: DashboardSectionState
@@ -287,6 +288,9 @@ function fillSections(
       if (shouldShowBalance(view.role)) {
         states.myBalance = state
       }
+      if (view.role === 'trainer') {
+        states.myTeam = state
+      }
       states.myEvents = state
     }
     return
@@ -309,6 +313,7 @@ function fillSections(
       }
       view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
       view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      states.myTeam = state
       states.myEvents = org.eventsState
       states.myFeedback = state
       break

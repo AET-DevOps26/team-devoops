@@ -24,6 +24,12 @@ export function TableToolbar({
 }: TableToolbarProps) {
   const searchId = useId()
   const [draftSearch, setDraftSearch] = useState(searchValue)
+  const [prevSearchValue, setPrevSearchValue] = useState(searchValue)
+
+  if (searchValue !== prevSearchValue) {
+    setPrevSearchValue(searchValue)
+    setDraftSearch(searchValue)
+  }
 
   useEffect(() => {
     const timeout = window.setTimeout(() => onSearchChange(draftSearch), 250)

@@ -186,17 +186,24 @@ function SportEventEditorLoaded({
   const handleTeamToggle = (teamId: string) => {
     setForm((current) => {
       const nextTeamIds = toggleId(current.teamIds, teamId)
-      const nextSportIds = unique([
-        ...current.sportIds,
-        ...teams
-          .filter((team) => nextTeamIds.includes(team.id))
-          .map((team) => team.sport.id),
-      ])
+      const teamSportIds = new Set(teams.map((team) => team.sport.id))
+      const selectedTeamSportIds = new Set(
+        teams.filter((team) => nextTeamIds.includes(team.id)).map((team) => team.sport.id),
+      )
+      // Keep sports with no backing team at all (e.g. a director's explicit pick) plus
+      // sports still backed by a currently selected team; drop team-derived sports whose
+      // only selected team was just deselected.
+      const nextSportIds = current.sportIds.filter(
+        (sportId) => !teamSportIds.has(sportId) || selectedTeamSportIds.has(sportId),
+      )
+      const addedSportIds = teams
+        .filter((team) => nextTeamIds.includes(team.id))
+        .map((team) => team.sport.id)
 
       return {
         ...current,
         teamIds: nextTeamIds,
-        sportIds: nextSportIds,
+        sportIds: unique([...nextSportIds, ...addedSportIds]),
         attendeeIds: syncAttendeesForTeams(current.teamIds, nextTeamIds, current.attendeeIds, teams),
       }
     })

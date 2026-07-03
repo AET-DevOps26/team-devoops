@@ -87,6 +87,10 @@ function canManageEvent(user: AuthUser, event: SportEvent): boolean {
   return user.role === 'admin' || event.creator?.id === user.id
 }
 
+function canCreateMockEvent(user: AuthUser): boolean {
+  return user.role === 'trainer' || user.role === 'director' || user.role === 'admin'
+}
+
 function upsertMockEvent(event: SportEvent): void {
   mockEventDetailsById[event.id] = event
 
@@ -105,6 +109,9 @@ function upsertMockEvent(event: SportEvent): void {
 
 function mockCreateEvent(data: EventCreate): SportEvent {
   const user = getCurrentUser()
+  if (!canCreateMockEvent(user)) {
+    throw mockEventError('You are not allowed to create events')
+  }
   const name = data.name.trim()
 
   if (!name) throw mockEventError('Name is required')

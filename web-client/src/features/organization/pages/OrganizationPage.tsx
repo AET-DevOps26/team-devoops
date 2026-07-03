@@ -318,7 +318,12 @@ function RosterSheet({
 
         <div>
           <FieldLabel>Coaches ({team.trainers.length})</FieldLabel>
-          <MemberBadges members={team.trainers} tone="accent" emptyText="No coaches assigned." />
+          <MemberBadges
+            members={team.trainers}
+            currentUserId={currentUserId}
+            tone="accent"
+            emptyText="No coaches assigned."
+          />
         </div>
 
         <Separator />
