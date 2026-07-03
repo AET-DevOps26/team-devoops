@@ -180,7 +180,8 @@ class MailRequest(BaseModel):
     subject: Annotated[
         str,
         Field(
-            description="Subject line of the email. Supports the same per-receiver placeholder tokens as the\ntemplate; each token is replaced with that receiver's data before the email is sent.\n"
+            description="Subject line of the email. Must not be empty. Supports the same per-receiver\nplaceholder tokens as the template; each token is replaced with that receiver's data\nbefore the email is sent.\n",
+            min_length=1,
         ),
     ]
     template: Annotated[

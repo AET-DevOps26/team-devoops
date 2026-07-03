@@ -8,6 +8,7 @@ metadata:
     {{- include "team-devoops.labels" (dict "name" $name "root" $root) | nindent 4 }}
 spec:
   replicas: {{ $svc.replicas | default 1 }}
+  progressDeadlineSeconds: {{ $svc.progressDeadlineSeconds | default 600 }}
   strategy:
     {{- toYaml $root.Values.strategy | nindent 4 }}
   selector:

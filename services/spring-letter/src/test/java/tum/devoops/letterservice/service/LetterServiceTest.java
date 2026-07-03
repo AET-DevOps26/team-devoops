@@ -3,10 +3,9 @@ package tum.devoops.letterservice.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -19,27 +18,21 @@ import jakarta.mail.internet.MimeMultipart;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import tum.devoops.letterservice.entity.MemberEntity;
 import tum.devoops.letterservice.entity.SportEntity;
 import tum.devoops.letterservice.entity.TeamEntity;
 import tum.devoops.letterservice.entity.TransactionEntity;
+import tum.devoops.letterservice.exception.ForbiddenException;
 import tum.devoops.letterservice.exception.MailDeliveryException;
 import tum.devoops.letterservice.model.MailRequest;
 import tum.devoops.letterservice.model.PdfRequest;
@@ -81,23 +74,16 @@ class LetterServiceTest {
                 teamRepository, directorRepository, trainerRepository, traineeRepository, transactionRepository);
     }
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
-
     // --- sendMail: role-based receiver resolution ---
 
     @Test
     void sendMailAsAdminSendsPersonalizedMailToAllMembers() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         MemberEntity alice = member("Alice", "Anderson", "alice@example.com");
         MemberEntity bob = member("Bob", "Brown", "bob@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(alice, bob));
         stubMimeMessages();
 
-        letterService.sendMail(new MailRequest("Welcome", "<p>Hi {{first_name}}</p>"));
+        letterService.sendMail(new MailRequest("Welcome", "<p>Hi {{first_name}}</p>"), UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender, times(2)).send(captor.capture());
@@ -111,7 +97,6 @@ class LetterServiceTest {
     @Test
     void sendMailAsDirectorResolvesReceiversViaSportsTeamsAndRoles() {
         UUID senderId = UUID.randomUUID();
-        authenticateAs(senderId, "director");
 
         UUID sportId = UUID.randomUUID();
         UUID teamId = UUID.randomUUID();
@@ -126,7 +111,7 @@ class LetterServiceTest {
         when(traineeRepository.findMemberIdsByTeamId(teamId)).thenReturn(List.of(traineeId));
         when(memberRepository.findAllById(any())).thenReturn(List.of());
 
-        letterService.sendMail(new MailRequest("Subject", "Body"));
+        letterService.sendMail(new MailRequest("Subject", "Body"), senderId, false);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<UUID>> captor = ArgumentCaptor.forClass(Iterable.class);
@@ -137,7 +122,6 @@ class LetterServiceTest {
     @Test
     void sendMailAsTrainerResolvesReceiversViaTeams() {
         UUID senderId = UUID.randomUUID();
-        authenticateAs(senderId, "trainer");
 
         UUID teamId = UUID.randomUUID();
         UUID coTrainerId = UUID.randomUUID();
@@ -148,7 +132,7 @@ class LetterServiceTest {
         when(traineeRepository.findMemberIdsByTeamId(teamId)).thenReturn(List.of(traineeId));
         when(memberRepository.findAllById(any())).thenReturn(List.of());
 
-        letterService.sendMail(new MailRequest("Subject", "Body"));
+        letterService.sendMail(new MailRequest("Subject", "Body"), senderId, false);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<UUID>> captor = ArgumentCaptor.forClass(Iterable.class);
@@ -157,25 +141,19 @@ class LetterServiceTest {
     }
 
     @Test
-    void sendMailAsTraineeSendsToNoOne() {
-        authenticateAs(UUID.randomUUID(), "trainee");
-        when(memberRepository.findAllById(any())).thenReturn(List.of());
+    void sendMailAsPlainMemberWithNoOrgRoleThrowsForbidden() {
+        UUID senderId = UUID.randomUUID();
 
-        letterService.sendMail(new MailRequest("Subject", "Body"));
+        assertThatThrownBy(() -> letterService.sendMail(new MailRequest("Subject", "Body"), senderId, false))
+                .isInstanceOf(ForbiddenException.class);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Iterable<UUID>> captor = ArgumentCaptor.forClass(Iterable.class);
-        verify(memberRepository).findAllById(captor.capture());
-        assertThat(captor.getValue()).isEmpty();
-        verify(mailSender, never()).send(any(MimeMessage.class));
+        verifyNoInteractions(memberRepository, mailSender);
     }
 
     // --- sendMail: token replacement ---
 
     @Test
     void sendMailReplacesAllKnownTokensAndUnknownTokensWithEmptyString() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com",
                 "123 Main St", "+49 170 0000000", LocalDate.of(1990, 5, 1), LocalDate.of(2020, 1, 15));
@@ -193,7 +171,7 @@ class LetterServiceTest {
         String template = "{{first_name}} {{last_name}} {{full_name}} {{email}} {{address}} "
                 + "{{phone_number}} {{birthday}} {{joining_date}} {{team_name}} {{sport_name}} "
                 + "{{balance}} {{unknown_token}}";
-        letterService.sendMail(new MailRequest("Subject", template));
+        letterService.sendMail(new MailRequest("Subject", template), UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -205,15 +183,14 @@ class LetterServiceTest {
 
     @Test
     void sendMailReplacesTokensInSubject() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(carol));
         when(transactionRepository.findAllByMemberId(memberId)).thenReturn(List.of());
         stubMimeMessages();
 
-        letterService.sendMail(new MailRequest("Hello {{first_name}}, your balance is {{balance}}", "Body"));
+        letterService.sendMail(new MailRequest("Hello {{first_name}}, your balance is {{balance}}", "Body"),
+                UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -222,8 +199,6 @@ class LetterServiceTest {
 
     @Test
     void sendMailLeavesNonSnakeCaseTagsAsLiteralText() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(carol));
@@ -231,7 +206,7 @@ class LetterServiceTest {
         stubMimeMessages();
 
         letterService.sendMail(new MailRequest("Subject",
-                "{{ first_name }} {{FIRST_NAME}} {{first.name}} {{first_name}}"));
+                "{{ first_name }} {{FIRST_NAME}} {{first.name}} {{first_name}}"), UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -241,15 +216,14 @@ class LetterServiceTest {
 
     @Test
     void sendMailWithMemberWithoutTeamOrSportLeavesTokensEmpty() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity dan = member(memberId, "Dan", "Doe", "dan@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(dan));
         when(transactionRepository.findAllByMemberId(memberId)).thenReturn(List.of());
         stubMimeMessages();
 
-        letterService.sendMail(new MailRequest("Subject", "[{{team_name}}][{{sport_name}}][{{balance}}]"));
+        letterService.sendMail(new MailRequest("Subject", "[{{team_name}}][{{sport_name}}][{{balance}}]"),
+                UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -258,8 +232,6 @@ class LetterServiceTest {
 
     @Test
     void sendMailWithDirectorWithoutTeamShowsSportNameFromDirectorRole() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity eve = member(memberId, "Eve", "Evans", "eve@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(eve));
@@ -270,7 +242,8 @@ class LetterServiceTest {
         when(sportRepository.findById(sportId)).thenReturn(java.util.Optional.of(sport(sportId, "Swimming")));
         stubMimeMessages();
 
-        letterService.sendMail(new MailRequest("Subject", "[{{team_name}}][{{sport_name}}]"));
+        letterService.sendMail(new MailRequest("Subject", "[{{team_name}}][{{sport_name}}]"),
+                UUID.randomUUID(), true);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -284,13 +257,13 @@ class LetterServiceTest {
         LetterService brokenFromService = new LetterService(mailSender, "not a valid from address",
                 memberRepository, sportRepository, teamRepository, directorRepository,
                 trainerRepository, traineeRepository, transactionRepository);
-        authenticateAs(UUID.randomUUID(), "admin");
 
         MemberEntity frank = member("Frank", "Foster", "frank@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(frank));
         stubMimeMessages();
 
-        assertThatThrownBy(() -> brokenFromService.sendMail(new MailRequest("Subject", "Body")))
+        assertThatThrownBy(() -> brokenFromService.sendMail(new MailRequest("Subject", "Body"),
+                UUID.randomUUID(), true))
                 .isInstanceOf(MailDeliveryException.class)
                 .hasMessageContaining("frank@example.com")
                 .hasCauseInstanceOf(jakarta.mail.MessagingException.class);
@@ -300,15 +273,13 @@ class LetterServiceTest {
 
     @Test
     void getPdfRendersOneLetterPagePerReceiverInSinglePdf() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         MemberEntity alice = member(UUID.randomUUID(), "Alice", "Anderson", "alice@example.com",
                 "1 Apple Ave", null, null, null);
         MemberEntity bob = member(UUID.randomUUID(), "Bob", "Brown", "bob@example.com",
                 "2 Berry Blvd", null, null, null);
         when(memberRepository.findAll()).thenReturn(List.of(alice, bob));
 
-        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}</p>"));
+        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}</p>"), UUID.randomUUID(), true);
 
         byte[] bytes = pdf.getContentAsByteArray();
         assertThat(new String(bytes, 0, 5)).isEqualTo("%PDF-");
@@ -325,8 +296,6 @@ class LetterServiceTest {
 
     @Test
     void getPdfReplacesTokensAndHandlesMissingAddress() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         UUID memberId = UUID.randomUUID();
         MemberEntity carol = member(memberId, "Carol", "Clark", "carol@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(carol));
@@ -334,7 +303,8 @@ class LetterServiceTest {
                 .thenReturn(List.of(transaction(memberId, 5000)));
 
         Resource pdf = letterService.getPdf(
-                new PdfRequest("<p>Balance of {{full_name}}: {{balance}}</p><p>[{{unknown_token}}]</p>"));
+                new PdfRequest("<p>Balance of {{full_name}}: {{balance}}</p><p>[{{unknown_token}}]</p>"),
+                UUID.randomUUID(), true);
 
         try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
             String text = pageText(document, 1);
@@ -344,12 +314,11 @@ class LetterServiceTest {
 
     @Test
     void getPdfWithMalformedTemplateHtmlStillProducesPdf() throws Exception {
-        authenticateAs(UUID.randomUUID(), "admin");
-
         MemberEntity dan = member(UUID.randomUUID(), "Dan", "Doe", "dan@example.com");
         when(memberRepository.findAll()).thenReturn(List.of(dan));
 
-        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}<br><div>unclosed"));
+        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi {{first_name}}<br><div>unclosed"),
+                UUID.randomUUID(), true);
 
         try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
             assertThat(pageText(document, 1)).contains("Hi Dan", "unclosed");
@@ -357,15 +326,13 @@ class LetterServiceTest {
     }
 
     @Test
-    void getPdfWithNoReceiversReturnsValidEmptyPdf() throws Exception {
-        authenticateAs(UUID.randomUUID(), "trainee");
-        when(memberRepository.findAllById(any())).thenReturn(List.of());
+    void getPdfAsPlainMemberWithNoOrgRoleThrowsForbidden() {
+        UUID senderId = UUID.randomUUID();
 
-        Resource pdf = letterService.getPdf(new PdfRequest("<p>Hi</p>"));
+        assertThatThrownBy(() -> letterService.getPdf(new PdfRequest("<p>Hi</p>"), senderId, false))
+                .isInstanceOf(ForbiddenException.class);
 
-        try (PDDocument document = PDDocument.load(pdf.getContentAsByteArray())) {
-            assertThat(new PDFTextStripper().getText(document).trim()).isEmpty();
-        }
+        verifyNoInteractions(memberRepository);
     }
 
     // --- helpers ---
@@ -379,16 +346,6 @@ class LetterServiceTest {
 
     private void stubMimeMessages() {
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
-    }
-
-    // resolveReceivers() only reads the JWT subject for director/trainer roles, so this stub is
-    // unused for admin/trainee auth and must be lenient to avoid Mockito's strict-stubs failure.
-    private static void authenticateAs(UUID memberId, String role) {
-        Jwt jwt = mock(Jwt.class);
-        Mockito.lenient().when(jwt.getSubject()).thenReturn(memberId.toString());
-        Authentication authentication = new TestingAuthenticationToken(jwt, null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role)));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private static String extractHtml(MimeMessage message) throws Exception {

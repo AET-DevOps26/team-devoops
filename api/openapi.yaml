@@ -1908,9 +1908,11 @@ components:
       properties:
         subject:
           type: string
+          minLength: 1
           description: |
-            Subject line of the email. Supports the same per-receiver placeholder tokens as the
-            template; each token is replaced with that receiver's data before the email is sent.
+            Subject line of the email. Must not be empty. Supports the same per-receiver
+            placeholder tokens as the template; each token is replaced with that receiver's data
+            before the email is sent.
         template:
           type: string
           description: |
