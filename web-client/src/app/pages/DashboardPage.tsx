@@ -25,6 +25,7 @@ const initials = (name: string) =>
 export function DashboardPage() {
   const { view, states } = useDashboardViewModel()
   const showBalanceCard = Boolean(view.myBalance || states.myBalance?.isLoading)
+  const showTeamCard = Boolean(view.myTeam)
   const showEventsCards = Boolean(view.myEvents || states.myEvents?.isLoading)
   const showFeedbackStat = Boolean(view.myFeedback || states.myFeedback?.isLoading)
 
@@ -40,9 +41,10 @@ export function DashboardPage() {
         <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
       )}
 
-      {(showBalanceCard || showEventsCards || showFeedbackStat) && (
+      {(showBalanceCard || showTeamCard || showEventsCards || showFeedbackStat) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {showBalanceCard && <BalanceCard balance={view.myBalance} state={states.myBalance} />}
+          {showTeamCard && <TeamCard team={view.myTeam} />}
           {showEventsCards && <EventsCards events={view.myEvents} state={states.myEvents} />}
           {showFeedbackStat && (
             <FeedbackStat feedback={view.myFeedback} state={states.myFeedback} />
@@ -82,6 +84,22 @@ function AdminCountsSection({
       <StatCard label="Directors" value={String(counts.directors)} meta="Unique directors" />
       <StatCard label="Trainers" value={String(counts.trainers)} meta="Unique trainers" />
     </div>
+  )
+}
+
+function TeamCard({
+  team,
+}: {
+  team?: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['myTeam']>
+}) {
+  if (!team) return null
+
+  return (
+    <StatCard
+      label="My Team"
+      value={team.teamName}
+      meta={`${team.totalMembers} roster members`}
+    />
   )
 }
 

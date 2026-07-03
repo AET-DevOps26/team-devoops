@@ -48,6 +48,11 @@ export interface DashboardFeedbackSection {
   items: DashboardFeedbackItem[]
 }
 
+export interface DashboardTeamSection {
+  teamName: string
+  totalMembers: number
+}
+
 export interface DashboardAdminCountsSection {
   totalTeams: number
   directors: number
@@ -74,6 +79,7 @@ export interface DashboardView {
   myEvents?: DashboardEventsSection
   myBalance?: DashboardBalanceSection
   myFeedback?: DashboardFeedbackSection
+  myTeam?: DashboardTeamSection
   adminCounts?: DashboardAdminCountsSection
   sports?: DashboardSportSection[]
 }
@@ -297,6 +303,10 @@ function fillSections(
       break
 
     case 'trainer':
+      view.myTeam = {
+        teamName: data.team.name,
+        totalMembers: data.total_members,
+      }
       view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
       view.myFeedback = buildFeedbackSection(data.recent_feedback)
       states.myEvents = org.eventsState
