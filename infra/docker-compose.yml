@@ -215,6 +215,43 @@ services:
     networks:
       - proxy
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    restart: on-failure
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - 9090
+    networks:
+      - proxy
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    restart: on-failure
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SERVER_ROOT_URL=https://team-devoops.polandcentral.cloudapp.azure.com/dashboard/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    expose:
+      - 3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.rule=Host(`team-devoops.polandcentral.cloudapp.azure.com`) && PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=le"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - proxy
+
   web-client:
     build:
       context: ../web-client/
@@ -260,6 +297,9 @@ services:
       # Redirect all HTTP traffic to HTTPS
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Edge-level request/latency/error metrics, scraped by Prometheus on the
+      # internal "traefik" API entrypoint (same port as --api.insecure).
+      - "--metrics.prometheus=true"
       # Let's Encrypt (production CA) via HTTP-01 challenge
       - "--certificatesresolvers.le.acme.email=04.raphael.frank@tum.de"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
@@ -390,6 +430,8 @@ volumes:
   app_db_data:
   keycloak_db_data:
   letsencrypt:
+  prometheus_data:
+  grafana_data:
 
 networks:
   proxy:

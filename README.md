@@ -53,6 +53,8 @@ The Spring Boot services and the GenAI service share a **PostgreSQL** database.
 | Web Client | `/` | 8080 | React, Vite |
 | Swagger UI | `/docs` | 8080 | swaggerapi/swagger-ui |
 | Keycloak | `/auth` | 8080 | Keycloak 26 |
+| Grafana | `/dashboard` (admin only) | 3000 | Grafana 11 |
+| Prometheus | internal only | 9090 | Prometheus v2 |
 | Traefik dashboard | `http://localhost:8080` (local only) | — | Traefik v3 |
 | PostgreSQL | internal only | 5432 | postgres:15 |
 
@@ -132,6 +134,7 @@ everything is reachable on plain HTTP:
 |---|---|
 | <http://localhost/> | Web client |
 | <http://localhost/docs> | Swagger UI |
+| <http://localhost/dashboard> | Grafana (monitoring, admin only) |
 | <http://localhost/api/v1/&lt;service&gt;/…> | APIs (organization, members, events, feedback, finance, letters, helper) |
 | <http://localhost/auth> | Keycloak (via Traefik) |
 | <http://localhost:8081/auth> | Keycloak (direct, for admin console) |
@@ -292,6 +295,23 @@ Each Spring service is a stateless OAuth2 resource server. It validates Bearer J
 | `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | URL to fetch Keycloak's public signing keys |
 
 These are set in each service's `src/main/resources/application.properties` as defaults (pointing at the local Keycloak on `localhost:8081/auth`). On the Azure VM, `docker-compose.yml` overrides `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` with the public HTTPS issuer so it matches the `iss` claim in tokens issued by production Keycloak. The JWK set URI always uses the internal Docker hostname `http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs`. On Kubernetes they are injected via the `env:` block in `infra/helm/team-devoops/values.yaml` using the internal `keycloak` ClusterIP DNS name.
+
+## Monitoring
+
+**Prometheus** scrapes request count, latency, and error-rate metrics from
+every Spring service (`/actuator/prometheus`, via Micrometer), the GenAI
+service (`/metrics`, via `prometheus-flask-exporter`), and Traefik itself
+(edge-level metrics). Scrape targets are statically configured in
+[`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml) — the
+same file is used locally and on the Azure VM, since all targets are internal
+Docker service names. Prometheus itself is never exposed outside the internal
+network in any environment.
+
+**Grafana** visualizes these metrics and is reachable at `/dashboard`
+(`http://localhost/dashboard` locally, `https://team-devoops.polandcentral.cloudapp.azure.com/dashboard`
+on the Azure VM). Dashboards and datasources are provisioned as code from
+[`infra/grafana/`](infra/grafana/) — nothing is configured by hand in the
+running instance.
 
 ## Docs
 

@@ -16,6 +16,7 @@
 # Access locally:
 #     http://localhost/                       web client
 #     http://localhost/docs                   Swagger UI
+#     http://localhost/dashboard              Grafana (monitoring)
 #     http://localhost/api/v1/<service>/...   APIs
 #     http://localhost:8080                   Traefik dashboard
 #     localhost:5432  (app_admin/app_admin_password, db: app_db)   PostgreSQL
@@ -118,6 +119,16 @@ services:
       - "traefik.http.routers.api-docs.entrypoints=web"
       - "traefik.http.routers.api-docs.rule=PathPrefix(`/docs`)"
       - "traefik.http.services.api-docs.loadbalancer.server.port=8080"
+
+  grafana:
+    environment: !override
+      - GF_SERVER_ROOT_URL=http://localhost/dashboard/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/dashboard`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   web-client:
     build:
