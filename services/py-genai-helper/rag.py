@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,10 +30,17 @@ def _load_pdfs() -> FAISS | None:
     return FAISS.from_documents(docs, embedding=embeddings)
 
 
-vector_store = _load_pdfs()
+@lru_cache(maxsize=1)
+def _get_vector_store() -> FAISS | None:
+    # Built lazily on first RAG request rather than at import time: embedding the PDFs is a
+    # real OpenAI API call per chunk, which previously ran during gunicorn worker boot and
+    # blocked /health from responding until it finished (minutes, sometimes exceeding the
+    # Kubernetes rollout deadline).
+    return _load_pdfs()
 
 
 def get_rag_agent():
+    vector_store = _get_vector_store()
     if vector_store is None:
         raise RuntimeError("No PDFs found in file-storage/")
 

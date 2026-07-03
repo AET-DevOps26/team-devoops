@@ -1,4 +1,4 @@
-package tum.devoops.letterservice;
+package tum.devoops.letterservice.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

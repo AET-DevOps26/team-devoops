@@ -1044,9 +1044,9 @@ paths:
         - letters
       summary: Send mail
       description: |
-        Sends a personalized mass email. The body carries a `subject` and an HTML `template`; the
-        template's placeholder tokens are replaced with each receiver's data, and one email is sent
-        per receiver.
+        Sends a personalized mass email. The body carries a `subject` and an HTML `template`;
+        placeholder tokens in both the subject and the template are replaced with each receiver's
+        data, and one email is sent per receiver.
 
         Receivers are determined from the caller's highest role:
         - **Admin**: all members.
@@ -1885,7 +1885,11 @@ components:
       properties:
         subject:
           type: string
-          description: Subject line of the email.
+          minLength: 1
+          description: |
+            Subject line of the email. Must not be empty. Supports the same per-receiver
+            placeholder tokens as the template; each token is replaced with that receiver's data
+            before the email is sent.
         template:
           type: string
           description: |

@@ -150,11 +150,11 @@ cd infra && docker compose down -v         # wipes the postgres volume too
 
 ## Production Deployment
 
-The stack runs on a single Azure VM in **UAE North**, fronted by Traefik with a
+The stack runs on a single Azure VM in **Poland Central**, fronted by Traefik with a
 real TLS certificate from Let's Encrypt (production CA). Everything is
 automated; no manual VM access is required for normal deploys.
 
-**Live URL:** <https://team-devoops.uaenorth.cloudapp.azure.com>
+**Live URL:** <https://team-devoops.polandcentral.cloudapp.azure.com>
 
 ### Infrastructure stack
 
@@ -163,7 +163,7 @@ automated; no manual VM access is required for normal deploys.
 | Provisioning | **Terraform** (AzureRM ~> 4.0) | Resource group, VNet, NSG (22/80/443), static public IP + free Azure FQDN, Ubuntu 24.04 VM |
 | Configuration | **Ansible** | Installs Docker, clones repo, writes `.env`, runs `docker compose up` |
 | CI/CD | **GitHub Actions** (OIDC, no client secrets) | `infra.yml` (manual: plan/apply/destroy) and `cd.yml` (auto on push to `main`) |
-| Remote state | **Azure Blob Storage** (`stteamdevoopstfstate/tfstate`) | Shared, locked Terraform state — survives between CI runs |
+| Remote state | **Azure Blob Storage** (`stdevoops26tfstate/tfstate`) | Shared, locked Terraform state — survives between CI runs |
 | TLS | **Let's Encrypt** (HTTP-01 via Traefik) | Cert persisted in a Docker volume; auto-renewed |
 
 ### GitHub Actions workflows
@@ -186,7 +186,7 @@ automated; no manual VM access is required for normal deploys.
 
 The OIDC service principal needs `Contributor` on the subscription (to manage
 resources in `rg-team-devoops`) and `Storage Blob Data Contributor` on the
-state account `stteamdevoopstfstate` (to read/write tfstate).
+state account `stdevoops26tfstate` (to read/write tfstate).
 
 ### Typical workflow
 
@@ -280,7 +280,7 @@ The web client redirects to Keycloak automatically (`login-required` strategy). 
 
 ### Production admin console
 
-Keycloak is publicly accessible via Traefik at <https://team-devoops.uaenorth.cloudapp.azure.com/auth>. Admin console: `/auth/admin`.
+Keycloak is publicly accessible via Traefik at <https://team-devoops.polandcentral.cloudapp.azure.com/auth>. Admin console: `/auth/admin`.
 
 ### Spring services — JWT validation
 

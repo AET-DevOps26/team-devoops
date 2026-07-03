@@ -7,13 +7,13 @@ variable "resource_group_name" {
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "uaenorth"
+  default     = "polandcentral"
 }
 
 variable "vm_size" {
   description = "Azure VM size"
   type        = string
-  default     = "Standard_D2_v4"
+  default     = "Standard_D2as_v4"
 }
 
 variable "admin_username" {

@@ -44,7 +44,8 @@
         "composite": true,
         "composites": {
           "client": {
-            "devops-client": ["Admin"]
+            "devops-client": ["Admin"],
+            "realm-management": ["manage-users"]
           }
         }
       },
@@ -117,12 +118,12 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "https://team-devoops.uaenorth.cloudapp.azure.com/_oauth",
+        "https://team-devoops.polandcentral.cloudapp.azure.com/_oauth",
         "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/oauth2/callback",
         "http://localhost/_oauth"
       ],
       "webOrigins": [
-        "https://team-devoops.uaenorth.cloudapp.azure.com",
+        "https://team-devoops.polandcentral.cloudapp.azure.com",
         "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
         "http://localhost"
       ]

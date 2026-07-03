@@ -7,22 +7,23 @@ import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.Transient;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(schema = "member", name = "members")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class MemberEntity {
+@Getter @Setter @NoArgsConstructor
+public class MemberEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
@@ -49,6 +50,35 @@ public class MemberEntity {
 
     @Column(name = "information", nullable = true, columnDefinition = "TEXT")
     private String information;
+
+    @Transient
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private boolean isNew = true;
+
+    public MemberEntity(UUID id, String firstName, String lastName, String email, LocalDate birthday,
+                         String phoneNumber, String address, LocalDate joiningDate, String information) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.birthday = birthday;
+        this.phoneNumber = phoneNumber;
+        this.address = address;
+        this.joiningDate = joiningDate;
+        this.information = information;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
 
     @Override
     public boolean equals(Object o) {
