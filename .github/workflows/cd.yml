@@ -161,6 +161,15 @@ jobs:
             --from-env-file=/tmp/genai.env \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
+      - name: Create/refresh letter-env secret
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: |
+          printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+          kubectl -n "$NAMESPACE" create secret generic letter-env \
+            --from-env-file=/tmp/letter.env \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
       - name: Create/refresh monitoring ConfigMaps
         # Same pattern as genai-env above: the chart only references these by name
         # (Helm can't reach outside its own chart directory via .Files.Get), so the

@@ -274,6 +274,7 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    envFromSecret: letter-env
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"

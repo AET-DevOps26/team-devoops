@@ -54,7 +54,19 @@ kubectl -n ge83mom-devops26 create secret generic genai-env \
   --from-env-file=services/py-genai-helper/.env
 ```
 
-### 2. ghcr image pull secret
+### 2. spring-letter environment Secret
+
+Same pattern, for the letter service's mail credentials. The chart
+references (but does not create) a Secret named `letter-env`. The
+`deploy-k8s` pipeline job creates/refreshes it automatically from the
+`LETTER_ENV_CONTENT` GitHub secret. For a manual deploy:
+
+```bash
+kubectl -n ge83mom-devops26 create secret generic letter-env \
+  --from-env-file=services/spring-letter/.env
+```
+
+### 3. ghcr image pull secret
 
 The service images are pushed to ghcr as private packages, so the chart is
 preconfigured to pull them via an `imagePullSecrets` entry named `ghcr-pull`
@@ -71,7 +83,7 @@ kubectl -n ge83mom-devops26 create secret docker-registry ghcr-pull \
 If you instead make the org packages public, remove (or empty)
 `global.imagePullSecrets` in `values.yaml`.
 
-### 3. Keycloak
+### 4. Keycloak
 
 The chart creates the `keycloak-credentials` Secret automatically from `values.yaml` — no manual `kubectl create secret` step is needed.
 
@@ -98,7 +110,7 @@ kubectl -n ge83mom-devops26 get pods | grep keycloak
 curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops/.well-known/openid-configuration
 ```
 
-### 4. Monitoring (Prometheus + Grafana)
+### 5. Monitoring (Prometheus + Grafana)
 
 Same pattern as `genai-env`: the chart only references these ConfigMaps by
 name (Helm can't reach outside its own chart directory via `.Files.Get`), so
@@ -171,7 +183,8 @@ against the Kubernetes schemas with `kubeconform`.
   runs the `helm upgrade` above with `global.image.tag=<git-sha>`.
 
 Required GitHub secrets: `KUBECONFIG` (the Rancher kubeconfig), `GENAI_ENV_CONTENT`
-(reused from the VM deploy). ghcr auth uses the built-in `GITHUB_TOKEN`.
+and `LETTER_ENV_CONTENT` (both reused from the VM deploy). ghcr auth uses the
+built-in `GITHUB_TOKEN`.
 
 ## Adding a service
 
