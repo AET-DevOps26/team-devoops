@@ -1,17 +1,14 @@
+from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
-from langchain.agents import create_agent
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_core.tools import create_retriever_tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from llm import get_chat_model, get_embeddings
+from llm import get_embeddings
 
 load_dotenv()
-
-embeddings = get_embeddings()
 
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
@@ -27,32 +24,25 @@ def _load_pdfs() -> FAISS | None:
         loader = PyPDFLoader(str(path))
         docs.extend(loader.load_and_split(splitter))
 
-    return FAISS.from_documents(docs, embedding=embeddings)
+    return FAISS.from_documents(docs, embedding=get_embeddings())
 
 
-vector_store = _load_pdfs()
+@lru_cache(maxsize=1)
+def _get_vector_store() -> FAISS | None:
+    """Build (once) and cache the FAISS index over the PDFs in file-storage/.
+
+    Deferred until first use rather than built at import time, so importing this module (directly,
+    or transitively via ``reports``) doesn't require API credentials or make network calls.
+    """
+    return _load_pdfs()
 
 
-def get_rag_agent(use_local: bool | None = None):
+def retrieve_context(query: str, k: int = 3) -> list[str]:
+    """Return the text of the k knowledge-base chunks most relevant to the query.
+
+    Returns an empty list if no PDFs are configured in file-storage/.
+    """
+    vector_store = _get_vector_store()
     if vector_store is None:
-        raise RuntimeError("No PDFs found in file-storage/")
-
-    retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-
-    retriever_tool = create_retriever_tool(
-        retriever,
-        name="kb_search",
-        description="Search the knowledge base for information about preferences. Always use this tool before answering.",
-    )
-
-    rag_agent = create_agent(
-        model=get_chat_model(use_local),
-        tools=[retriever_tool],
-        system_prompt=(
-            "You are a helpful assistant."
-            "Always call kb_search first to retrieve relevant context."
-            "Base your answer strictly on what the tool returns."
-        ),
-    )
-
-    return rag_agent
+        return []
+    return [doc.page_content for doc in vector_store.similarity_search(query, k=k)]

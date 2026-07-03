@@ -54,11 +54,25 @@ def stub_feedback_api(monkeypatch, entries):
     return requested
 
 
-def stub_chat_model(monkeypatch, reply="generated report"):
-    """Replace the LLM with a fake that records the messages it was invoked with."""
-    invocations = []
+class _Invocations(list):
+    """A list of the message batches the fake LLM was invoked with.
 
-    def fake_get_chat_model():
+    Also records the ``use_local`` value each ``get_chat_model`` call received, in
+    ``use_local_values``, so tests can assert on the provider-selection behaviour too.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.use_local_values = []
+
+
+def stub_chat_model(monkeypatch, reply="generated report"):
+    """Replace the LLM with a fake that records the messages (and use_local) it was invoked with."""
+    invocations = _Invocations()
+
+    def fake_get_chat_model(use_local=None):
+        invocations.use_local_values.append(use_local)
+
         def invoke(messages):
             invocations.append(messages)
             return types.SimpleNamespace(content=reply)
@@ -67,6 +81,18 @@ def stub_chat_model(monkeypatch, reply="generated report"):
 
     monkeypatch.setattr(reports, "get_chat_model", fake_get_chat_model)
     return invocations
+
+
+def stub_rag_context(monkeypatch, chunks=None):
+    """Replace the knowledge-base retrieval with a fake returning the given chunks (default: none)."""
+    queries = []
+
+    def fake_retrieve_context(query, k=3):
+        queries.append(query)
+        return chunks or []
+
+    monkeypatch.setattr(reports, "retrieve_context", fake_retrieve_context)
+    return queries
 
 
 # --------------------------------------------------------------------------- #
@@ -79,6 +105,7 @@ def test_member_report_uses_only_that_members_feedback(monkeypatch):
     ]
     requested = stub_feedback_api(monkeypatch, entries)
     invocations = stub_chat_model(monkeypatch)
+    stub_rag_context(monkeypatch)
     monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
 
     text = reports.generate_member_report_text(MEMBER_A, TOKEN)
@@ -106,6 +133,7 @@ def test_member_report_without_feedback_skips_llm(monkeypatch):
 def test_member_report_prompt_includes_rating_event_and_creator(monkeypatch):
     stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork", rating=9)])
     invocations = stub_chat_model(monkeypatch)
+    stub_rag_context(monkeypatch)
     monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
 
     reports.generate_member_report_text(MEMBER_A, TOKEN)
@@ -115,6 +143,59 @@ def test_member_report_prompt_includes_rating_event_and_creator(monkeypatch):
     assert "Monday practice" in prompt
     assert "Coach Carter" in prompt
     assert "2026-06-28" in prompt
+
+
+def test_member_report_forwards_use_local_to_chat_model(monkeypatch):
+    stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork")])
+    invocations = stub_chat_model(monkeypatch)
+    stub_rag_context(monkeypatch)
+    monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
+
+    reports.generate_member_report_text(MEMBER_A, TOKEN, use_local=True)
+
+    assert invocations.use_local_values == [True]
+
+
+def test_team_report_forwards_use_local_to_chat_model(monkeypatch):
+    stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork")])
+    invocations = stub_chat_model(monkeypatch, reply="team report")
+    stub_rag_context(monkeypatch)
+    monkeypatch.setattr(db, "resolve_team_name", lambda team_id: "First Team")
+    monkeypatch.setattr(db, "list_team_trainees", lambda team_id: [{"id": MEMBER_A, "name": "Jane Doe"}])
+
+    reports.generate_team_report_text(TEAM_A, TOKEN, use_local=False)
+
+    assert invocations.use_local_values == [False]
+
+
+# --------------------------------------------------------------------------- #
+# RAG: knowledge-base context from the PDFs in file-storage/
+# --------------------------------------------------------------------------- #
+def test_member_report_includes_retrieved_pdf_context(monkeypatch):
+    stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork")])
+    invocations = stub_chat_model(monkeypatch)
+    queries = stub_rag_context(monkeypatch, chunks=["Club policy: praise effort before results."])
+    monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
+
+    reports.generate_member_report_text(MEMBER_A, TOKEN)
+
+    prompt = invocations[0][-1].content
+    assert "Club policy: praise effort before results." in prompt
+    # The retrieval query is derived from the member and their feedback, not hardcoded.
+    assert "Jane Doe" in queries[0]
+    assert "Great footwork" in queries[0]
+
+
+def test_member_report_omits_context_section_when_no_pdfs_match(monkeypatch):
+    stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork")])
+    invocations = stub_chat_model(monkeypatch)
+    stub_rag_context(monkeypatch, chunks=[])
+    monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
+
+    reports.generate_member_report_text(MEMBER_A, TOKEN)
+
+    prompt = invocations[0][-1].content
+    assert "knowledge base" not in prompt.lower()
 
 
 # --------------------------------------------------------------------------- #
@@ -127,6 +208,7 @@ def test_team_report_groups_by_trainee_and_filters_non_members(monkeypatch):
     ]
     stub_feedback_api(monkeypatch, entries)
     invocations = stub_chat_model(monkeypatch, reply="team report")
+    stub_rag_context(monkeypatch)
     monkeypatch.setattr(db, "resolve_team_name", lambda team_id: "First Team")
     monkeypatch.setattr(db, "list_team_trainees", lambda team_id: [{"id": MEMBER_A, "name": "Jane Doe"}])
 
@@ -158,6 +240,7 @@ def test_team_report_without_feedback_skips_llm(monkeypatch):
 def test_reasoning_blocks_are_stripped(monkeypatch):
     stub_feedback_api(monkeypatch, [_feedback_entry("f1", MEMBER_A, "Jane Doe", "Great footwork")])
     stub_chat_model(monkeypatch, reply="<think>hmm, let me reason</think>\nThe actual report.")
+    stub_rag_context(monkeypatch)
     monkeypatch.setattr(db, "resolve_member_name", lambda member_id: "Jane Doe")
 
     text = reports.generate_member_report_text(MEMBER_A, TOKEN)

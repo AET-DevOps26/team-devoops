@@ -9,7 +9,7 @@ from generated.models import (
     Report,
     TeamReportSummary,
 )
-from service import generate_rag_response, hello
+from service import hello
 
 app = Flask("genai-service")
 
@@ -32,6 +32,17 @@ def health():
     return {"status": "ok"}, 200
 
 
+# --------------------------------------------------------------------------- #
+# Reports
+# --------------------------------------------------------------------------- #
+def _member_reference(member_id) -> Reference:
+    return Reference(id=member_id, name=db.resolve_member_name(member_id) or "")
+
+
+def _team_reference(team_id) -> Reference:
+    return Reference(id=team_id, name=db.resolve_team_name(team_id) or "")
+
+
 def _parse_bool(value):
     """Parse a JSON bool or "true"/"false" string; None means unparseable."""
     if isinstance(value, bool):
@@ -45,37 +56,21 @@ def _parse_bool(value):
     return None
 
 
-@app.route("/rag-response", methods=["POST"])
-@require_auth
-def rag_response():
-    # Get the json of the object. force=True ignores the stated MimeType
-    data = request.get_json(force=True) or {}
-    question = data.get("question")
+def _parse_use_local():
+    """Read the optional `uselocal` flag from the request body.
 
-    if not question:
-        return {"error": "Missing required field: 'question'"}, 400
-
-    # Optional per-request provider switch: true forces the local Ollama model, false forces
-    # OpenAI. Absent means the env-configured LLM_PROVIDER decides.
-    use_local = data.get("uselocal")
-    if use_local is not None:
-        use_local = _parse_bool(use_local)
-        if use_local is None:
-            return {"error": "Invalid value for 'uselocal': expected true or false"}, 400
-
-    response = generate_rag_response(question, use_local)
-    return {"response": response}, 200
-
-
-# --------------------------------------------------------------------------- #
-# Reports
-# --------------------------------------------------------------------------- #
-def _member_reference(member_id) -> Reference:
-    return Reference(id=member_id, name=db.resolve_member_name(member_id) or "")
-
-
-def _team_reference(team_id) -> Reference:
-    return Reference(id=team_id, name=db.resolve_team_name(team_id) or "")
+    Returns (use_local, error_response). error_response is None unless the value couldn't be
+    parsed as a bool, in which case use_local is None and error_response is the (body, status)
+    tuple to return.
+    """
+    data = request.get_json(silent=True, force=True) or {}
+    value = data.get("uselocal")
+    if value is None:
+        return None, None
+    parsed = _parse_bool(value)
+    if parsed is None:
+        return None, ({"error": "Invalid value for 'uselocal': expected true or false"}, 400)
+    return parsed, None
 
 
 @app.route("/reports/member/<member_id>", methods=["POST"])
@@ -83,7 +78,10 @@ def _team_reference(team_id) -> Reference:
 def generate_member_report(member_id):
     if g.user_id != member_id and not is_admin():
         return {"error": "Access denied"}, 403
-    reports.trigger_member_report(member_id, g.token)
+    use_local, error = _parse_use_local()
+    if error:
+        return error
+    reports.trigger_member_report(member_id, g.token, use_local)
     return "", 202
 
 
@@ -105,7 +103,10 @@ def list_member_reports(member_id):
 def generate_team_report(team_id):
     if not is_admin() and not db.is_trainer_of_team(g.user_id, team_id):
         return {"error": "Access denied"}, 403
-    reports.trigger_team_report(team_id, g.token)
+    use_local, error = _parse_use_local()
+    if error:
+        return error
+    reports.trigger_team_report(team_id, g.token, use_local)
     return "", 202
 
 
