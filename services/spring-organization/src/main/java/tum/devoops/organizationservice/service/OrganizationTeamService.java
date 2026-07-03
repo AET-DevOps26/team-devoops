@@ -92,7 +92,12 @@ public class OrganizationTeamService {
         affected.addAll(traineeIds);
         memberRoleSyncService.scheduleSync(affected);
 
-        return toTeam(findTeamOrThrow(team.getId()));
+        // Build the response from the resolved ids: within this transaction findById returns
+        // the same managed instance, whose trainers/trainees collections don't see the rows
+        // saved above.
+        return new Team(team.getId(), team.getName(), team.getDescription(), team.getCreatedAt(),
+                team.getAddress(), sportReference(team.getSportId()),
+                memberReferences(trainerIds), memberReferences(traineeIds));
     }
 
     @Transactional
