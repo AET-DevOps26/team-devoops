@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useAuth } from '@/features/auth'
-import type { MemberRef, Sport, Team } from '@/types'
+import type { AuthUser, MemberRef, Sport, Team } from '@/types'
 import { useSportsList, useTeamsList } from '../api/queries'
 
 export interface TeamView {
@@ -34,7 +34,7 @@ export interface TeamsView {
 export function buildTeamsView(
   sports: Sport[],
   teams: Team[],
-  currentUserId: string,
+  user: AuthUser,
 ): TeamsView {
   const teamsBySportId = new Map<string, TeamView[]>()
 
@@ -65,7 +65,11 @@ export function buildTeamsView(
 
   const myTeams = joinedSports.flatMap((sport) =>
     sport.teams
-      .filter((team) => team.trainees.some((trainee) => trainee.id === currentUserId))
+      .filter(
+        (team) =>
+          team.trainees.some((trainee) => trainee.id === user.id) ||
+          team.trainers.some((trainer) => trainer.id === user.id),
+      )
       .map((team) => ({ ...team, sportName: sport.name })),
   )
 
@@ -87,8 +91,8 @@ export function useTeamsViewModel() {
   const teamsQuery = useTeamsList()
 
   const view = useMemo(
-    () => buildTeamsView(sportsQuery.data ?? [], teamsQuery.data ?? [], user.id),
-    [sportsQuery.data, teamsQuery.data, user.id],
+    () => buildTeamsView(sportsQuery.data ?? [], teamsQuery.data ?? [], user),
+    [sportsQuery.data, teamsQuery.data, user],
   )
 
   return {

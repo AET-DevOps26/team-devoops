@@ -63,7 +63,7 @@ export function OrganizationPage() {
                     key={team.id}
                     team={team}
                     sportName={team.sportName}
-                    isMine
+                    currentUserId={currentUserId}
                     onOpen={() => setRosterTeamId(team.id)}
                   />
                 ))}
@@ -128,7 +128,7 @@ function StatsRow({
         label="My Teams"
         value={String(view.stats.myTeams)}
         tone={view.stats.myTeams > 0 ? 'positive' : 'default'}
-        meta="You're a member"
+        meta="Teams you're part of"
       />
       <StatCard label="Sports" value={String(view.stats.sports)} meta="Offered by the club" />
       <StatCard label="Teams Total" value={String(view.stats.teams)} meta="Across all sports" />
@@ -194,27 +194,41 @@ function SportSection({
               No teams in this sport yet.
             </li>
           ) : (
-            sport.teams.map((team) => (
-              <li key={team.id} className="border-b last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => onOpenTeam(team.id)}
-                  className="flex w-full items-center gap-3 py-2.5 pl-11 pr-4 text-left transition-colors hover:bg-surface-sunken"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body-sm font-medium text-text-primary">{team.name}</p>
-                    <p className="truncate text-caption text-text-tertiary">
-                      Coach {nameList(team.trainers)} - {team.trainees.length} members
-                    </p>
-                  </div>
-                  {team.trainees.some((member) => member.id === currentUserId) && (
-                    <Badge tone="positive" size="sm">
-                      Trainee
-                    </Badge>
-                  )}
-                </button>
-              </li>
-            ))
+            sport.teams.map((team) => {
+              const isCoach = isTeamCoach(team, currentUserId)
+              const isTrainee = isTeamTrainee(team, currentUserId)
+
+              return (
+                <li key={team.id} className="border-b last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => onOpenTeam(team.id)}
+                    className="flex w-full items-center gap-3 py-2.5 pl-11 pr-4 text-left transition-colors hover:bg-surface-sunken"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body-sm font-medium text-text-primary">{team.name}</p>
+                      <p className="truncate text-caption text-text-tertiary">
+                        Coach {nameList(team.trainers)} - {team.trainees.length} members
+                      </p>
+                    </div>
+                    {(isCoach || isTrainee) && (
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {isCoach && (
+                          <Badge tone="accent" size="sm">
+                            Coach
+                          </Badge>
+                        )}
+                        {isTrainee && (
+                          <Badge tone="positive" size="sm">
+                            Trainee
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                </li>
+              )
+            })
           )}
         </ul>
       )}
@@ -225,14 +239,17 @@ function SportSection({
 function TeamSummaryCard({
   team,
   sportName,
-  isMine,
+  currentUserId,
   onOpen,
 }: {
   team: TeamView
   sportName: string
-  isMine: boolean
+  currentUserId: string
   onOpen: () => void
 }) {
+  const isCoach = isTeamCoach(team, currentUserId)
+  const isTrainee = isTeamTrainee(team, currentUserId)
+
   return (
     <button
       type="button"
@@ -240,14 +257,23 @@ function TeamSummaryCard({
       className="border border-primary/30 bg-primary/4 p-4 text-left transition-colors hover:bg-primary/8"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-caption uppercase tracking-[0.1em] text-primary">{sportName}</p>
           <h3 className="mt-0.5 truncate text-h4">{team.name}</h3>
         </div>
-        {isMine && (
-          <Badge tone="positive" size="sm">
-            Trainee
-          </Badge>
+        {(isCoach || isTrainee) && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {isCoach && (
+              <Badge tone="accent" size="sm">
+                Coach
+              </Badge>
+            )}
+            {isTrainee && (
+              <Badge tone="positive" size="sm">
+                Trainee
+              </Badge>
+            )}
+          </div>
         )}
       </div>
       <p className="mt-2 text-caption text-text-tertiary">
@@ -255,6 +281,14 @@ function TeamSummaryCard({
       </p>
     </button>
   )
+}
+
+function isTeamCoach(team: TeamView, currentUserId: string) {
+  return team.trainers.some((member) => member.id === currentUserId)
+}
+
+function isTeamTrainee(team: TeamView, currentUserId: string) {
+  return team.trainees.some((member) => member.id === currentUserId)
 }
 
 function RosterSheet({
@@ -276,7 +310,7 @@ function RosterSheet({
         <SheetDescription>{team.description}</SheetDescription>
       </SheetHeader>
 
-      <div className="space-y-6 px-4 py-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-2">
         <div>
           <FieldLabel>Address</FieldLabel>
           <p className="mt-0.5 text-body-sm">{team.address}</p>
@@ -290,11 +324,45 @@ function RosterSheet({
         <Separator />
 
         <div>
-          <FieldLabel>Roster ({team.trainees.length})</FieldLabel>
-          <MemberBadges members={team.trainees} currentUserId={currentUserId} />
+          <FieldLabel>Members ({team.trainees.length})</FieldLabel>
+          <RosterMembers members={team.trainees} currentUserId={currentUserId} />
         </div>
       </div>
     </>
+  )
+}
+
+function RosterMembers({
+  members,
+  currentUserId,
+}: {
+  members: Parameters<typeof memberRefName>[0][]
+  currentUserId: string
+}) {
+  if (members.length === 0) {
+    return <p className="mt-2 text-body-sm text-text-tertiary">No members yet.</p>
+  }
+
+  return (
+    <ul className="mt-2 divide-y border bg-card">
+      {members.map((member) => {
+        const name = memberRefName(member)
+        const isCurrentUser = member.id === currentUserId
+
+        return (
+          <li key={member.id} className="flex items-center justify-between gap-3 px-3 py-2">
+            <div className="min-w-0">
+              <p className="truncate text-body-sm font-medium text-text-primary">{name}</p>
+              {isCurrentUser && (
+                <Badge tone="positive" size="sm" className="mt-1">
+                  You
+                </Badge>
+              )}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
