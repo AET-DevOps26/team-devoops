@@ -157,6 +157,8 @@ services:
   keycloak:
     environment:
       KC_HOSTNAME: "http://localhost:8081/auth"
+    volumes:
+      - ./keycloak/themes:/opt/keycloak/themes
     labels: !override
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.entrypoints=web"

@@ -1,6 +1,7 @@
 {
   "realm": "devops",
   "enabled": true,
+  "loginTheme": "roost",
   "users": [
     {
       "username": "admin",
