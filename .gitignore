@@ -1,2 +1,5 @@
 settings.json
 services/spring-letter/.env
+
+# Build-tool binaries — provided via the build's dependency management, never committed
+lombok-*.jar
