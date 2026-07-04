@@ -1,31 +1,51 @@
 package tum.devoops.memberservice.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class KeycloakService {
 
-    private final RestClient restClient;
-    @Value("${keycloak.realm}")
-    private String realm;
+    private static final long TOKEN_REFRESH_SKEW_SECONDS = 30L;
 
-    public KeycloakService(RestClient.Builder restClientBuilder, @Value("${keycloak.base-url}") String baseUrl) {
+    private final RestClient restClient;
+    private final String realm;
+    private final String serviceAccountClientId;
+    private final String serviceAccountClientSecret;
+
+    private volatile String cachedServiceAccountToken;
+    private volatile Instant cachedServiceAccountTokenExpiresAt = Instant.EPOCH;
+
+    public KeycloakService(RestClient.Builder restClientBuilder,
+                           @Value("${keycloak.base-url}") String baseUrl,
+                           @Value("${keycloak.realm}") String realm,
+                           @Value("${keycloak.service-account.client-id}") String serviceAccountClientId,
+                           @Value("${keycloak.service-account.client-secret}") String serviceAccountClientSecret) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        this.realm = realm;
+        this.serviceAccountClientId = serviceAccountClientId;
+        this.serviceAccountClientSecret = serviceAccountClientSecret;
     }
 
-    public UUID createUser(MemberCreate member, String bearerToken) throws Exception {
-        String username = member.getEmail() != null ? member.getEmail() : (member.getFirstName() + member.getLastName()).toLowerCase();
+    public UUID createUser(MemberCreate member) throws Exception {
+        String username = member.getEmail() != null
+                ? member.getEmail()
+                : (member.getFirstName() + member.getLastName()).toLowerCase();
 
         List<Credential> credentials = member.getPassword() != null
                 ? List.of(new Credential("password", member.getPassword(), false))
@@ -39,7 +59,7 @@ public class KeycloakService {
         try {
             response = restClient.post()
                     .uri("/admin/realms/{realm}/users", realm)
-                    .header("Authorization", "Bearer " + bearerToken)
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -60,7 +80,7 @@ public class KeycloakService {
         return UUID.fromString(path.substring(path.lastIndexOf("/") + 1));
     }
 
-    public void updateUser(Member member, String bearerToken) throws HttpClientErrorException {
+    public void updateUser(Member member) throws HttpClientErrorException {
 
         UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(),
                 member.getLastName(), member.getEmail(), true, List.of());
@@ -68,7 +88,7 @@ public class KeycloakService {
         try {
             restClient.put()
                     .uri("/admin/realms/{realm}/users/{id}", realm, member.getId())
-                    .header("Authorization", "Bearer " + bearerToken)
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -80,11 +100,11 @@ public class KeycloakService {
         }
     }
 
-    public void deleteUser(UUID keycloakId, String bearerToken) throws HttpClientErrorException, SecurityException {
+    public void deleteUser(UUID keycloakId) throws HttpClientErrorException, SecurityException {
         try {
             restClient.delete()
                     .uri("/admin/realms/{realm}/users/{id}", realm, keycloakId)
-                    .header("Authorization", "Bearer " + bearerToken)
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound e) {
@@ -92,6 +112,51 @@ public class KeycloakService {
         } catch (HttpClientErrorException.Forbidden e) {
             throw new SecurityException("Insufficient permissions to delete a keycloak user");
         }
+    }
+
+    private String authorizationHeader() {
+        return "Bearer " + serviceAccountToken();
+    }
+
+    private String serviceAccountToken() {
+        Instant now = Instant.now();
+        if (cachedServiceAccountToken != null && now.isBefore(cachedServiceAccountTokenExpiresAt)) {
+            return cachedServiceAccountToken;
+        }
+
+        synchronized (this) {
+            now = Instant.now();
+            if (cachedServiceAccountToken != null && now.isBefore(cachedServiceAccountTokenExpiresAt)) {
+                return cachedServiceAccountToken;
+            }
+
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("grant_type", "client_credentials");
+            form.add("client_id", serviceAccountClientId);
+            form.add("client_secret", serviceAccountClientSecret);
+
+            TokenResponse response = restClient.post()
+                    .uri("/realms/{realm}/protocol/openid-connect/token", realm)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(TokenResponse.class);
+
+            if (response == null || response.accessToken() == null || response.accessToken().isBlank()) {
+                throw new IllegalStateException("Keycloak did not return a service account access token");
+            }
+
+            cachedServiceAccountToken = response.accessToken();
+            cachedServiceAccountTokenExpiresAt = now.plusSeconds(cacheTtlSeconds(response.expiresIn()));
+            return cachedServiceAccountToken;
+        }
+    }
+
+    private static long cacheTtlSeconds(Long expiresIn) {
+        if (expiresIn == null || expiresIn <= 0) {
+            return 0;
+        }
+        return Math.max(1, expiresIn - TOKEN_REFRESH_SKEW_SECONDS);
     }
 
     private record UserRepresentation(
@@ -104,4 +169,9 @@ public class KeycloakService {
     ) {}
 
     private record Credential(String type, String value, boolean temporary) {}
+
+    private record TokenResponse(
+            @JsonProperty("access_token") String accessToken,
+            @JsonProperty("expires_in") Long expiresIn
+    ) {}
 }

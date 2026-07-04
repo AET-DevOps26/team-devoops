@@ -11,7 +11,6 @@ import {
   MessageSquareText,
   Monitor,
   Moon,
-  Settings,
   Sun,
   User,
   Users,
@@ -19,8 +18,8 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useTheme } from '@/app/theme/useTheme'
 import type { Theme } from '@/app/theme/ThemeContext'
+import { NAV_ITEMS } from '@/app/navPolicy'
 import { useAuth } from '@/features/auth'
-import type { Role } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -44,66 +43,21 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 
-interface NavItem {
-  to: string
-  label: string
-  icon: LucideIcon
-  roles: Role[]
-  end?: boolean
+// Icons are a presentational concern, so they're kept local to the sidebar
+// rather than in the shared nav policy.
+const NAV_ICONS: Record<string, LucideIcon> = {
+  '/': LayoutDashboard,
+  '/sport-events': CalendarDays,
+  '/feedback': MessageSquareText,
+  '/organization': Users,
+  '/payments': CreditCard,
+  '/helper': LineChart,
+  '/members': Users,
+  '/letters': Mail,
 }
-
-// Dashboard stays pinned at the top, then role-eligible destinations render as
-// one flat list. Icons let the sidebar collapse to an icon rail.
-const ALL_ROLES: Role[] = ['member', 'trainer', 'director', 'admin']
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    to: '/',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    roles: ALL_ROLES,
-    end: true,
-  },
-  { to: '/sport-events', label: 'Events', icon: CalendarDays, roles: ALL_ROLES },
-  {
-    to: '/feedback',
-    label: 'Feedback',
-    icon: MessageSquareText,
-    roles: ['member', 'trainer', 'admin'],
-  },
-  {
-    to: '/organization',
-    label: 'Teams',
-    icon: Users,
-    roles: ALL_ROLES,
-  },
-  {
-    to: '/payments',
-    label: 'Payments',
-    icon: CreditCard,
-    roles: ['member', 'director', 'admin'],
-  },
-  {
-    to: '/helper',
-    label: 'Development',
-    icon: LineChart,
-    roles: ['member', 'trainer', 'admin'],
-  },
-  {
-    to: '/members',
-    label: 'Members',
-    icon: Users,
-    roles: ['trainer', 'director', 'admin'],
-  },
-  {
-    to: '/letters',
-    label: 'Letters',
-    icon: Mail,
-    roles: ['trainer', 'director', 'admin'],
-  },
-]
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -111,18 +65,25 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
   { value: 'system', label: 'System', icon: Monitor },
 ]
 
-export function AppShell() {
+function AppShellContent() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { isMobile, setOpenMobile } = useSidebar()
   const userInitial = user.name.trim().charAt(0).toUpperCase() || 'U'
   const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(user.role))
 
+  // On mobile the sidebar is an off-canvas overlay, so it must close itself
+  // once the user navigates; on desktop it stays put.
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false)
+  }
+
   return (
-    <SidebarProvider>
+    <>
       <Sidebar collapsible="icon">
         <SidebarHeader className="gap-0">
           <div className="flex items-start justify-between gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <div className="min-w-0 pt-6 group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 pt-3 group-data-[collapsible=icon]:hidden">
               <div className="flex items-center gap-1.5">
                 <img
                   src="/RoostIcon.svg"
@@ -144,22 +105,25 @@ export function AppShell() {
           />
         </SidebarHeader>
 
-        <SidebarContent>
-          <SidebarMenu className="gap-1.5">
-            {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
-              <SidebarMenuItem key={to}>
-                <SidebarMenuButton
-                  asChild
-                  tooltip={label}
-                  className="group-data-[collapsible=icon]:mx-auto"
-                >
-                  <NavLink to={to} end={end}>
-                    <Icon />
-                    <span>{label}</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+        <SidebarContent className="mt-6 px-2 group-data-[collapsible=icon]:mt-4 group-data-[collapsible=icon]:px-0">
+          <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-2">
+            {visibleNavItems.map(({ to, label, end }) => {
+              const Icon = NAV_ICONS[to]
+              return (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={label}
+                    className="group-data-[collapsible=icon]:mx-auto aria-[current=page]:bg-sidebar-primary aria-[current=page]:text-sidebar-primary-foreground aria-[current=page]:hover:bg-sidebar-primary aria-[current=page]:hover:text-sidebar-primary-foreground"
+                  >
+                    <NavLink to={to} end={end} onClick={handleNavClick}>
+                      <Icon />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
         </SidebarContent>
 
@@ -191,13 +155,11 @@ export function AppShell() {
                   align="end"
                   className="w-56 border border-sidebar-border"
                 >
-                  <DropdownMenuItem disabled>
-                    <User className="size-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <Settings className="size-4" />
-                    Settings
+                  <DropdownMenuItem asChild>
+                    <NavLink to="/profile" onClick={handleNavClick}>
+                      <User className="size-4" />
+                      Profile
+                    </NavLink>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -230,12 +192,24 @@ export function AppShell() {
       </Sidebar>
 
       <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-sidebar-border bg-background px-4 md:hidden">
+          <SidebarTrigger className="text-text-tertiary" />
+          <img src="/RoostIcon.svg" alt="" aria-hidden className="h-8 w-8" />
+        </header>
         <main className="min-w-0 px-page-x py-page-y">
           <Outlet />
         </main>
       </SidebarInset>
 
       <ReactQueryDevtools initialIsOpen={false} />
+    </>
+  )
+}
+
+export function AppShell() {
+  return (
+    <SidebarProvider>
+      <AppShellContent />
     </SidebarProvider>
   )
 }

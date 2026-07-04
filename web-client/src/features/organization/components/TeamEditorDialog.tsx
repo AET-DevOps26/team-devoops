@@ -1,16 +1,16 @@
 import { type FormEvent, useMemo, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
 import {
   Select,
   SelectContent,
@@ -25,8 +25,8 @@ import { toggleId } from '@/lib/id-selection'
 import { serverErrorMessage } from '@/lib/server-error'
 import type { AuthUser, MemberSummary, Sport, Team } from '@/types'
 import { useCreateTeam, useSportsList, useTeamsList, useUpdateTeam } from '../api/queries'
-import { MemberSelector } from './MemberSelector'
 import {
+  buildCoachPickerOptions,
   buildMemberPickerOptions,
   buildTeamCreatePayload,
   buildTeamCreatorInitialState,
@@ -54,25 +54,21 @@ export function TeamEditorDialog() {
 
 function TeamEditorForm({ target }: { target: TeamEditorTarget }) {
   const { user } = useAuth()
-  const teamsQuery = useTeamsList(target.mode === 'edit')
+  const teamsQuery = useTeamsList()
   const sportsQuery = useSportsList()
   const membersQuery = useMembers()
-  const queryError =
-    sportsQuery.error ?? membersQuery.error ?? (target.mode === 'edit' ? teamsQuery.error : null)
+  const queryError = sportsQuery.error ?? membersQuery.error ?? teamsQuery.error
   const teams = teamsQuery.data
   const sports = sportsQuery.data
   const members = membersQuery.data
   const team =
     target.mode === 'edit' ? teams?.find((candidate) => candidate.id === target.teamId) : undefined
   const title = target.mode === 'create' ? 'New Team' : 'Edit Team'
-  const isLoading =
-    sportsQuery.isLoading ||
-    membersQuery.isLoading ||
-    (target.mode === 'edit' && teamsQuery.isLoading)
+  const isLoading = sportsQuery.isLoading || membersQuery.isLoading || teamsQuery.isLoading
 
   if (queryError) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -83,9 +79,9 @@ function TeamEditorForm({ target }: { target: TeamEditorTarget }) {
     )
   }
 
-  if (isLoading || !sports || !members || (target.mode === 'edit' && !teams)) {
+  if (isLoading || !sports || !members || !teams) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -98,7 +94,7 @@ function TeamEditorForm({ target }: { target: TeamEditorTarget }) {
 
   if (target.mode === 'edit' && !team) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Team</DialogTitle>
         </DialogHeader>
@@ -114,6 +110,7 @@ function TeamEditorForm({ target }: { target: TeamEditorTarget }) {
       target={target}
       team={team ?? null}
       sports={sports}
+      teams={teams}
       members={members}
       user={user}
     />
@@ -124,12 +121,14 @@ function TeamEditorLoaded({
   target,
   team,
   sports,
+  teams,
   members,
   user,
 }: {
   target: TeamEditorTarget
   team: Team | null
   sports: Sport[]
+  teams: Team[]
   members: MemberSummary[]
   user: AuthUser
 }) {
@@ -165,6 +164,7 @@ function TeamEditorLoaded({
       target={target}
       team={team}
       sports={sports}
+      teams={teams}
       members={members}
       user={user}
       editableFields={editableFields}
@@ -176,6 +176,7 @@ function TeamEditorEditable({
   target,
   team,
   sports,
+  teams,
   members,
   user,
   editableFields,
@@ -183,6 +184,7 @@ function TeamEditorEditable({
   target: TeamEditorTarget
   team: Team | null
   sports: Sport[]
+  teams: Team[]
   members: MemberSummary[]
   user: AuthUser
   editableFields: readonly TeamEditorField[]
@@ -196,8 +198,7 @@ function TeamEditorEditable({
       ? buildTeamEditorInitialState(team)
       : buildTeamCreatorInitialState(sports, user),
   )
-  const [trainerSearch, setTrainerSearch] = useState('')
-  const [traineeSearch, setTraineeSearch] = useState('')
+  const [stepIndex, setStepIndex] = useState(0)
   const [formError, setFormError] = useState<string | null>(null)
   const fields = useMemo(() => new Set(editableFields), [editableFields])
   const availableSports = useMemo(
@@ -205,8 +206,8 @@ function TeamEditorEditable({
     [fields, sports, user],
   )
   const trainerOptions = useMemo(
-    () => buildMemberPickerOptions(members, team?.trainers ?? []),
-    [members, team?.trainers],
+    () => buildCoachPickerOptions(members, teams, team?.trainers ?? []),
+    [members, teams, team?.trainers],
   )
   const traineeOptions = useMemo(
     () => buildMemberPickerOptions(members, team?.trainees ?? []),
@@ -214,17 +215,31 @@ function TeamEditorEditable({
   )
   const isPending = createTeam.isPending || updateTeam.isPending
   const title = target.mode === 'create' ? 'New Team' : 'Edit Team'
+  const steps: DialogStep[] = useMemo(() => {
+    const stepList: DialogStep[] = [{ id: 'details', label: 'Details' }]
+    if (fields.has('trainers') || fields.has('trainees')) stepList.push({ id: 'members', label: 'Members' })
+    return stepList
+  }, [fields])
+  const isFirstStep = stepIndex === 0
+  const isLastStep = stepIndex === steps.length - 1
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const validationError = validateTeamEditorForm(form, editableFields)
-    if (validationError) {
-      setFormError(validationError)
-      return
+    if (steps[stepIndex].id === 'details') {
+      const validationError = validateTeamEditorForm(form, editableFields)
+      if (validationError) {
+        setFormError(validationError)
+        return
+      }
     }
 
     setFormError(null)
+
+    if (!isLastStep) {
+      setStepIndex((current) => current + 1)
+      return
+    }
 
     try {
       if (target.mode === 'create') {
@@ -251,110 +266,118 @@ function TeamEditorEditable({
   }
 
   return (
-    <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+    <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         {target.mode === 'edit' && team && <DialogDescription>{team.sport.name}</DialogDescription>}
       </DialogHeader>
 
+      {steps.length > 1 && <DialogStepperNav steps={steps} currentStep={stepIndex} />}
+
       <form className="space-y-5" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {fields.has('name') && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="team-name">Name</Label>
-              <Input
-                id="team-name"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                required
-                disabled={isPending}
-                aria-invalid={formError !== null && form.name.trim() === ''}
-              />
-            </div>
-          )}
+        {steps[stepIndex].id === 'details' && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {fields.has('name') && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="team-name">Name</Label>
+                <Input
+                  id="team-name"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  required
+                  disabled={isPending}
+                  aria-invalid={formError !== null && form.name.trim() === ''}
+                />
+              </div>
+            )}
 
-          {fields.has('sport') && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="team-sport">Sport</Label>
-              <Select
-                value={form.sportId}
-                onValueChange={(sportId) => setForm({ ...form, sportId })}
-                disabled={isPending || availableSports.length === 0}
-              >
-                <SelectTrigger id="team-sport" className="w-full">
-                  <SelectValue placeholder="Select sport" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSports.map((sport) => (
-                    <SelectItem key={sport.id} value={sport.id}>
-                      {sport.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {fields.has('sport') && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="team-sport">Sport</Label>
+                <Select
+                  value={form.sportId}
+                  onValueChange={(sportId) => setForm({ ...form, sportId })}
+                  disabled={isPending || availableSports.length === 0}
+                >
+                  <SelectTrigger id="team-sport" className="w-full">
+                    <SelectValue placeholder="Select sport" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSports.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.id}>
+                        {sport.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          {fields.has('description') && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="team-description">Description</Label>
-              <Textarea
-                id="team-description"
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-                disabled={isPending}
-                className="min-h-24"
-              />
-            </div>
-          )}
+            {fields.has('description') && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="team-description">Description</Label>
+                <Textarea
+                  id="team-description"
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                  disabled={isPending}
+                  className="min-h-24"
+                />
+              </div>
+            )}
 
-          {fields.has('address') && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="team-address">Address</Label>
-              <Input
-                id="team-address"
-                value={form.address}
-                onChange={(event) => setForm({ ...form, address: event.target.value })}
-                disabled={isPending}
-              />
-            </div>
-          )}
-        </div>
-
-        {fields.has('trainers') && (
-          <MemberSelector
-            label="Coaches"
-            searchId="team-trainer-search"
-            options={trainerOptions}
-            selectedIds={form.trainerIds}
-            search={trainerSearch}
-            disabled={isPending}
-            onSearchChange={setTrainerSearch}
-            onToggle={(id) =>
-              setForm((current) => ({
-                ...current,
-                trainerIds: toggleId(current.trainerIds, id),
-              }))
-            }
-          />
+            {fields.has('address') && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="team-address">Address</Label>
+                <Input
+                  id="team-address"
+                  value={form.address}
+                  onChange={(event) => setForm({ ...form, address: event.target.value })}
+                  disabled={isPending}
+                />
+              </div>
+            )}
+          </div>
         )}
 
-        {fields.has('trainees') && (
-          <MemberSelector
-            label="Trainees"
-            searchId="team-trainee-search"
-            options={traineeOptions}
-            selectedIds={form.traineeIds}
-            search={traineeSearch}
-            disabled={isPending}
-            onSearchChange={setTraineeSearch}
-            onToggle={(id) =>
-              setForm((current) => ({
-                ...current,
-                traineeIds: toggleId(current.traineeIds, id),
-              }))
-            }
-          />
+        {steps[stepIndex].id === 'members' && (
+          <div className="space-y-5">
+            {fields.has('trainers') && (
+              <MultiSelectCombobox
+                label="Coaches"
+                placeholder="Search and select coaches..."
+                emptyLabel="No coaches available. Promote a member to Coach first."
+                emptySearchLabel="No coaches match that search."
+                options={trainerOptions.map((option) => ({ ...option, label: option.name }))}
+                selectedIds={form.trainerIds}
+                disabled={isPending}
+                onToggle={(id) =>
+                  setForm((current) => ({
+                    ...current,
+                    trainerIds: toggleId(current.trainerIds, id),
+                  }))
+                }
+              />
+            )}
+
+            {fields.has('trainees') && (
+              <MultiSelectCombobox
+                label="Trainees"
+                placeholder="Search and select trainees..."
+                emptyLabel="No members available."
+                emptySearchLabel="No members match that search."
+                options={traineeOptions.map((option) => ({ ...option, label: option.name }))}
+                selectedIds={form.traineeIds}
+                disabled={isPending}
+                onToggle={(id) =>
+                  setForm((current) => ({
+                    ...current,
+                    traineeIds: toggleId(current.traineeIds, id),
+                  }))
+                }
+              />
+            )}
+          </div>
         )}
 
         {formError && (
@@ -363,14 +386,17 @@ function TeamEditorEditable({
           </p>
         )}
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={closeEditor} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? 'Saving' : target.mode === 'create' ? 'Create Team' : 'Save Team'}
-          </Button>
-        </DialogFooter>
+        <DialogStepperFooter
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          isPending={isPending}
+          submitLabel={target.mode === 'create' ? 'Create Team' : 'Save Team'}
+          onCancel={closeEditor}
+          onBack={() => {
+            setFormError(null)
+            setStepIndex((current) => Math.max(current - 1, 0))
+          }}
+        />
       </form>
     </DialogContent>
   )

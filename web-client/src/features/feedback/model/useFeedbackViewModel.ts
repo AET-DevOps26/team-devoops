@@ -5,6 +5,7 @@ import { useMembers } from '@/features/members/api/queries'
 import { buildComposableMemberIds } from '@/features/members/model/useMembersViewModel'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
 import { useEventsList } from '@/features/sport-events/api/queries'
+import { buildEventSportNamesById } from '@/lib/event-sports'
 import { formatDateShort, formatDateTime } from '@/lib/format'
 import {
   type AuthUser,
@@ -28,6 +29,7 @@ export interface FeedbackRow {
   memberName: string
   creatorName: string
   eventName: string
+  sportNames: string[]
   createdAt: string
   rating: number
 }
@@ -64,7 +66,7 @@ export interface FeedbackCoverage {
 export interface FeedbackView {
   rows: FeedbackRow[]
   totalRows: number
-  eventOptions: { value: string; label: string }[]
+  sportOptions: { value: string; label: string }[]
   coachOptions: { value: string; label: string }[]
   stats: {
     total: number
@@ -83,6 +85,13 @@ export interface FeedbackDetailView {
   isLoading: boolean
   // rating is undefined only while detail is unloaded; every loaded feedback has one.
   error: Error | null
+}
+
+export function canManageFeedback(
+  user: AuthUser,
+  creatorId: string | null | undefined,
+): boolean {
+  return user.role === 'admin' || creatorId === user.id
 }
 
 function includesSearch(value: string, search: string): boolean {
@@ -110,12 +119,13 @@ export function filterFeedbackRows(
       search.length === 0 ||
       includesSearch(feedback.memberName, search) ||
       includesSearch(feedback.creatorName, search) ||
-      includesSearch(feedback.eventName, search)
+      includesSearch(feedback.eventName, search) ||
+      feedback.sportNames.some((sportName) => includesSearch(sportName, search))
 
     return (
       matchesText &&
       matchesRating(feedback.rating, filters.rating) &&
-      (filters.eventId === 'all' || feedback.eventId === filters.eventId) &&
+      (filters.sport === 'all' || feedback.sportNames.includes(filters.sport)) &&
       (filters.coachId === 'all' || feedback.coachId === filters.coachId) &&
       (fromTime === null || feedbackTime >= fromTime) &&
       (toTime === null || feedbackTime <= toTime)
@@ -153,27 +163,40 @@ function buildFeedbackCoverage(
   events: EventListItem[],
   user: AuthUser,
 ): FeedbackCoverage | null {
-  if (user.role !== 'trainer') return null
+  if (user.role !== 'trainer' && user.role !== 'admin') return null
 
-  const composableMemberIds = buildComposableMemberIds(members, teams, user)
-  if (composableMemberIds.size === 0) return null
-
-  const membersById = new Map(members.map((member) => [member.id, member]))
-  const traineeName = (id: string) => {
-    const member = membersById.get(id)
-    return member ? `${member.first_name} ${member.last_name}` : id
+  if (user.role === 'trainer') {
+    const composableMemberIds = buildComposableMemberIds(members, teams, user)
+    if (composableMemberIds.size === 0) return null
   }
 
-  // Feedback already given by this coach, keyed by `${eventId}:${memberId}`.
-  const covered = new Set(
+  const membersById = new Map(members.map((member) => [member.id, member]))
+  const traineeName = (trainee: { id: string; name?: string }) => {
+    const member = membersById.get(trainee.id)
+    return member ? `${member.first_name} ${member.last_name}` : trainee.name || trainee.id
+  }
+
+  const coveredByCoach = new Set(
     summaries
       .filter((feedback) => feedback.creator?.id === user.id)
       .map((feedback) => `${feedback.event.id}:${feedback.member?.id ?? ''}`),
   )
+  const coveredByAnyone = new Set(
+    summaries.map((feedback) => `${feedback.event.id}:${feedback.member?.id ?? ''}`),
+  )
 
-  const coachedTeams = teams.filter((team) => team.trainers.some((t) => t.id === user.id))
+  const scopedTeams =
+    user.role === 'admin'
+      ? teams
+      : teams.filter((team) => team.trainers.some((trainer) => trainer.id === user.id))
+  if (scopedTeams.length === 0) return null
+
+  const sportNamesById = new Map(sports.map((sport) => [sport.id, sport.name]))
   const teamsBySportId = new Map<string, Team[]>()
-  for (const team of coachedTeams) {
+  for (const team of scopedTeams) {
+    if (!sportNamesById.has(team.sport.id)) {
+      sportNamesById.set(team.sport.id, team.sport.name)
+    }
     const sportTeams = teamsBySportId.get(team.sport.id) ?? []
     sportTeams.push(team)
     teamsBySportId.set(team.sport.id, sportTeams)
@@ -182,10 +205,9 @@ function buildFeedbackCoverage(
   let coveredCount = 0
   let totalCount = 0
 
-  const coverageSports: FeedbackCoverageSport[] = sports
-    .filter((sport) => teamsBySportId.has(sport.id))
-    .map((sport) => {
-      const sportTeams = teamsBySportId.get(sport.id) ?? []
+  const coverageSports: FeedbackCoverageSport[] = Array.from(teamsBySportId.entries())
+    .map(([sportId, sportTeams]) => {
+      const sportName = sportNamesById.get(sportId) ?? sportId
 
       const coverageTeams: FeedbackCoverageTeam[] = sportTeams.map((team) => {
         const teamEvents = events.filter((event) =>
@@ -194,16 +216,26 @@ function buildFeedbackCoverage(
 
         const coverageEvents: FeedbackCoverageEvent[] = teamEvents
           .map((event) => {
-            const scoped = (event.attendees ?? []).filter((attendee) =>
-              team.trainees.some((trainee) => trainee.id === attendee.id),
-            )
+            const scoped =
+              user.role === 'admin'
+                ? (event.attendees ?? [])
+                : (event.attendees ?? []).filter((attendee) =>
+                    team.trainees.some((trainee) => trainee.id === attendee.id),
+                  )
             const missing = scoped
-              .filter((attendee) => !covered.has(`${event.id}:${attendee.id}`))
-              .map((attendee) => ({ id: attendee.id, name: traineeName(attendee.id) }))
+              .filter(
+                (attendee) =>
+                  user.role === 'admin' || !coveredByCoach.has(`${event.id}:${attendee.id}`),
+              )
+              .map((attendee) => ({ id: attendee.id, name: traineeName(attendee) }))
               .toSorted((a, b) => a.name.localeCompare(b.name))
 
             totalCount += scoped.length
-            coveredCount += scoped.length - missing.length
+            coveredCount +=
+              user.role === 'admin'
+                ? scoped.filter((attendee) => coveredByAnyone.has(`${event.id}:${attendee.id}`))
+                    .length
+                : scoped.length - missing.length
 
             return {
               id: event.id,
@@ -216,11 +248,14 @@ function buildFeedbackCoverage(
           .toSorted((a, b) => a.name.localeCompare(b.name))
 
         return { id: team.id, name: team.name, events: coverageEvents }
-      }).filter((team) => team.events.length > 0)
+      })
+        .filter((team) => team.events.length > 0)
+        .toSorted((a, b) => a.name.localeCompare(b.name))
 
-      return { name: sport.name, teams: coverageTeams }
+      return { name: sportName, teams: coverageTeams }
     })
     .filter((sport) => sport.teams.length > 0)
+    .toSorted((a, b) => a.name.localeCompare(b.name))
 
   return {
     coveredCount,
@@ -238,6 +273,7 @@ export function buildFeedbackView(
   events: EventListItem[] = [],
   user?: AuthUser,
 ): FeedbackView {
+  const sportNamesByEventId = buildEventSportNamesById(events, teams)
   const rows = summaries.map((feedback) => ({
     id: feedback.id,
     eventId: feedback.event.id,
@@ -246,12 +282,13 @@ export function buildFeedbackView(
     memberName: memberRefName(feedback.member),
     creatorName: creatorName(feedback.creator),
     eventName: feedback.event.name,
+    sportNames: sportNamesByEventId.get(feedback.event.id) ?? [],
     createdAt: feedback.created_at,
     rating: feedback.rating,
   }))
-  const eventOptions = Array.from(
-    new Map(rows.map((row) => [row.eventId, row.eventName])).entries(),
-    ([value, label]) => ({ value, label }),
+  const sportOptions = Array.from(
+    new Set(rows.flatMap((row) => row.sportNames)),
+    (sport) => ({ value: sport, label: sport }),
   ).toSorted((a, b) => a.label.localeCompare(b.label))
   const coachOptions = Array.from(
     new Map(rows.map((row) => [row.coachId, row.creatorName])).entries(),
@@ -274,7 +311,7 @@ export function buildFeedbackView(
   return {
     rows: filteredRows,
     totalRows: rows.length,
-    eventOptions,
+    sportOptions,
     coachOptions,
     stats: {
       total: rows.length,
@@ -292,8 +329,8 @@ export function useFeedbackViewModel() {
   const feedbackQuery = useFeedbackList()
   const membersQuery = useMembers()
   const teamsQuery = useTeamsList()
-  const sportsQuery = useSportsList(user.role === 'trainer')
-  const eventsQuery = useEventsList(user.role === 'trainer')
+  const sportsQuery = useSportsList()
+  const eventsQuery = useEventsList()
   const filters = useFeedbackUiStore((state) => state.filters)
 
   const view = useMemo(
@@ -320,8 +357,18 @@ export function useFeedbackViewModel() {
 
   return {
     view,
-    isLoading: feedbackQuery.isLoading,
-    error: feedbackQuery.error,
+    isLoading:
+      feedbackQuery.isLoading ||
+      membersQuery.isLoading ||
+      teamsQuery.isLoading ||
+      sportsQuery.isLoading ||
+      eventsQuery.isLoading,
+    error:
+      feedbackQuery.error ??
+      membersQuery.error ??
+      teamsQuery.error ??
+      sportsQuery.error ??
+      eventsQuery.error,
   }
 }
 

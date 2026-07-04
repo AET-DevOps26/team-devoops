@@ -1,4 +1,5 @@
 import { sameIds } from '@/lib/id-selection'
+import { memberSummaryName } from '@/lib/format'
 import {
   isTeamCoach,
   type AuthUser,
@@ -188,6 +189,19 @@ export function buildMemberPickerOptions(
   return Array.from(options.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
+// Coaches are members who already hold the coach role — approximated client-side as "is a
+// trainer of at least one team", since role isn't a field on MemberSummary. Current trainers stay
+// selectable even if this is the only team they coach.
+export function buildCoachPickerOptions(
+  members: MemberSummary[],
+  teams: readonly Team[],
+  currentTrainers: MemberRef[],
+): MemberPickerOption[] {
+  const coachIds = new Set(teams.flatMap((team) => team.trainers.map((trainer) => trainer.id)))
+  const eligibleMembers = members.filter((member) => coachIds.has(member.id))
+  return buildMemberPickerOptions(eligibleMembers, currentTrainers)
+}
+
 export function teamCreatorFieldsForUser(
   sports: readonly Sport[],
   user: AuthUser,
@@ -230,11 +244,6 @@ export function canDeleteTeamForUser(
   if (user.role === 'admin') return true
   if (user.role === 'director') return isDirectorForTeam(team, sports, user.id)
   return false
-}
-
-function memberSummaryName(member: MemberSummary): string {
-  const name = `${member.first_name} ${member.last_name}`.trim()
-  return name || member.email
 }
 
 function isDirectorForTeam(

@@ -123,25 +123,58 @@ describe('sport editor helpers', () => {
     expect(validateSportEditorForm(form, ['directors'])).toBeNull()
   })
 
-  it('builds director picker options from existing members only', () => {
-    expect(
-      buildSportDirectorPickerOptions([
-        {
-          id: 'member-2',
-          first_name: 'Beta',
-          last_name: 'Member',
-          email: 'beta@example.test',
-        },
-        {
-          id: 'member-1',
-          first_name: 'Alpha',
-          last_name: 'Member',
-          email: 'alpha@example.test',
-        },
-      ]),
-    ).toEqual([
-      { id: 'member-1', name: 'Alpha Member', meta: 'alpha@example.test' },
-      { id: 'member-2', name: 'Beta Member', meta: 'beta@example.test' },
+  it('builds director picker options scoped to members who already direct a sport', () => {
+    const members = [
+      {
+        id: 'member-2',
+        first_name: 'Beta',
+        last_name: 'Member',
+        email: 'beta@example.test',
+      },
+      {
+        id: 'member-1',
+        first_name: 'Alpha',
+        last_name: 'Member',
+        email: 'alpha@example.test',
+      },
+      {
+        id: director.id,
+        first_name: 'Director',
+        last_name: 'One',
+        email: 'director-1@example.test',
+      },
+    ]
+
+    expect(buildSportDirectorPickerOptions(members, [football])).toEqual([
+      { id: director.id, name: 'Director One', meta: 'director-1@example.test' },
     ])
+  })
+
+  it('keeps the sport being edited\'s current directors selectable even without another directorship', () => {
+    const members = [
+      {
+        id: director.id,
+        first_name: 'Director',
+        last_name: 'One',
+        email: 'director-1@example.test',
+      },
+    ]
+
+    expect(buildSportDirectorPickerOptions(members, [], [director])).toEqual([
+      { id: director.id, name: 'Director One', meta: 'director-1@example.test' },
+    ])
+  })
+
+  it('returns no options when nobody currently directs a sport', () => {
+    const members = [
+      {
+        id: 'member-1',
+        first_name: 'Alpha',
+        last_name: 'Member',
+        email: 'alpha@example.test',
+      },
+    ]
+
+    expect(buildSportDirectorPickerOptions(members, [])).toEqual([])
   })
 })

@@ -1,3 +1,5 @@
+import type { MemberSummary } from '@/types'
+
 // Money is integer cents with no currency field; we display the agreed EUR.
 const EUR = new Intl.NumberFormat('en-IE', {
   style: 'currency',
@@ -9,11 +11,16 @@ export function formatCents(amountCents: number): string {
   return EUR.format(amountCents / 100)
 }
 
-export const formatEuroCents = formatCents
 
 /** Absolute amount, no sign — for places that show direction separately. */
 export function formatCentsAbs(amountCents: number): string {
   return EUR.format(Math.abs(amountCents) / 100)
+}
+
+/** Display name for a member list model. Falls back to email when blank. */
+export function memberSummaryName(member: MemberSummary): string {
+  const name = `${member.first_name} ${member.last_name}`.trim()
+  return name || member.email
 }
 
 const DATE = new Intl.DateTimeFormat('en-GB', {

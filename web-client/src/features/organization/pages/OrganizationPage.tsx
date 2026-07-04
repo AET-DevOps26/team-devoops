@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
@@ -321,7 +322,7 @@ function StatsRow({
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {['my-teams', 'sports', 'teams', 'my-sports'].map((key) => (
+        {['sports', 'teams'].map((key) => (
           <Skeleton key={key} className="h-32 border" />
         ))}
       </div>
@@ -330,20 +331,24 @@ function StatsRow({
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        label="My Teams"
-        value={String(view.stats.myTeams)}
-        tone={view.stats.myTeams > 0 ? 'positive' : 'default'}
-        meta="Teams you're part of"
-      />
+      {view.stats.myTeams > 0 && (
+        <StatCard
+          label="My Teams"
+          value={String(view.stats.myTeams)}
+          tone={view.stats.myTeams > 0 ? 'positive' : 'default'}
+          meta="Teams you're part of"
+        />
+      )}
       <StatCard label="Sports" value={String(view.stats.sports)} meta="Offered by the club" />
       <StatCard label="Teams Total" value={String(view.stats.teams)} meta="Across all sports" />
-      <StatCard
-        label="My Sports"
-        value={String(view.stats.mySports)}
-        tone={view.stats.mySports > 0 ? 'positive' : 'default'}
-        meta="Teams and directed sports"
-      />
+      {view.stats.mySports > 0 && (
+        <StatCard
+          label="My Sports"
+          value={String(view.stats.mySports)}
+          tone={view.stats.mySports > 0 ? 'positive' : 'default'}
+          meta="Teams and directed sports"
+        />
+      )}
     </div>
   )
 }
@@ -425,32 +430,23 @@ function SportSection({
           </Badge>
         </button>
         {(canEditSport || canDeleteSport) && (
-          <div className="flex items-center gap-1 py-3 pr-4">
+          <RowActions className="py-3 pr-4">
             {canEditSport && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
+              <RowActionButton
+                icon={Pencil}
+                label={`Edit ${sport.name}`}
                 onClick={() => onEditSport(sport.id)}
-                title={`Edit ${sport.name}`}
-              >
-                <Pencil />
-                <span className="sr-only">Edit {sport.name}</span>
-              </Button>
+              />
             )}
             {canDeleteSport && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
+              <RowActionButton
+                icon={Trash2}
+                label={`Delete ${sport.name}`}
+                destructive
                 onClick={() => onDeleteSport(sport.id)}
-                title={`Delete ${sport.name}`}
-              >
-                <Trash2 />
-                <span className="sr-only">Delete {sport.name}</span>
-              </Button>
+              />
             )}
-          </div>
+          </RowActions>
         )}
       </div>
 
@@ -497,32 +493,23 @@ function SportSection({
                       )}
                     </button>
                     {(canEdit || canDelete) && (
-                      <div className="flex items-center gap-1 pr-4">
+                      <RowActions className="pr-4">
                         {canEdit && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
+                          <RowActionButton
+                            icon={Pencil}
+                            label={`Edit ${team.name}`}
                             onClick={() => onEditTeam(team.id)}
-                            title={`Edit ${team.name}`}
-                          >
-                            <Pencil />
-                            <span className="sr-only">Edit {team.name}</span>
-                          </Button>
+                          />
                         )}
                         {canDelete && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
+                          <RowActionButton
+                            icon={Trash2}
+                            label={`Delete ${team.name}`}
+                            destructive
                             onClick={() => onDeleteTeam(team.id)}
-                            title={`Delete ${team.name}`}
-                          >
-                            <Trash2 />
-                            <span className="sr-only">Delete {team.name}</span>
-                          </Button>
+                          />
                         )}
-                      </div>
+                      </RowActions>
                     )}
                   </div>
                 </li>
@@ -699,7 +686,7 @@ function RosterSheet({
         </div>
       </SheetHeader>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-2">
+      <div className="roost-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-2">
         <div>
           <FieldLabel>Address</FieldLabel>
           <p className="mt-0.5 text-body-sm">{team.address || '--'}</p>

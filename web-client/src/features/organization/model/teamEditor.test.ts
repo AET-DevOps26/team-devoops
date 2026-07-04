@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { AuthUser, MemberRef, Sport, Team } from '@/types'
 import {
   adminTeamEditorFields,
+  buildCoachPickerOptions,
   buildMemberPickerOptions,
   buildTeamCreatePayload,
   buildTeamEditorInitialState,
@@ -197,6 +198,53 @@ describe('team editor helpers', () => {
       { id: 'member-2', name: 'Current Member' },
       { id: 'member-1', name: 'Known Member', meta: 'known@example.test' },
     ])
+  })
+
+  it('builds coach picker options scoped to members who already coach a team', () => {
+    const members = [
+      {
+        id: 'member-1',
+        first_name: 'Plain',
+        last_name: 'Member',
+        email: 'plain@example.test',
+      },
+      {
+        id: coach.id,
+        first_name: 'Coach',
+        last_name: 'One',
+        email: 'coach-1@example.test',
+      },
+    ]
+
+    expect(buildCoachPickerOptions(members, [team()], [])).toEqual([
+      { id: coach.id, name: 'Coach One', meta: 'coach-1@example.test' },
+    ])
+  })
+
+  it('keeps the team\'s current trainers selectable even without another coaching assignment', () => {
+    const members = [
+      {
+        id: coach.id,
+        first_name: 'Coach',
+        last_name: 'One',
+        email: 'coach-1@example.test',
+      },
+    ]
+
+    expect(buildCoachPickerOptions(members, [], [coach])).toEqual([{ id: coach.id, name: 'Coach One' }])
+  })
+
+  it('returns no coach options when nobody currently coaches a team', () => {
+    const members = [
+      {
+        id: 'member-1',
+        first_name: 'Plain',
+        last_name: 'Member',
+        email: 'plain@example.test',
+      },
+    ]
+
+    expect(buildCoachPickerOptions(members, [], [])).toEqual([])
   })
 })
 

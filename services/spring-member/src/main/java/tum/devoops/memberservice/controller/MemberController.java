@@ -48,21 +48,21 @@ public class MemberController implements MembersApi {
     @Override
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Member> createMember(@Valid MemberCreate memberCreate) {
-        Member member = memberService.createMember(memberCreate, currentJwt().getTokenValue());
+        Member member = memberService.createMember(memberCreate);
         return ResponseEntity.created(URI.create("/" + member.getId())).body(member);
     }
 
     @Override
     @PreAuthorize("hasRole('admin') or hasRole('member') and #id.toString() == authentication.name")
     public ResponseEntity<Member> updateMemberDetails(UUID id, @Valid MemberPartialUpdate memberPartialUpdate) {
-        Member updated = memberService.updateMember(id, memberPartialUpdate, currentJwt().getTokenValue());
+        Member updated = memberService.updateMember(id, memberPartialUpdate);
         return ResponseEntity.ok(updated);
     }
 
     @Override
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<Void> deleteMember(UUID id) {
-        memberService.deleteMember(id, currentJwt().getTokenValue());
+        memberService.deleteMember(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -74,10 +74,5 @@ public class MemberController implements MembersApi {
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_admin".equals(a.getAuthority()));
         return ResponseEntity.ok(dashboardService.getDashboard(requesterId, isAdmin));
-    }
-
-    private static Jwt currentJwt() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (Jwt) auth.getPrincipal();
     }
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BookOpenText, Trash2 } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -13,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
@@ -145,24 +147,20 @@ export function HelperPage() {
                     </p>
                     <p className="text-body-sm text-text-tertiary">{row.dateLabel}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="link"
-                      className="h-auto p-0"
+                  <RowActions className="shrink-0">
+                    <RowActionButton
+                      icon={BookOpenText}
+                      label={`Read report for ${row.subject}`}
                       onClick={() => openReport(row.id)}
-                    >
-                      Read
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-text-tertiary hover:text-destructive"
+                    />
+                    <RowActionButton
+                      icon={Trash2}
+                      label={`Delete report for ${row.subject}`}
+                      destructive
                       onClick={() => requestDelete(row.id)}
                       disabled={deleteReport.isPending}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                    />
+                  </RowActions>
                 </li>
               ))}
             </ul>
@@ -171,7 +169,7 @@ export function HelperPage() {
       </Card>
 
       <Sheet open={openReportId !== null} onOpenChange={(open) => !open && closeReport()}>
-        <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-lg">
+        <SheetContent className="roost-scroll w-full gap-0 overflow-y-auto sm:max-w-lg">
           <ReportDetailSheet detailView={detailView} />
         </SheetContent>
       </Sheet>

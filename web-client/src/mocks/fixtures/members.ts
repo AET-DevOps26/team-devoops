@@ -68,7 +68,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 156 2883472",
     "address": "Wiesenweg 69, 81243 München",
     "joining_date": "2018-03-07",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0006-0000-b54c-00000003b54a",
@@ -79,7 +79,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 160 6529327",
     "address": "Lindenstraße 14, 80636 München",
     "joining_date": "2024-11-14",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0007-0000-5384-000000045381",
@@ -90,7 +90,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 171 8122796",
     "address": "Ahornweg 56, 80335 München",
     "joining_date": "2024-10-10",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0008-0000-f1bb-00000004f1b8",
@@ -101,7 +101,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 164 1909138",
     "address": "Mühlgasse 9, 80337 München",
     "joining_date": "2018-01-14",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0009-0000-8ff3-000000058fef",
@@ -112,7 +112,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 170 3476169",
     "address": "Mühlgasse 18, 80636 München",
     "joining_date": "2020-02-12",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000a-0000-2e2a-000000062e26",
@@ -123,7 +123,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 150 6547182",
     "address": "Talstraße 18, 80801 München",
     "joining_date": "2019-10-23",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000b-0000-cc62-00000006cc5d",
@@ -134,7 +134,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 155 9402739",
     "address": "Parkstraße 30, 80331 München",
     "joining_date": "2019-07-11",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000c-0000-6a99-000000076a94",
@@ -145,7 +145,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 160 8142947",
     "address": "Mühlgasse 74, 80801 München",
     "joining_date": "2024-11-07",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000d-0000-08d1-0000000808cb",
@@ -156,7 +156,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 163 1250170",
     "address": "Ahornweg 119, 80801 München",
     "joining_date": "2018-03-25",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000e-0000-a708-00000008a702",
@@ -167,7 +167,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 151 7592426",
     "address": "Parkstraße 14, 80333 München",
     "joining_date": "2025-09-02",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-000f-0000-4540-000000094539",
@@ -178,7 +178,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 167 5733796",
     "address": "Sonnenweg 65, 80337 München",
     "joining_date": "2019-07-06",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0010-0001-e377-00000009e370",
@@ -189,7 +189,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 156 3465920",
     "address": "Sonnenweg 67, 80469 München",
     "joining_date": "2025-01-10",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0011-0001-81af-0000000a81a7",
@@ -200,7 +200,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 163 6952840",
     "address": "Mühlgasse 94, 80538 München",
     "joining_date": "2023-12-10",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0012-0001-1fe6-0000000b1fde",
@@ -211,7 +211,7 @@ export const memberFixtures: Member[] = [
     "phone_number": "+49 178 5131402",
     "address": "Schulstraße 126, 80636 München",
     "joining_date": "2023-12-04",
-    "information": "Coach / trainer."
+    "information": "Coach."
   },
   {
     "id": "99999999-0013-0001-be1e-0000000bbe15",

@@ -1,6 +1,8 @@
 import { sameIds } from '@/lib/id-selection'
+import { memberSummaryName } from '@/lib/format'
 import type {
   AuthUser,
+  MemberRef,
   MemberSummary,
   Sport,
   SportCreate,
@@ -123,10 +125,19 @@ export function sportEditorFieldsForUser(
   return []
 }
 
+// Directors are members who already hold the director role — approximated client-side as "is a
+// director of at least one sport", since role isn't a field on MemberSummary. Current directors of
+// the sport being edited stay selectable even if this is their only directorship.
 export function buildSportDirectorPickerOptions(
   members: MemberSummary[],
+  sports: readonly Sport[],
+  currentDirectors: readonly MemberRef[] = [],
 ): SportDirectorPickerOption[] {
+  const directorIds = new Set(sports.flatMap((sport) => sport.directors.map((director) => director.id)))
+  for (const director of currentDirectors) directorIds.add(director.id)
+
   return members
+    .filter((member) => directorIds.has(member.id))
     .map((member) => ({
       id: member.id,
       name: memberSummaryName(member),
@@ -137,11 +148,6 @@ export function buildSportDirectorPickerOptions(
 
 function isSportDirector(sport: Sport, userId: string): boolean {
   return sport.directors.some((director) => director.id === userId)
-}
-
-function memberSummaryName(member: MemberSummary): string {
-  const name = `${member.first_name} ${member.last_name}`.trim()
-  return name || member.email
 }
 
 function cleanOptionalText(value: string): string | undefined {
