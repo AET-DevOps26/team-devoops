@@ -17,6 +17,12 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" "prometheus") | nindent 8 }}
     spec:
+      # The cluster's CSI-provisioned PVC mounts root-owned by default, but the
+      # official prom/prometheus image runs as non-root (nobody, uid/gid 65534) --
+      # without this, Prometheus panics on startup with a permission-denied
+      # writing to /prometheus (verified live against the cluster).
+      securityContext:
+        fsGroup: 65534
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -17,6 +17,12 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" "grafana") | nindent 8 }}
     spec:
+      # The cluster's CSI-provisioned PVC mounts root-owned by default, but the
+      # official grafana/grafana image runs as non-root (uid/gid 472) -- without
+      # this, Grafana fails to start with a permission-denied writing to
+      # /var/lib/grafana (verified live against the cluster).
+      securityContext:
+        fsGroup: 472
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
