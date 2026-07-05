@@ -20,7 +20,10 @@ HUGGINGFACEHUB_API_TOKEN="your_huggingface_token_here"
 ## Local LLM (Ollama)
 
 The service can run against a local [Ollama](https://ollama.com) instance instead of OpenAI — no
-API key required. Configure it via the `.env` file (see `.env.example`):
+API key required. `LLM_PROVIDER` (env, default `openai`) picks the default backend, and the
+`uselocal` field on the report generation endpoints (see Endpoints below) overrides it per request:
+`true` forces the entire request — chat model and RAG retrieval alike — onto Ollama, `false` forces
+OpenAI, omitted uses the `LLM_PROVIDER` default.
 
 ```
 LLM_PROVIDER=ollama
@@ -37,9 +40,12 @@ ollama pull qwen3:0.6b
 ollama pull nomic-embed-text
 ```
 
-In the docker-compose stack this is wired up automatically: the `ollama` service pulls both models
-on startup (`infra/ollama/entrypoint_ollama.sh`), and `py-genai-helper` runs with
-`LLM_PROVIDER=ollama` and `OLLAMA_BASE_URL=http://ollama:11434`.
+An `ollama` instance is wired up identically in all three environments (local docker-compose, the
+Azure VM, and the Kubernetes cluster) via `OLLAMA_BASE_URL=http://ollama:11434` — but `LLM_PROVIDER`
+itself is left at its `openai` default everywhere, so the local model is only used when a request
+explicitly sets `uselocal: true`. In docker-compose, the `ollama` service pulls both models on
+startup (`infra/ollama/entrypoint_ollama.sh`) and a healthcheck gates `py-genai-helper`'s startup
+until they're ready.
 
 With `LLM_PROVIDER=openai` (the default), `LLM_MODEL` and `EMBEDDING_MODEL` default to
 `gpt-4.1-mini` and `text-embedding-3-large`.
@@ -55,16 +61,15 @@ flask --app app run
 | Endpoint | Description |
 | :------: | :---------- |
 | /hello | Returns a "Hello World" paragraph created by a LLM |
-| /rag-response | POST; answers `question` from the PDF knowledge base. Optional `uselocal` (`true`/`false`) forces the local Ollama model or OpenAI for that request; omitted means `LLM_PROVIDER` decides |
-| /reports/member/{member_id} | POST kicks off asynchronous report generation (202); GET lists the member's report summaries |
-| /reports/team/{team_id} | POST kicks off asynchronous report generation (202); GET lists the team's report summaries |
+| /reports/member/{member_id} | POST kicks off asynchronous report generation (202) — optional JSON body `{"uselocal": true\|false}` overrides the LLM provider for this report; GET lists the member's report summaries |
+| /reports/team/{team_id} | POST kicks off asynchronous report generation (202) — same optional `uselocal` override; GET lists the team's report summaries |
 | /reports/{report_id} | GET returns a stored report including its text; DELETE removes it |
 
 ## Report generation
 
 Reports are generated in a background thread from the feedback stored in the feedback service.
 The feedback is fetched over that service's REST API with the requester's bearer token, so the
-feedback service's own visibility rules decide which entries feed the report. The configured
-`LLM_PROVIDER` chat model (Ollama in the docker-compose stack) writes the report text, which is
-then persisted to the `reports` schema. Configure the feedback service location via
+feedback service's own visibility rules decide which entries feed the report. The chat model
+(OpenAI or Ollama, per `LLM_PROVIDER`/`uselocal` — see Local LLM above) writes the report text,
+which is then persisted to the `reports` schema. Configure the feedback service location via
 `FEEDBACK_SERVICE_URL` (default `http://feedback-service:8080`).

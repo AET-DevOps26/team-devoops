@@ -229,6 +229,7 @@ push to `main`; the VM path is unchanged.
 | Images | built and pushed to `ghcr.io/aet-devops26/team-devoops/<service>` |
 | Database | in-cluster PostgreSQL `StatefulSet` + PVC (cluster default StorageClass) |
 | Monitoring | in-cluster Prometheus + Grafana, each with its own PVC (see [Monitoring](#monitoring)) |
+| Local LLM | in-cluster Ollama + PVC, reachable only by `py-genai-helper` (see [`services/py-genai-helper/README.md`](services/py-genai-helper/README.md)) |
 
 The `cd` workflow's `docker-push` job builds and pushes all service images to
 ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
@@ -342,7 +343,7 @@ Three dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafan
 | Dashboard | Covers |
 |---|---|
 | `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status, Keycloak login rate, and letters sent/generated |
-| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service, plus RAG query rate/latency and report-generation rate by kind/status |
+| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service, plus RAG query rate/latency and report-generation rate by kind/status, each broken out by LLM provider (OpenAI vs. local Ollama) |
 | `logs.json` | Centralized logs from every service (Loki), filterable by container, plus a log-volume graph |
 
 Beyond the generic per-request metrics above, a few **business-level custom
@@ -353,8 +354,8 @@ doing, not just HTTP noise:
 |---|---|---|
 | `letters_sent_total{status}` | letter-service | Actual mail delivery outcomes — ties directly to the mail credentials/health-check work above |
 | `letters_generated_total` | letter-service | PDF letters generated |
-| `genai_rag_queries_total{status}`, `genai_rag_query_duration_seconds` | py-genai-helper | RAG question-answering usage and latency |
-| `genai_report_generation_total{kind,status}` | py-genai-helper | Member/team AI report generation attempts |
+| `genai_rag_queries_total{status,provider}`, `genai_rag_query_duration_seconds{provider}` | py-genai-helper | RAG question-answering usage and latency, split by OpenAI vs. local Ollama |
+| `genai_report_generation_total{kind,status,provider}` | py-genai-helper | Member/team AI report generation attempts, split by OpenAI vs. local Ollama |
 | `http_server_requests_seconds_count{job="keycloak", uri=".../protocol/openid-connect/token"}` | Keycloak | Login rate — Keycloak already exposes Micrometer-style HTTP metrics on its management port (`KC_METRICS_ENABLED=true`), reused as-is rather than building a separate login-tracking mechanism |
 
 Two alert rules are provisioned in Grafana's unified alerting

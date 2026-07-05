@@ -32,6 +32,9 @@ infra/helm/team-devoops/
     alloy-configmap.yaml       #  (loki.source.kubernetes), not a DaemonSet/hostPath;
     alloy-rbac.yaml            #  config embedded via .Files.Get (k8s-specific, not
                                 #  shared with docker-compose, so no out-of-band step)
+    ollama-deployment.yaml     # Local LLM backend for py-genai-helper + PVC (entrypoint
+    ollama-service.yaml        #  script from a ConfigMap created out-of-band, same as
+    ollama-pvc.yaml            #  prometheus-config -- see "Local LLM" below)
 ```
 
 The `api-docs` (Swagger UI) image is built from [api/Dockerfile](../../api/Dockerfile),
@@ -162,6 +165,35 @@ Validate:
 ```bash
 kubectl -n ge83mom-devops26 get pods | grep -E "prometheus|grafana"
 curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard/login
+```
+
+### 6. Local LLM (Ollama)
+
+Same out-of-band ConfigMap pattern as monitoring above: `infra/ollama/entrypoint_ollama.sh`
+is shared with docker-compose, so it's loaded into a `ollama-entrypoint` ConfigMap by the
+`deploy-k8s` pipeline job rather than embedded via `.Files.Get`. For a manual deploy:
+
+```bash
+kubectl -n ge83mom-devops26 create configmap ollama-entrypoint \
+  --from-file=infra/ollama/entrypoint_ollama.sh
+```
+
+`py-genai-helper` reaches it via `OLLAMA_BASE_URL=http://ollama:11434` (set in `values.yaml`,
+same as docker-compose) — but `LLM_PROVIDER` itself stays at its `openai` default in every
+environment, so Ollama is only used per-request via the `uselocal` field on the report
+generation endpoints (see `services/py-genai-helper/README.md`). Ollama is never routed
+through the ingress; it's reachable in-cluster only.
+
+Resource limits for a handful of otherwise-idle services (Prometheus, Loki, Grafana, Alloy,
+the Keycloak database, `py-genai-helper`, `web-client`, `api-docs`) were trimmed down closer
+to their actual measured usage to make room for Ollama's ~1Gi memory footprint within the
+namespace's fixed `limits.memory: 6Gi` quota — see the comments next to each in `values.yaml`.
+
+Validate:
+
+```bash
+kubectl -n ge83mom-devops26 get pods | grep ollama
+kubectl -n ge83mom-devops26 exec deploy/ollama -- ollama list
 ```
 
 ## Manual deploy
