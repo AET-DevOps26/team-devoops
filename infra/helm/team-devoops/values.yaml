@@ -128,7 +128,7 @@ monitoring:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 64Mi
       # Actual usage is ~45Mi; trimmed to make room for ollama (see prometheus above).
       limits:
         cpu: 100m
@@ -199,7 +199,7 @@ keycloak:
     resources:
       requests:
         cpu: 100m
-        memory: 128Mi
+        memory: 64Mi
       # Actual usage is ~45Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
         cpu: 100m
