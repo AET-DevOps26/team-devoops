@@ -195,6 +195,27 @@ jobs:
             --from-file=infra/grafana/dashboards \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
+      - name: Create/refresh keycloak theme ConfigMaps
+        # infra/keycloak/themes/roost/ has nested subdirectories (css/fonts/img); a single
+        # ConfigMap can't hold those (--from-file=<dir> only picks up files directly inside
+        # that directory, silently dropping subdirectories), so each subdirectory gets its
+        # own ConfigMap here and the chart's projected volume (keycloak-deployment.yaml)
+        # stitches them back into the theme's real directory layout.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-root \
+            --from-file=infra/keycloak/themes/roost/login/template.ftl \
+            --from-file=infra/keycloak/themes/roost/login/theme.properties \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-css \
+            --from-file=infra/keycloak/themes/roost/login/resources/css \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-fonts \
+            --from-file=infra/keycloak/themes/roost/login/resources/fonts \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-img \
+            --from-file=infra/keycloak/themes/roost/login/resources/img \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
       - name: Unlock stuck Helm release (if any)
         run: |
           for secret in $(kubectl -n "$NAMESPACE" get secret \

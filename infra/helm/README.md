@@ -117,7 +117,36 @@ kubectl -n ge83mom-devops26 get pods | grep keycloak
 curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops/.well-known/openid-configuration
 ```
 
-### 5. Monitoring (Prometheus + Grafana)
+### 5. Keycloak login theme
+
+The Roost login theme (`infra/keycloak/themes/roost/`) is referenced by the realm config
+(`"loginTheme": "roost"`) but, like the ConfigMaps above, has to be loaded into the cluster
+out-of-band — Helm can't reach outside its own chart directory via `.Files.Get`, and unlike
+the flat directories used for monitoring config, the theme has nested subdirectories
+(`login/resources/{css,fonts,img}/`) that a single `kubectl create configmap --from-file=<dir>`
+can't hold (it only picks up files directly inside that directory, silently dropping
+subdirectories). Each subdirectory gets its own ConfigMap, and the chart's `keycloak`
+Deployment stitches them back into the theme's real directory layout via a projected volume.
+The `deploy-k8s` pipeline job creates/refreshes these automatically; for a manual deploy:
+
+```bash
+kubectl -n ge83mom-devops26 create configmap keycloak-theme-root \
+  --from-file=infra/keycloak/themes/roost/login/template.ftl \
+  --from-file=infra/keycloak/themes/roost/login/theme.properties
+kubectl -n ge83mom-devops26 create configmap keycloak-theme-css \
+  --from-file=infra/keycloak/themes/roost/login/resources/css
+kubectl -n ge83mom-devops26 create configmap keycloak-theme-fonts \
+  --from-file=infra/keycloak/themes/roost/login/resources/fonts
+kubectl -n ge83mom-devops26 create configmap keycloak-theme-img \
+  --from-file=infra/keycloak/themes/roost/login/resources/img
+```
+
+> **Existing realm note:** like all realm-config.json changes, this only takes effect via
+> `--import-realm` on a realm that doesn't already exist. If the cluster's `devops` realm
+> predates this change, Keycloak silently skips reimporting it — patch the running realm
+> directly instead: `kubectl -n ge83mom-devops26 exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user admin --password admin && /opt/keycloak/bin/kcadm.sh update realms/devops -s loginTheme=roost'`
+
+### 6. Monitoring (Prometheus + Grafana)
 
 Same pattern as `genai-env`: the chart only references these ConfigMaps by
 name (Helm can't reach outside its own chart directory via `.Files.Get`), so
