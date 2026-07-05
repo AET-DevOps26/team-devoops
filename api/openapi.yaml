@@ -1162,6 +1162,13 @@ paths:
         - $ref: "#/components/parameters/member_id"
       security:
         - BearerJwt: []
+      requestBody:
+        required: false
+        description: Optional per-request generation options.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReportRequest"
     get:
       operationId: listMemberReports
       tags:
@@ -1215,6 +1222,13 @@ paths:
         - $ref: "#/components/parameters/team_id"
       security:
         - BearerJwt: []
+      requestBody:
+        required: false
+        description: Optional per-request generation options.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReportRequest"
     get:
       operationId: listTeamReports
       tags:
@@ -1434,6 +1448,15 @@ components:
         - id
         - name
       description: A lightweight reference to another entity — its id plus a display name.
+    GenerateReportRequest:
+      type: object
+      properties:
+        uselocal:
+          type: boolean
+          description: |
+            Optional per-request model switch: `true` forces the local Ollama model, `false`
+            forces OpenAI. When omitted, the service's configured default provider is used.
+      description: Optional per-request options for report generation.
     MemberReportSummary:
       type: object
       properties:

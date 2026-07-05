@@ -2,21 +2,22 @@ from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
-from langchain.agents import create_agent
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_core.tools import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from prometheus_client import Counter, Histogram
+
+from llm import get_embeddings, resolve_provider
 
 load_dotenv()
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+RAG_QUERIES = Counter("genai_rag_queries_total", "Total RAG queries", ["status", "provider"])
+RAG_QUERY_DURATION = Histogram("genai_rag_query_duration_seconds", "RAG query duration in seconds", ["provider"])
 
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
 
-def _load_pdfs() -> FAISS | None:
+def _load_pdfs(use_local: bool) -> FAISS | None:
     pdf_files = list(_FILE_STORAGE.glob("*.pdf"))
     if not pdf_files:
         return None
@@ -27,39 +28,38 @@ def _load_pdfs() -> FAISS | None:
         loader = PyPDFLoader(str(path))
         docs.extend(loader.load_and_split(splitter))
 
-    return FAISS.from_documents(docs, embedding=embeddings)
+    return FAISS.from_documents(docs, embedding=get_embeddings(use_local))
 
 
-@lru_cache(maxsize=1)
-def _get_vector_store() -> FAISS | None:
-    # Built lazily on first RAG request rather than at import time: embedding the PDFs is a
-    # real OpenAI API call per chunk, which previously ran during gunicorn worker boot and
-    # blocked /health from responding until it finished (minutes, sometimes exceeding the
-    # Kubernetes rollout deadline).
-    return _load_pdfs()
+@lru_cache(maxsize=2)
+def _get_vector_store(use_local: bool) -> FAISS | None:
+    """Build (once per provider) and cache the FAISS index over the PDFs in file-storage/.
+
+    Cached per provider rather than globally: an index built from OpenAI embeddings isn't valid to
+    query with Ollama embeddings (and vice versa) — different model, different vector space.
+    Deferred until first use rather than built at import time, so importing this module (directly,
+    or transitively via ``reports``) doesn't require API credentials or make network calls.
+    """
+    return _load_pdfs(use_local)
 
 
-def get_rag_agent():
-    vector_store = _get_vector_store()
-    if vector_store is None:
-        raise RuntimeError("No PDFs found in file-storage/")
+def retrieve_context(query: str, use_local: bool | None = None, k: int = 3) -> list[str]:
+    """Return the text of the k knowledge-base chunks most relevant to the query.
 
-    retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-
-    retriever_tool = create_retriever_tool(
-        retriever,
-        name="kb_search",
-        description="Search the knowledge base for information about preferences. Always use this tool before answering.",
-    )
-
-    rag_agent = create_agent(
-        model="gpt-4.1-mini",
-        tools=[retriever_tool],
-        system_prompt=(
-            "You are a helpful assistant."
-            "Always call kb_search first to retrieve relevant context."
-            "Base your answer strictly on what the tool returns."
-        ),
-    )
-
-    return rag_agent
+    Returns an empty list if no PDFs are configured in file-storage/. ``use_local`` selects the
+    embedding provider for both the query and the underlying index — see ``llm.get_chat_model``
+    for its semantics.
+    """
+    provider = resolve_provider(use_local)
+    with RAG_QUERY_DURATION.labels(provider=provider).time():
+        try:
+            vector_store = _get_vector_store(provider == "ollama")
+            if vector_store is None:
+                RAG_QUERIES.labels(status="success", provider=provider).inc()
+                return []
+            chunks = [doc.page_content for doc in vector_store.similarity_search(query, k=k)]
+        except Exception:
+            RAG_QUERIES.labels(status="failure", provider=provider).inc()
+            raise
+        RAG_QUERIES.labels(status="success", provider=provider).inc()
+        return chunks

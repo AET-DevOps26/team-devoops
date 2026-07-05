@@ -1,0 +1,16 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "ollama" "root" $) | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "team-devoops.selectorLabels" (dict "name" "ollama") | nindent 4 }}
+  ports:
+    - port: 11434
+      targetPort: 11434
+      protocol: TCP
+{{- end }}

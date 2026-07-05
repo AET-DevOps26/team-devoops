@@ -62,8 +62,8 @@ public class KeycloakService {
 
     public void updateUser(Member member, String bearerToken) throws HttpClientErrorException {
 
-        UserRepresentation body = new UserRepresentation(member.getEmail(), member.getFirstName(),
-                member.getLastName(), member.getEmail(), true, List.of());
+        UserUpdateRepresentation body = new UserUpdateRepresentation(member.getFirstName(),
+                member.getLastName(), member.getEmail(), true);
 
         try {
             restClient.put()
@@ -101,6 +101,15 @@ public class KeycloakService {
             String email,
             boolean enabled,
             List<Credential> credentials
+    ) {}
+
+    // Excludes "username": Keycloak rejects any update payload that touches it once
+    // the User Profile config marks the attribute read-only, even to its existing value.
+    private record UserUpdateRepresentation(
+            String firstName,
+            String lastName,
+            String email,
+            boolean enabled
     ) {}
 
     private record Credential(String type, String value, boolean temporary) {}

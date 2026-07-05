@@ -3,10 +3,13 @@
   "enabled": true,
   "users": [
     {
+      "id": "32bd2021-1e95-4951-bd1d-3d756c579dce",
       "username": "admin",
       "enabled": true,
-      "email": "admin@team-devoops.local",
       "emailVerified": true,
+      "email": "teamdevoops2026+admin@gmail.com",
+      "firstName": "Admin",
+      "lastName": "Admin",
       "credentials": [
         {
           "type": "password",
@@ -17,10 +20,13 @@
       "realmRoles": ["admin", "member"]
     },
     {
+      "id": "3f3864aa-1d24-42ba-9d64-055b86bc92df",
       "username": "user",
       "enabled": true,
-      "email": "user@team-devoops.local",
       "emailVerified": true,
+      "email": "teamdevoops2026+user@gmail.com",
+      "firstName": "User",
+      "lastName": "User",
       "credentials": [
         {
           "type": "password",
