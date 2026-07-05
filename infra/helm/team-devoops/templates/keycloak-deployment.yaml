@@ -65,6 +65,8 @@ spec:
                   key: KC_BOOTSTRAP_ADMIN_PASSWORD
             - name: KC_HEALTH_ENABLED
               value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.path | quote }}
             - name: KC_HTTP_MANAGEMENT_RELATIVE_PATH

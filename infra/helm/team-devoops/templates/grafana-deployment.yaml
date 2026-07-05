@@ -1,0 +1,114 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "grafana" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "grafana") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "grafana") | nindent 8 }}
+    spec:
+      # The cluster's CSI-provisioned PVC mounts root-owned by default, but the
+      # official grafana/grafana image runs as non-root (uid/gid 472) -- without
+      # this, Grafana fails to start with a permission-denied writing to
+      # /var/lib/grafana (verified live against the cluster).
+      securityContext:
+        fsGroup: 472
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: grafana
+          image: {{ .Values.monitoring.grafana.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SERVER_ROOT_URL
+              value: {{ printf "https://%s/dashboard/" .Values.ingress.host | quote }}
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+            # Keycloak is the only login option -- admin-only access is enforced
+            # entirely by ROLE_ATTRIBUTE_PATH/STRICT below.
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_ENABLED
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_NAME
+              value: "Keycloak"
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+              value: {{ .Values.monitoring.grafana.oauthClientId | quote }}
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+              value: {{ .Values.monitoring.grafana.oauthClientSecret | quote }}
+            - name: GF_AUTH_GENERIC_OAUTH_SCOPES
+              value: "openid profile email"
+            - name: GF_AUTH_GENERIC_OAUTH_AUTH_URL
+              value: {{ printf "%s/realms/devops/protocol/openid-connect/auth" .Values.keycloak.hostname | quote }}
+            - name: GF_AUTH_GENERIC_OAUTH_TOKEN_URL
+              value: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token"
+            - name: GF_AUTH_GENERIC_OAUTH_API_URL
+              value: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/userinfo"
+            - name: GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP
+              value: "true"
+            # Only the Keycloak realm "admin" role maps to a valid Grafana org role;
+            # everyone else evaluates to an empty string, which -- combined with
+            # STRICT=true -- denies login outright. (Mapping to the literal string
+            # "None" instead does NOT deny login: Grafana treats "None" as a real,
+            # if content-less, org role and still creates a session -- verified via
+            # docker compose.)
+            - name: GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH
+              value: "contains(realm_access.roles[*], 'admin') && 'Admin' || ''"
+            - name: GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT
+              value: "true"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard-providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: alerting
+              mountPath: /etc/grafana/provisioning/alerting
+            - name: dashboards
+              mountPath: /etc/grafana/dashboards
+          readinessProbe:
+            httpGet:
+              path: /dashboard/api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /dashboard/api/health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.monitoring.grafana.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-data
+        - name: datasources
+          configMap:
+            name: {{ .Values.monitoring.grafana.datasourcesConfigMapName }}
+        - name: dashboard-providers
+          configMap:
+            name: {{ .Values.monitoring.grafana.dashboardProvidersConfigMapName }}
+        - name: alerting
+          configMap:
+            name: {{ .Values.monitoring.grafana.alertingConfigMapName }}
+        - name: dashboards
+          configMap:
+            name: {{ .Values.monitoring.grafana.dashboardsConfigMapName }}
+{{- end }}

@@ -1,0 +1,43 @@
+// Kubernetes-specific: fetches pod logs via the Kubernetes API (pods/log subresource)
+// rather than reading node-local files, so this can run as a normal namespace-scoped
+// Deployment with a namespaced Role (list pods, get pods/log) -- no ClusterRole, no
+// DaemonSet, no hostPath, and therefore no way to see other teams' pods sharing the
+// same node. The compose/VM path uses discovery.docker + loki.source.docker instead
+// (infra/alloy/config.alloy), since there's a single shared Docker socket there.
+
+discovery.kubernetes "pods" {
+  role = "pod"
+
+  namespaces {
+    names = [sys.env("NAMESPACE")]
+  }
+}
+
+// discovery.kubernetes only provides __meta_kubernetes_* labels, which
+// loki.source.kubernetes drops by default -- without this, every pod's logs
+// land in one indistinguishable "service_name=unknown_service" stream
+// (same pitfall hit and fixed for loki.source.docker on the compose side).
+discovery.relabel "pods" {
+  targets = discovery.kubernetes.pods.targets
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+  }
+}
+
+loki.source.kubernetes "pods" {
+  targets    = discovery.relabel.pods.output
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

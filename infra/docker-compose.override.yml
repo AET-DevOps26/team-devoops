@@ -16,6 +16,7 @@
 # Access locally:
 #     http://localhost/                       web client
 #     http://localhost/docs                   Swagger UI
+#     http://localhost/dashboard              Grafana (monitoring)
 #     http://localhost/api/v1/<service>/...   APIs
 #     http://localhost:8080                   Traefik dashboard
 #     localhost:5432  (app_admin/app_admin_password, db: app_db)   PostgreSQL
@@ -30,6 +31,7 @@ services:
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
+      - "--metrics.prometheus=true"
     ports: !override
       - "80:80"
       - "8080:8080"
@@ -118,6 +120,28 @@ services:
       - "traefik.http.routers.api-docs.entrypoints=web"
       - "traefik.http.routers.api-docs.rule=PathPrefix(`/docs`)"
       - "traefik.http.services.api-docs.loadbalancer.server.port=8080"
+
+  grafana:
+    environment: !override
+      - GF_SERVER_ROOT_URL=http://localhost/dashboard/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-oauth-secret
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8081/auth/realms/devops/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/userinfo
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(realm_access.roles[*], 'admin') && 'Admin' || ''
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/dashboard`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   web-client:
     build:

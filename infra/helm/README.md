@@ -19,6 +19,19 @@ infra/helm/team-devoops/
     secret-db.yaml            # SPRING_DATASOURCE_PASSWORD / POSTGRES_PASSWORD
     postgres-statefulset.yaml # Postgres + PVC (cluster default StorageClass)
     postgres-service.yaml
+    prometheus-deployment.yaml # Prometheus + PVC (scrape config from a ConfigMap
+    prometheus-service.yaml    #  created out-of-band, see "Monitoring" below)
+    prometheus-pvc.yaml
+    grafana-deployment.yaml    # Grafana + PVC (dashboards/datasources/alerting
+    grafana-service.yaml       #  from ConfigMaps created out-of-band)
+    grafana-pvc.yaml
+    loki-deployment.yaml       # Loki + PVC (config from a ConfigMap created
+    loki-service.yaml          #  out-of-band, same as prometheus-config)
+    loki-pvc.yaml
+    alloy-deployment.yaml      # Log shipper -- fetches pod logs via the k8s API
+    alloy-configmap.yaml       #  (loki.source.kubernetes), not a DaemonSet/hostPath;
+    alloy-rbac.yaml            #  config embedded via .Files.Get (k8s-specific, not
+                                #  shared with docker-compose, so no out-of-band step)
 ```
 
 The `api-docs` (Swagger UI) image is built from [api/Dockerfile](../../api/Dockerfile),
@@ -48,7 +61,19 @@ kubectl -n ge83mom-devops26 create secret generic genai-env \
   --from-env-file=services/py-genai-helper/.env
 ```
 
-### 2. ghcr image pull secret
+### 2. spring-letter environment Secret
+
+Same pattern, for the letter service's mail credentials. The chart
+references (but does not create) a Secret named `letter-env`. The
+`deploy-k8s` pipeline job creates/refreshes it automatically from the
+`LETTER_ENV_CONTENT` GitHub secret. For a manual deploy:
+
+```bash
+kubectl -n ge83mom-devops26 create secret generic letter-env \
+  --from-env-file=services/spring-letter/.env
+```
+
+### 3. ghcr image pull secret
 
 The service images are pushed to ghcr as private packages, so the chart is
 preconfigured to pull them via an `imagePullSecrets` entry named `ghcr-pull`
@@ -65,7 +90,7 @@ kubectl -n ge83mom-devops26 create secret docker-registry ghcr-pull \
 If you instead make the org packages public, remove (or empty)
 `global.imagePullSecrets` in `values.yaml`.
 
-### 3. Keycloak
+### 4. Keycloak
 
 The chart creates the `keycloak-credentials` Secret automatically from `values.yaml` — no manual `kubectl create secret` step is needed.
 
@@ -90,6 +115,53 @@ kubectl -n ge83mom-devops26 get pods | grep keycloak
 # keycloak-database-0  1/1  Running
 
 curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops/.well-known/openid-configuration
+```
+
+### 5. Monitoring (Prometheus + Grafana)
+
+Same pattern as `genai-env`: the chart only references these ConfigMaps by
+name (Helm can't reach outside its own chart directory via `.Files.Get`), so
+the `deploy-k8s` pipeline job creates/refreshes them automatically from the
+canonical files in `infra/prometheus/` and `infra/grafana/` — the same ones
+docker-compose bind-mounts. For a manual deploy, create them the same way:
+
+```bash
+kubectl -n ge83mom-devops26 create configmap prometheus-config \
+  --from-file=infra/prometheus/prometheus.yml
+kubectl -n ge83mom-devops26 create configmap loki-config \
+  --from-file=infra/loki/loki-config.yaml
+kubectl -n ge83mom-devops26 create configmap grafana-datasources \
+  --from-file=infra/grafana/provisioning/datasources
+kubectl -n ge83mom-devops26 create configmap grafana-dashboard-providers \
+  --from-file=infra/grafana/provisioning/dashboards
+kubectl -n ge83mom-devops26 create configmap grafana-alerting \
+  --from-file=infra/grafana/provisioning/alerting
+kubectl -n ge83mom-devops26 create configmap grafana-dashboards \
+  --from-file=infra/grafana/dashboards
+```
+
+Grafana is admin-only: it authenticates through its own Keycloak client
+(`grafana`, auto-imported with the realm above), not through `oauth2-proxy`.
+Only the realm `admin` role maps to Grafana's `Admin` org role
+(`GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true` rejects login for
+anyone else). Prometheus and Loki are never routed through the ingress at all.
+
+**Alloy** (log shipper) needs no manual setup — unlike Prometheus/Loki's
+config, `files/alloy-config.alloy` is Kubernetes-specific (not shared with
+docker-compose), so it's embedded straight into a ConfigMap via `.Files.Get`
+in `alloy-configmap.yaml`, the same way the Keycloak realm config is. It
+authenticates to the Kubernetes API as its own `alloy` ServiceAccount, bound
+to a namespaced `Role` (`list pods` / `get pods/log` only, scoped to
+`ge83mom-devops26`) rather than a `ClusterRole` + DaemonSet + hostPath — this
+identity cannot create `ClusterRole`/`ClusterRoleBinding` on this cluster
+(verified directly), and a hostPath-based DaemonSet would also be able to
+read every other team's pod logs sharing the same node regardless.
+
+Validate:
+
+```bash
+kubectl -n ge83mom-devops26 get pods | grep -E "prometheus|grafana"
+curl https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard/login
 ```
 
 ## Manual deploy
@@ -131,7 +203,8 @@ against the Kubernetes schemas with `kubeconform`.
   runs the `helm upgrade` above with `global.image.tag=<git-sha>`.
 
 Required GitHub secrets: `KUBECONFIG` (the Rancher kubeconfig), `GENAI_ENV_CONTENT`
-(reused from the VM deploy). ghcr auth uses the built-in `GITHUB_TOKEN`.
+and `LETTER_ENV_CONTENT` (both reused from the VM deploy). ghcr auth uses the
+built-in `GITHUB_TOKEN`.
 
 ## Adding a service
 

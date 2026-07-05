@@ -91,6 +91,14 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
 
+    - name: Write spring-letter .env file
+      copy:
+        src: "{{ letter_env_file }}"
+        dest: "{{ app_dir }}/services/spring-letter/.env"
+        mode: "0600"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
     - name: Deploy with docker compose
       shell: >
         docker compose -f infra/docker-compose.yml up -d --build --remove-orphans

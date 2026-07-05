@@ -5,10 +5,14 @@ from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from prometheus_client import Counter, Histogram
 
 from llm import get_embeddings
 
 load_dotenv()
+
+RAG_QUERIES = Counter("genai_rag_queries_total", "Total RAG queries", ["status"])
+RAG_QUERY_DURATION = Histogram("genai_rag_query_duration_seconds", "RAG query duration in seconds")
 
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
@@ -42,7 +46,15 @@ def retrieve_context(query: str, k: int = 3) -> list[str]:
 
     Returns an empty list if no PDFs are configured in file-storage/.
     """
-    vector_store = _get_vector_store()
-    if vector_store is None:
-        return []
-    return [doc.page_content for doc in vector_store.similarity_search(query, k=k)]
+    with RAG_QUERY_DURATION.time():
+        try:
+            vector_store = _get_vector_store()
+            if vector_store is None:
+                RAG_QUERIES.labels(status="success").inc()
+                return []
+            chunks = [doc.page_content for doc in vector_store.similarity_search(query, k=k)]
+        except Exception:
+            RAG_QUERIES.labels(status="failure").inc()
+            raise
+        RAG_QUERIES.labels(status="success").inc()
+        return chunks

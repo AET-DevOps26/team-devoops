@@ -20,6 +20,7 @@ import threading
 
 import requests
 from langchain.messages import HumanMessage, SystemMessage
+from prometheus_client import Counter
 
 import db
 from llm import get_chat_model
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 # Internal base URL of the feedback service (docker-compose service name; the API's /api/v1 prefix
 # is stripped by the proxy, so the service serves /feedback directly).
 FEEDBACK_SERVICE_URL = os.environ.get("FEEDBACK_SERVICE_URL", "http://feedback-service:8080")
+
+REPORT_GENERATION = Counter("genai_report_generation_total", "Total report generation attempts", ["kind", "status"])
 
 _REQUEST_TIMEOUT = 30
 
@@ -134,16 +137,20 @@ def generate_and_store_member_report(member_id: str, token: str, use_local: bool
     try:
         report_text = generate_member_report_text(member_id, token, use_local)
         db.insert_member_report(member_id, report_text)
+        REPORT_GENERATION.labels(kind="member", status="success").inc()
     except Exception:
         logger.exception("Failed to generate member report for %s", member_id)
+        REPORT_GENERATION.labels(kind="member", status="failure").inc()
 
 
 def generate_and_store_team_report(team_id: str, token: str, use_local: bool | None = None) -> None:
     try:
         report_text = generate_team_report_text(team_id, token, use_local)
         db.insert_team_report(team_id, report_text)
+        REPORT_GENERATION.labels(kind="team", status="success").inc()
     except Exception:
         logger.exception("Failed to generate team report for %s", team_id)
+        REPORT_GENERATION.labels(kind="team", status="failure").inc()
 
 
 def trigger_member_report(member_id: str, token: str, use_local: bool | None = None) -> None:

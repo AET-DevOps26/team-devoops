@@ -1,6 +1,7 @@
 package tum.devoops.letterservice.service;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.jsoup.Jsoup;
@@ -55,6 +56,7 @@ public class LetterService {
     private final TrainerRepository trainerRepository;
     private final TraineeRepository traineeRepository;
     private final TransactionRepository transactionRepository;
+    private final MeterRegistry meterRegistry;
 
     public LetterService(JavaMailSender mailSender,
                           @Value("${spring.mail.username}") String from,
@@ -64,7 +66,8 @@ public class LetterService {
                           DirectorRepository directorRepository,
                           TrainerRepository trainerRepository,
                           TraineeRepository traineeRepository,
-                          TransactionRepository transactionRepository) {
+                          TransactionRepository transactionRepository,
+                          MeterRegistry meterRegistry) {
         this.mailSender = mailSender;
         this.from = from;
         this.memberRepository = memberRepository;
@@ -74,6 +77,7 @@ public class LetterService {
         this.trainerRepository = trainerRepository;
         this.traineeRepository = traineeRepository;
         this.transactionRepository = transactionRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     public void sendMail(MailRequest mailRequest, UUID requesterId, boolean isAdmin) {
@@ -86,7 +90,9 @@ public class LetterService {
             String html = replaceTags(template, tokens);
             try {
                 sendHtml(receiver.getEmail(), personalizedSubject, html);
+                meterRegistry.counter("letters_sent_total", "status", "success").increment();
             } catch (MessagingException e) {
+                meterRegistry.counter("letters_sent_total", "status", "failure").increment();
                 throw new MailDeliveryException("Failed to send mail to " + receiver.getEmail(), e);
             }
         }
@@ -99,6 +105,7 @@ public class LetterService {
         for (MemberEntity receiver : resolveReceivers(requesterId, isAdmin)) {
             Map<String, String> tokens = tokensFor(receiver);
             letters.append(renderLetter(tokens.get("full_name"), receiver.getAddress(), replaceTags(template, tokens)));
+            meterRegistry.counter("letters_generated_total").increment();
         }
 
         String html = """
