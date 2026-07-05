@@ -50,25 +50,16 @@
 
 /* ---- Roost tokens (mirrors web-client/src/index.css :root, light scheme) ---- */
 :root {
-  --roost-primary: #7cce27;
   --roost-primary: oklch(0.768 0.233 130.85);
-  --roost-primary-hover: #6fb922;
   --roost-primary-hover: oklch(0.72 0.233 130.85);
   --roost-primary-foreground: #ffffff;
 
-  --roost-background: #f2f2f3;
   --roost-background: oklch(0.967 0.0014 285);
-  --roost-surface: #ffffff;
   --roost-surface: oklch(1 0 0);
-  --roost-foreground: #1c1c20;
   --roost-foreground: oklch(0.141 0.005 285.823);
-  --roost-muted-foreground: #78787f;
   --roost-muted-foreground: oklch(0.552 0.016 285.938);
-  --roost-border: #e6e6e9;
   --roost-border: oklch(0.92 0.004 286.32);
-  --roost-input-bg: #ffffff;
   --roost-input-bg: oklch(1 0 0);
-  --roost-destructive: #d64545;
   --roost-destructive: oklch(0.577 0.245 27.325);
   --roost-radius: 0;
 
@@ -81,17 +72,11 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --roost-primary-foreground: #ffffff;
-    --roost-background: #1c1c20;
     --roost-background: oklch(0.141 0.005 285.823);
-    --roost-surface: #2a2a2e;
     --roost-surface: oklch(0.21 0.006 285.885);
-    --roost-foreground: #fafafa;
     --roost-foreground: oklch(0.985 0 0);
-    --roost-muted-foreground: #b4b4b8;
     --roost-muted-foreground: oklch(0.705 0.015 286.067);
-    --roost-border: rgba(255, 255, 255, 0.12);
     --roost-border: oklch(1 0 0 / 12%);
-    --roost-input-bg: #202024;
     --roost-input-bg: oklch(0.18 0.005 285.8);
     --roost-glow-1: oklch(0.55 0.12 128 / 0.22);
     --roost-glow-2: oklch(0.6 0.06 86 / 0.16);
