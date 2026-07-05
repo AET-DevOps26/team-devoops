@@ -29,6 +29,12 @@ spec:
           image: {{ .Values.ollama.image }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           command: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
+          env:
+            # Keeps the chat and embedding models from being resident in memory at the same
+            # time -- caps peak usage to the larger of the two rather than their sum, which
+            # matters under this namespace's tight, fixed memory quota (see values.yaml).
+            - name: OLLAMA_MAX_LOADED_MODELS
+              value: "1"
           ports:
             - containerPort: 11434
           volumeMounts:
