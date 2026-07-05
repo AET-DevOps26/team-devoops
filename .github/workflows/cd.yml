@@ -194,6 +194,9 @@ jobs:
           kubectl -n "$NAMESPACE" create configmap grafana-dashboards \
             --from-file=infra/grafana/dashboards \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap ollama-entrypoint \
+            --from-file=infra/ollama/entrypoint_ollama.sh \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)
         run: |

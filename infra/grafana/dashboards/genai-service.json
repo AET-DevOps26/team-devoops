@@ -109,8 +109,8 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (status) (rate(genai_rag_queries_total[5m]))",
-          "legendFormat": "{{status}}"
+          "expr": "sum by (status, provider) (rate(genai_rag_queries_total[5m]))",
+          "legendFormat": "{{status}} ({{provider}})"
         }
       ]
     },
@@ -125,8 +125,8 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(genai_rag_query_duration_seconds_bucket[5m])))",
-          "legendFormat": "p95"
+          "expr": "histogram_quantile(0.95, sum by (le, provider) (rate(genai_rag_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{provider}}"
         }
       ]
     },
@@ -141,8 +141,25 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (kind, status) (rate(genai_report_generation_total[5m]))",
-          "legendFormat": "{{kind}} ({{status}})"
+          "expr": "sum by (kind, status, provider) (rate(genai_report_generation_total[5m]))",
+          "legendFormat": "{{kind}} ({{status}}, {{provider}})"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "LLM provider usage (reports)",
+      "type": "timeseries",
+      "description": "Share of report generation served by the local Ollama model vs. OpenAI, driven by the uselocal request flag.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (provider) (rate(genai_report_generation_total[5m]))",
+          "legendFormat": "{{provider}}"
         }
       ]
     },
@@ -150,7 +167,7 @@
       "id": 5,
       "title": "Active alerts",
       "type": "alertlist",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
       "options": {
         "showOptions": "current",
         "maxItems": 20,

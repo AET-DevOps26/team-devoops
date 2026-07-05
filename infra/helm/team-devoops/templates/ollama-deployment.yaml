@@ -1,0 +1,65 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "ollama" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "ollama") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "ollama") | nindent 8 }}
+    spec:
+      # Unlike prometheus/grafana/loki, the official ollama/ollama image has no USER directive
+      # (runs as root), so it doesn't hit the CSI PVC's root-owned-mount permission issue those
+      # need fsGroup for -- confirmed via the image's config blob (Config.User is empty).
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
+          ports:
+            - containerPort: 11434
+          volumeMounts:
+            - name: entrypoint
+              mountPath: /entrypoint_ollama.sh
+              subPath: entrypoint_ollama.sh
+            - name: data
+              mountPath: /root/.ollama
+          # Same check as the docker-compose healthcheck: confirms both models the entrypoint
+          # pulls are actually present, not just that the server process answers.
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "ollama list | grep -q qwen3 && ollama list | grep -q nomic-embed-text"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "ollama list | grep -q qwen3 && ollama list | grep -q nomic-embed-text"]
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.ollama.resources | nindent 12 }}
+      volumes:
+        - name: entrypoint
+          configMap:
+            name: {{ .Values.ollama.configMapName }}
+            defaultMode: 0755
+        - name: data
+          persistentVolumeClaim:
+            claimName: ollama-data
+{{- end }}

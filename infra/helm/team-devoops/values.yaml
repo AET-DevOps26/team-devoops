@@ -80,9 +80,11 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
+      # Actual usage on this cluster is ~50Mi; trimmed from 512Mi to make room for ollama
+      # within the namespace's fixed 6Gi memory quota.
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 150m
+        memory: 256Mi
   grafana:
     image: grafana/grafana:11.4.0
     storageSize: 2Gi
@@ -98,9 +100,10 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
+      # Actual usage is ~60Mi; trimmed to make room for ollama (see prometheus above).
       limits:
-        cpu: 150m
-        memory: 256Mi
+        cpu: 100m
+        memory: 200Mi
   # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
   # is the same file docker-compose uses).
   loki:
@@ -111,9 +114,10 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
+      # Actual usage is ~80Mi; trimmed to make room for ollama (see prometheus above).
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 150m
+        memory: 256Mi
   # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
   # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
   # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
@@ -124,9 +128,30 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
+      # Actual usage is ~50Mi; trimmed to make room for ollama (see prometheus above).
       limits:
-        cpu: 150m
-        memory: 256Mi
+        cpu: 100m
+        memory: 150Mi
+
+# ---------------------------------------------------------------------------
+# Local LLM backend for py-genai-helper (see services.py-genai-helper.env.OLLAMA_BASE_URL
+# below). Reachable in-cluster only, on the same OLLAMA_BASE_URL used by docker-compose.
+# infra/ollama/entrypoint_ollama.sh is shared with docker-compose, so -- like
+# prometheus/loki above -- it's loaded into a ConfigMap out-of-band rather than via
+# .Files.Get.
+# ---------------------------------------------------------------------------
+ollama:
+  enabled: true
+  image: ollama/ollama:latest
+  configMapName: ollama-entrypoint
+  storageSize: 3Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 # ---------------------------------------------------------------------------
 # Keycloak identity provider.
@@ -166,9 +191,10 @@ keycloak:
       requests:
         cpu: 100m
         memory: 128Mi
+      # Actual usage is ~40Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 150m
-        memory: 256Mi
+        cpu: 100m
+        memory: 150Mi
 
 ingress:
   enabled: true
@@ -316,13 +342,16 @@ services:
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      OLLAMA_BASE_URL: "http://ollama:11434"
     resources:
       requests:
         cpu: 100m
         memory: 256Mi
+      # Actual usage is ~135Mi; trimmed a bit (still ~3x actual) to make room for ollama
+      # (see monitoring.prometheus above).
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 150m
+        memory: 400Mi
   web-client:
     path: /
     port: 8080
@@ -333,9 +362,10 @@ services:
       requests:
         cpu: 50m
         memory: 32Mi
+      # Actual usage is a few Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 80m
+        memory: 80Mi
   api-docs:
     path: /docs
     port: 8080
@@ -346,6 +376,7 @@ services:
       requests:
         cpu: 50m
         memory: 32Mi
+      # Actual usage is a few Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 80m
+        memory: 80Mi

@@ -294,38 +294,45 @@ def test_delete_report_not_found(client, monkeypatch):
 # Background worker persists the (stubbed) generated text
 # --------------------------------------------------------------------------- #
 def test_worker_persists_generated_member_text(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.setattr(reports, "generate_member_report_text", lambda m, t, use_local=None: "generated text")
     inserted = []
     monkeypatch.setattr(db, "insert_member_report", lambda member_id, text: inserted.append((member_id, text)))
-    before = reports.REPORT_GENERATION.labels(kind="member", status="success")._value.get()
+    before = reports.REPORT_GENERATION.labels(kind="member", status="success", provider="openai")._value.get()
 
     reports.generate_and_store_member_report(MEMBER_A, "test")
 
     assert inserted == [(MEMBER_A, "generated text")]
-    assert reports.REPORT_GENERATION.labels(kind="member", status="success")._value.get() == before + 1
+    assert (
+        reports.REPORT_GENERATION.labels(kind="member", status="success", provider="openai")._value.get() == before + 1
+    )
 
 
 def test_worker_persists_generated_team_text(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.setattr(reports, "generate_team_report_text", lambda t, tok, use_local=None: "team text")
     inserted = []
     monkeypatch.setattr(db, "insert_team_report", lambda team_id, text: inserted.append((team_id, text)))
-    before = reports.REPORT_GENERATION.labels(kind="team", status="success")._value.get()
+    before = reports.REPORT_GENERATION.labels(kind="team", status="success", provider="openai")._value.get()
 
     reports.generate_and_store_team_report(TEAM_A, "test")
 
     assert inserted == [(TEAM_A, "team text")]
-    assert reports.REPORT_GENERATION.labels(kind="team", status="success")._value.get() == before + 1
+    assert reports.REPORT_GENERATION.labels(kind="team", status="success", provider="openai")._value.get() == before + 1
 
 
 def test_worker_records_failure_metric_when_db_insert_raises(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.setattr(reports, "generate_member_report_text", lambda m, t: "generated text")
 
     def raise_error(member_id, text):
         raise RuntimeError("db is down")
 
     monkeypatch.setattr(db, "insert_member_report", raise_error)
-    before = reports.REPORT_GENERATION.labels(kind="member", status="failure")._value.get()
+    before = reports.REPORT_GENERATION.labels(kind="member", status="failure", provider="openai")._value.get()
 
     reports.generate_and_store_member_report(MEMBER_A, "test")
 
-    assert reports.REPORT_GENERATION.labels(kind="member", status="failure")._value.get() == before + 1
+    assert (
+        reports.REPORT_GENERATION.labels(kind="member", status="failure", provider="openai")._value.get() == before + 1
+    )

@@ -11,8 +11,8 @@ from llm import get_embeddings, resolve_provider
 
 load_dotenv()
 
-RAG_QUERIES = Counter("genai_rag_queries_total", "Total RAG queries", ["status"])
-RAG_QUERY_DURATION = Histogram("genai_rag_query_duration_seconds", "RAG query duration in seconds")
+RAG_QUERIES = Counter("genai_rag_queries_total", "Total RAG queries", ["status", "provider"])
+RAG_QUERY_DURATION = Histogram("genai_rag_query_duration_seconds", "RAG query duration in seconds", ["provider"])
 
 _FILE_STORAGE = Path(__file__).parent / "file-storage"
 
@@ -50,15 +50,16 @@ def retrieve_context(query: str, use_local: bool | None = None, k: int = 3) -> l
     embedding provider for both the query and the underlying index — see ``llm.get_chat_model``
     for its semantics.
     """
-    with RAG_QUERY_DURATION.time():
+    provider = resolve_provider(use_local)
+    with RAG_QUERY_DURATION.labels(provider=provider).time():
         try:
-            vector_store = _get_vector_store(resolve_provider(use_local) == "ollama")
+            vector_store = _get_vector_store(provider == "ollama")
             if vector_store is None:
-                RAG_QUERIES.labels(status="success").inc()
+                RAG_QUERIES.labels(status="success", provider=provider).inc()
                 return []
             chunks = [doc.page_content for doc in vector_store.similarity_search(query, k=k)]
         except Exception:
-            RAG_QUERIES.labels(status="failure").inc()
+            RAG_QUERIES.labels(status="failure", provider=provider).inc()
             raise
-        RAG_QUERIES.labels(status="success").inc()
+        RAG_QUERIES.labels(status="success", provider=provider).inc()
         return chunks
