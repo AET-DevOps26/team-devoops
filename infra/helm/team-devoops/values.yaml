@@ -84,7 +84,7 @@ monitoring:
       # within the namespace's fixed 6Gi memory quota.
       limits:
         cpu: 150m
-        memory: 256Mi
+        memory: 150Mi
   grafana:
     image: grafana/grafana:11.4.0
     storageSize: 2Gi
@@ -100,10 +100,11 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~60Mi; trimmed to make room for ollama (see prometheus above).
+      # Actual usage is ~166Mi in practice (higher than first estimated) -- the earlier
+      # 200Mi trim left almost no headroom, so it's bumped back up here.
       limits:
         cpu: 100m
-        memory: 200Mi
+        memory: 280Mi
   # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
   # is the same file docker-compose uses).
   loki:
@@ -114,10 +115,10 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~80Mi; trimmed to make room for ollama (see prometheus above).
+      # Actual usage is ~153Mi; trimmed to make room for ollama (see prometheus above).
       limits:
         cpu: 150m
-        memory: 256Mi
+        memory: 220Mi
   # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
   # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
   # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
@@ -128,10 +129,10 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~50Mi; trimmed to make room for ollama (see prometheus above).
+      # Actual usage is ~45Mi; trimmed to make room for ollama (see prometheus above).
       limits:
         cpu: 100m
-        memory: 150Mi
+        memory: 100Mi
 
 # ---------------------------------------------------------------------------
 # Local LLM backend for py-genai-helper (see services.py-genai-helper.env.OLLAMA_BASE_URL
@@ -139,6 +140,14 @@ monitoring:
 # infra/ollama/entrypoint_ollama.sh is shared with docker-compose, so -- like
 # prometheus/loki above -- it's loaded into a ConfigMap out-of-band rather than via
 # .Files.Get.
+#
+# The 1Gi limit this shipped with OOMKilled on the very first real inference call --
+# it was sized from idle usage (~170Mi, nothing loaded), not actual model-loading cost.
+# Loading qwen3:0.6b alone takes ~940Mi (492Mi model buffers + 448Mi KV cache at the
+# default 4096-token context, verified live from the crashed container's own logs).
+# OLLAMA_MAX_LOADED_MODELS=1 (below, in ollama-deployment.yaml) keeps the chat and
+# embedding models from being resident at once, capping the peak to the larger of the
+# two rather than their sum.
 # ---------------------------------------------------------------------------
 ollama:
   enabled: true
@@ -151,7 +160,7 @@ ollama:
       memory: 256Mi
     limits:
       cpu: 1000m
-      memory: 1Gi
+      memory: 1536Mi
 
 # ---------------------------------------------------------------------------
 # Keycloak identity provider.
@@ -191,10 +200,10 @@ keycloak:
       requests:
         cpu: 100m
         memory: 128Mi
-      # Actual usage is ~40Mi; trimmed to make room for ollama (see monitoring.prometheus above).
+      # Actual usage is ~45Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
         cpu: 100m
-        memory: 150Mi
+        memory: 100Mi
 
 ingress:
   enabled: true
