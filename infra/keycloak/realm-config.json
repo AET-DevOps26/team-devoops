@@ -1,6 +1,7 @@
 {
   "realm": "devops",
   "enabled": true,
+  "loginTheme": "roost",
   "users": [
     {
       "id": "32bd2021-1e95-4951-bd1d-3d756c579dce",

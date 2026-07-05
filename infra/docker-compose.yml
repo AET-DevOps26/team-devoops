@@ -451,6 +451,7 @@ services:
       start_period: 30s
     volumes:
       - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
+      - ./keycloak/themes:/opt/keycloak/themes
     ports:
       - "8081:8080"
     networks:

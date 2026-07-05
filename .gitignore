@@ -1,2 +1,13 @@
 settings.json
 services/spring-letter/.env
+
+# Local env files
+.env
+.env.development
+.env.*.local
+
+# Agent instructions (local, not shared)
+AGENTS.md
+
+# Build-tool binaries — provided via the build's dependency management, never committed
+lombok-*.jar

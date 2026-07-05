@@ -122,6 +122,13 @@ jobs:
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
           build-args: ${{ matrix.build_args || '' }}
+          # Persists the BuildKit cache (including each Dockerfile's
+          # --mount=type=cache,target=/root/.gradle) across workflow runs via GitHub's
+          # cache backend -- without this, every run starts cold and every Spring service
+          # re-resolves and re-downloads its entire dependency tree from scratch. Scoped
+          # per service so the matrix jobs don't overwrite each other's cache entries.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # ------------------------------------------------------------------
   # Deploy to the RKE2 Kubernetes cluster via Helm.
@@ -196,6 +203,27 @@ jobs:
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
           kubectl -n "$NAMESPACE" create configmap ollama-entrypoint \
             --from-file=infra/ollama/entrypoint_ollama.sh \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh keycloak theme ConfigMaps
+        # infra/keycloak/themes/roost/ has nested subdirectories (css/fonts/img); a single
+        # ConfigMap can't hold those (--from-file=<dir> only picks up files directly inside
+        # that directory, silently dropping subdirectories), so each subdirectory gets its
+        # own ConfigMap here and the chart's projected volume (keycloak-deployment.yaml)
+        # stitches them back into the theme's real directory layout.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-root \
+            --from-file=infra/keycloak/themes/roost/login/template.ftl \
+            --from-file=infra/keycloak/themes/roost/login/theme.properties \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-css \
+            --from-file=infra/keycloak/themes/roost/login/resources/css \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-fonts \
+            --from-file=infra/keycloak/themes/roost/login/resources/fonts \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-img \
+            --from-file=infra/keycloak/themes/roost/login/resources/img \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)

@@ -1,0 +1,491 @@
+/*
+ * Roost login theme overrides.
+ *
+ * Loaded after the parent keycloak/login `login.css` (PatternFly), so these
+ * rules win by cascade order. Tokens are taken literally from the web app
+ * (web-client/src/index.css): lime primary, zero radius, Bebas Neue display,
+ * Poppins body. Fonts are bundled under resources/fonts (no CDN).
+ *
+ * Layout: a split shell. A branded lime/gradient panel on the left, the login
+ * form on a clean surface on the right. Collapses to a single column below
+ * 900px. Both light and dark schemes are honoured via prefers-color-scheme.
+ */
+
+/* ---- Bundled fonts (served from the theme, offline-safe) ---- */
+@font-face {
+  font-family: 'Bebas Neue';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/bebas-neue-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/poppins-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/poppins-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/poppins-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/poppins-latin-700-normal.woff2') format('woff2');
+}
+
+/* ---- Roost tokens (mirrors web-client/src/index.css :root, light scheme) ---- */
+:root {
+  --roost-primary: oklch(0.768 0.233 130.85);
+  --roost-primary-hover: oklch(0.72 0.233 130.85);
+  --roost-primary-foreground: #ffffff;
+
+  --roost-background: oklch(0.967 0.0014 285);
+  --roost-surface: oklch(1 0 0);
+  --roost-foreground: oklch(0.141 0.005 285.823);
+  --roost-muted-foreground: oklch(0.552 0.016 285.938);
+  --roost-border: oklch(0.92 0.004 286.32);
+  --roost-input-bg: oklch(1 0 0);
+  --roost-destructive: oklch(0.577 0.245 27.325);
+  --roost-radius: 0;
+
+  /* Ambient gradient spots, straight from the web app. */
+  --roost-glow-1: oklch(0.88 0.07 128 / 0.35);
+  --roost-glow-2: oklch(0.92 0.03 86 / 0.28);
+}
+
+/* ---- Dark scheme (mirrors .dark in the web app) ---- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --roost-primary-foreground: #ffffff;
+    --roost-background: oklch(0.141 0.005 285.823);
+    --roost-surface: oklch(0.21 0.006 285.885);
+    --roost-foreground: oklch(0.985 0 0);
+    --roost-muted-foreground: oklch(0.705 0.015 286.067);
+    --roost-border: oklch(1 0 0 / 12%);
+    --roost-input-bg: oklch(0.18 0.005 285.8);
+    --roost-glow-1: oklch(0.55 0.12 128 / 0.22);
+    --roost-glow-2: oklch(0.6 0.06 86 / 0.16);
+  }
+}
+
+/* ---- Page shell ---- */
+html.login-pf,
+body.login-pf,
+body.login-pf-page {
+  height: 100%;
+}
+
+body,
+body.login-pf-page {
+  font-family: 'Poppins', sans-serif;
+  color: var(--roost-foreground);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Kill PatternFly's default background image / gradient. */
+.login-pf-page,
+html.login-pf,
+body.login-pf {
+  background: var(--roost-background);
+  background-image: none;
+}
+
+/* The two-column shell wrapping the aside + the stock login column. */
+.roost-shell {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--roost-background);
+}
+
+/* ---- Left brand panel ---- */
+.roost-aside {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  color: #ffffff;
+  background:
+    radial-gradient(60% 50% at 30% 20%, oklch(0.768 0.233 130.85 / 0.28), transparent 70%),
+    radial-gradient(120% 120% at 100% 0%, var(--roost-glow-2), transparent 55%),
+    radial-gradient(100% 100% at 0% 100%, var(--roost-glow-1), transparent 60%),
+    oklch(0.22 0.02 150);
+}
+
+.roost-aside__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 3rem;
+  padding: 3.5rem;
+  width: 100%;
+}
+
+.roost-aside__brand {
+  display: flex;
+  /* Top-align: Bebas Neue carries empty space below its baseline, so
+     centering makes the logo sit low against the text. Pin both to the top
+     and nudge the wordmark down slightly to match the glyph cap height. */
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.roost-aside__brand img {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.roost-aside__wordmark {
+  font-family: 'Bebas Neue', ui-sans-serif, system-ui, sans-serif;
+  font-size: 3.9rem;
+  /* Trim the font's built-in top gap so the cap height starts at the top,
+     lining the letters up with the top of the logo. */
+  line-height: 0.79;
+  margin-top: 0.05em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.roost-aside__headline {
+  font-family: 'Bebas Neue', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.75rem, 5vw, 4rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin: 0 0 1rem;
+  color: #ffffff;
+}
+
+.roost-aside__sub {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  max-width: 26ch;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- Right column (the stock login column) ---- */
+.roost-main.login-pf-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--roost-background);
+}
+
+/* Hide the parent theme's realm-name header; the brand lives in the aside. */
+.roost-main .login-pf-page__header,
+.roost-main #kc-header {
+  display: none;
+}
+
+/* ---- Brand logo above the card (hidden when the aside is visible) ---- */
+.roost-brand {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 0 0 1.25rem;
+}
+
+.roost-brand img {
+  width: 52px;
+  height: 52px;
+  display: block;
+}
+
+/* ---- Login card ---- */
+.roost-main .card-pf,
+.login-pf-page .card-pf {
+  width: 100%;
+  max-width: 25rem;
+  margin: 0 auto;
+  border-radius: var(--roost-radius);
+  border: 1px solid var(--roost-border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 32px -12px rgba(0, 0, 0, 0.18);
+  background: var(--roost-surface);
+  padding: 2.5rem 2.25rem 2.25rem;
+}
+
+/* ---- Page title (Bebas Neue, uppercase) ---- */
+#kc-page-title {
+  font-family: 'Bebas Neue', ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+  font-size: 2.5rem;
+  line-height: 1.05;
+  color: var(--roost-foreground);
+  text-align: left;
+  margin: 0 0 1.5rem;
+}
+
+.login-pf-page .login-pf-header {
+  margin-bottom: 0;
+}
+
+/* ---- Form fields ---- */
+.pf-c-form__label,
+label {
+  font-family: 'Poppins', sans-serif;
+  color: var(--roost-foreground);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+.pf-c-form__group,
+.form-group {
+  margin-bottom: 1.125rem;
+}
+
+.pf-c-form-control,
+input.pf-c-form-control,
+input[type='text'],
+input[type='password'],
+input[type='email'],
+textarea.pf-c-form-control {
+  height: 2.75rem;
+  border-radius: var(--roost-radius);
+  border: 1px solid var(--roost-border);
+  background: var(--roost-input-bg);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9375rem;
+  color: var(--roost-foreground);
+  padding: 0 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pf-c-form-control::placeholder,
+input::placeholder {
+  color: var(--roost-muted-foreground);
+}
+
+.pf-c-form-control:focus,
+input.pf-c-form-control:focus,
+input[type='text']:focus,
+input[type='password']:focus,
+input[type='email']:focus {
+  border-color: var(--roost-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--roost-primary) 30%, transparent);
+}
+
+/* ---- Buttons (match the app Button: uppercase, tracked out, semibold) ---- */
+.pf-c-button,
+input[type='submit'],
+button[type='submit'] {
+  border-radius: var(--roost-radius);
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+.pf-c-button.pf-m-primary,
+#kc-form-buttons input[type='submit'],
+input[type='submit'].pf-c-button.pf-m-primary,
+.pf-c-button.pf-m-primary.pf-m-block {
+  height: 2.75rem;
+  width: 100%;
+  background-color: var(--roost-primary);
+  color: var(--roost-primary-foreground);
+  border: 1px solid var(--roost-primary);
+  margin-top: 0.5rem;
+}
+
+.pf-c-button.pf-m-primary:hover,
+.pf-c-button.pf-m-primary:focus {
+  background-color: var(--roost-primary-hover);
+  border-color: var(--roost-primary-hover);
+}
+
+.pf-c-button.pf-m-primary:active {
+  transform: translateY(1px);
+}
+
+.pf-c-button.pf-m-primary:focus-visible {
+  outline: 2px solid var(--roost-foreground);
+  outline-offset: 2px;
+}
+
+/* Secondary/social buttons: outline style like the app's outline variant.
+   Exclude the password toggle (.pf-m-control) — that's a bare icon, not a box. */
+.pf-c-button:not(.pf-m-primary):not(.pf-m-control) {
+  background: transparent;
+  border: 1px solid var(--roost-border);
+  color: var(--roost-foreground);
+}
+
+.pf-c-button:not(.pf-m-primary):not(.pf-m-control):hover {
+  border-color: color-mix(in oklch, var(--roost-primary) 60%, transparent);
+  background: color-mix(in oklch, var(--roost-primary) 8%, transparent);
+}
+
+/* ---- Checkbox (remember me) ---- */
+.pf-c-check__input,
+input[type='checkbox'] {
+  accent-color: var(--roost-primary);
+}
+
+/* ---- Links (forgot password, try another way, etc.) ---- */
+a {
+  color: var(--roost-foreground);
+  text-decoration: none;
+}
+
+#kc-registration a,
+#kc-info a,
+a#reset-login,
+.pf-c-login__main-footer-links-item-link,
+.login-pf-signup a,
+#kc-form-options a,
+a:hover {
+  color: var(--roost-primary);
+}
+
+#kc-form-options a:hover,
+#kc-registration a:hover,
+#kc-info a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Form options row (remember me / forgot password) */
+#kc-form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.8125rem;
+}
+
+/* ---- Registration / info footer ---- */
+#kc-registration,
+#kc-info {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--roost-border);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--roost-muted-foreground);
+}
+
+/* ---- Alerts / errors ---- */
+.pf-c-alert,
+.alert {
+  border-radius: var(--roost-radius);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.pf-c-alert.pf-m-danger,
+.alert-error {
+  border-radius: var(--roost-radius);
+  border-left: 3px solid var(--roost-destructive);
+  background: color-mix(in oklch, var(--roost-destructive) 10%, transparent);
+}
+
+.kc-feedback-text,
+.pf-c-form__helper-text.pf-m-error {
+  font-family: 'Poppins', sans-serif;
+  color: var(--roost-destructive);
+}
+
+/* ---- Password visibility toggle: overlaid inside the field ---- */
+.pf-c-input-group {
+  position: relative;
+  border-radius: var(--roost-radius);
+  display: block;
+}
+
+/* Leave room on the right of the input for the eye icon. */
+.pf-c-input-group > .pf-c-form-control {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+/* Overlay the toggle as a bare icon: no box, just the eye inside the field. */
+.pf-c-input-group > .pf-c-button.pf-m-control {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.75rem;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--roost-muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+/* PatternFly draws the button's box via an ::after border overlay; kill it. */
+.pf-c-input-group > .pf-c-button.pf-m-control::after {
+  content: none;
+}
+
+.pf-c-input-group > .pf-c-button.pf-m-control:hover,
+.pf-c-input-group > .pf-c-button.pf-m-control:focus {
+  color: var(--roost-foreground);
+  background: transparent;
+}
+
+.pf-c-input-group > .pf-c-button.pf-m-control:focus-visible {
+  outline: 2px solid var(--roost-primary);
+  outline-offset: -2px;
+}
+
+.pf-c-input-group > .pf-c-button.pf-m-control .fa,
+.pf-c-input-group > .pf-c-button.pf-m-control i {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* ---- Responsive: collapse to a single centered column ---- */
+@media (max-width: 900px) {
+  .roost-shell {
+    grid-template-columns: 1fr;
+  }
+  .roost-aside {
+    display: none;
+  }
+  .roost-brand {
+    display: flex;
+  }
+  #kc-page-title {
+    text-align: center;
+  }
+}
