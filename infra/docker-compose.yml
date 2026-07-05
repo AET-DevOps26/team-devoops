@@ -12,6 +12,14 @@ services:
     networks:
       - ollama
     entrypoint: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
+    healthcheck:
+      # Checks that both models the entrypoint pulls are actually present, not just that the
+      # server process answers -- py-genai-helper's first request would otherwise race the pull.
+      test: ["CMD-SHELL", "ollama list | grep -q qwen3 && ollama list | grep -q nomic-embed-text"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   py-genai-helper:
     build: ../services/py-genai-helper/
@@ -23,14 +31,13 @@ services:
       app-database:
         condition: service_healthy
       ollama:
-        condition: service_started
+        condition: service_healthy
     environment:
       - KEYCLOAK_ISSUER_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
       - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=reports_user
       - SPRING_DATASOURCE_PASSWORD=reports_password
-      - LLM_PROVIDER=ollama
       - OLLAMA_BASE_URL=http://ollama:11434
       - FEEDBACK_SERVICE_URL=http://feedback-service:8080
     expose:

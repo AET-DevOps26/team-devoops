@@ -72,9 +72,9 @@ def _format_feedback(entry: dict) -> str:
     return f"- {date} | event: {event} | rating: {entry['rating']}/10 | from {creator}: {entry['feedback']}"
 
 
-def _knowledge_base_context(query: str) -> str:
+def _knowledge_base_context(query: str, use_local: bool | None = None) -> str:
     """Return a prompt section with knowledge-base excerpts relevant to the query, or "" if none."""
-    chunks = retrieve_context(query)
+    chunks = retrieve_context(query, use_local)
     if not chunks:
         return ""
     excerpts = "\n\n".join(f"[Excerpt {i}]\n{chunk}" for i, chunk in enumerate(chunks, start=1))
@@ -101,7 +101,7 @@ def generate_member_report_text(member_id: str, token: str, use_local: bool | No
         return f"No feedback has been recorded for {member_name} yet, so no report can be generated."
 
     lines = "\n".join(_format_feedback(f) for f in feedback)
-    context = _knowledge_base_context(f"{member_name}\n{lines}")
+    context = _knowledge_base_context(f"{member_name}\n{lines}", use_local)
     prompt = (
         f"Write a progress report for {member_name} based on the following training feedback "
         f"(newest data may appear in any order):\n\n{lines}{context}"
@@ -125,7 +125,7 @@ def generate_team_report_text(team_id: str, token: str, use_local: bool | None =
             sections.append(f"{trainee['name']}:\n{lines}")
 
     all_sections = "\n\n".join(sections)
-    context = _knowledge_base_context(f"{team_name}\n{all_sections}")
+    context = _knowledge_base_context(f"{team_name}\n{all_sections}", use_local)
     prompt = (
         f"Write a team progress report for {team_name}. Summarise the team as a whole, then briefly "
         f"cover each member. The training feedback per member:\n\n{all_sections}{context}"

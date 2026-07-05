@@ -35,29 +35,38 @@ def _ollama_base_url() -> str:
     return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 
+def resolve_provider(use_local: bool | None = None) -> str:
+    """Resolve the effective provider for a call.
+
+    ``use_local`` overrides the env-configured provider for a single call: True forces Ollama,
+    False forces OpenAI, None keeps the LLM_PROVIDER default.
+    """
+    env_provider = _provider()
+    if use_local is None:
+        return env_provider
+    return "ollama" if use_local else "openai"
+
+
 def get_chat_model(use_local: bool | None = None) -> BaseChatModel:
     """Return the configured chat model.
 
-    ``use_local`` overrides the env-configured provider for a single call: True forces Ollama,
-    False forces OpenAI, None keeps the LLM_PROVIDER default. The LLM_MODEL override only applies
+    See ``resolve_provider`` for ``use_local``'s semantics. The LLM_MODEL override only applies
     when the selected provider matches the env-configured one, so forcing the other provider falls
     back to that provider's default model.
     """
     env_provider = _provider()
-    if use_local is None:
-        provider = env_provider
-    else:
-        provider = "ollama" if use_local else "openai"
-
+    provider = resolve_provider(use_local)
     model = (os.getenv("LLM_MODEL") if provider == env_provider else None) or _DEFAULT_CHAT_MODELS[provider]
     if provider == "ollama":
         return ChatOllama(model=model, base_url=_ollama_base_url())
     return ChatOpenAI(model=model)
 
 
-def get_embeddings() -> Embeddings:
-    provider = _provider()
-    model = os.getenv("EMBEDDING_MODEL") or _DEFAULT_EMBEDDING_MODELS[provider]
+def get_embeddings(use_local: bool | None = None) -> Embeddings:
+    """Return the configured embedding model. See ``get_chat_model`` for ``use_local``'s semantics."""
+    env_provider = _provider()
+    provider = resolve_provider(use_local)
+    model = (os.getenv("EMBEDDING_MODEL") if provider == env_provider else None) or _DEFAULT_EMBEDDING_MODELS[provider]
     if provider == "ollama":
         return OllamaEmbeddings(model=model, base_url=_ollama_base_url())
     return OpenAIEmbeddings(model=model)

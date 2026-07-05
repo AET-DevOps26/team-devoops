@@ -87,7 +87,7 @@ def stub_rag_context(monkeypatch, chunks=None):
     """Replace the knowledge-base retrieval with a fake returning the given chunks (default: none)."""
     queries = []
 
-    def fake_retrieve_context(query, k=3):
+    def fake_retrieve_context(query, use_local=None, k=3):
         queries.append(query)
         return chunks or []
 

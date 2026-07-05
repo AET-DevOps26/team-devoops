@@ -98,3 +98,42 @@ def test_unknown_provider_raises(monkeypatch):
 
     with pytest.raises(ValueError, match="Unsupported LLM_PROVIDER"):
         llm.get_chat_model()
+
+
+def test_embeddings_use_local_true_overrides_env_provider(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    embeddings = llm.get_embeddings(use_local=True)
+
+    assert isinstance(embeddings, OllamaEmbeddings)
+    assert embeddings.model == "nomic-embed-text"
+
+
+def test_embeddings_use_local_false_overrides_env_provider(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    embeddings = llm.get_embeddings(use_local=False)
+
+    assert isinstance(embeddings, OpenAIEmbeddings)
+    assert embeddings.model == "text-embedding-3-large"
+
+
+def test_embeddings_model_override_ignored_for_forced_provider(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("EMBEDDING_MODEL", "nomic-embed-text-v2")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    embeddings = llm.get_embeddings(use_local=False)
+
+    assert isinstance(embeddings, OpenAIEmbeddings)
+    assert embeddings.model == "text-embedding-3-large"
+
+
+def test_resolve_provider_defaults_to_env(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+
+    assert llm.resolve_provider() == "ollama"
+    assert llm.resolve_provider(use_local=False) == "openai"
+    assert llm.resolve_provider(use_local=True) == "ollama"
