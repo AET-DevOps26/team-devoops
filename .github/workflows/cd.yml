@@ -122,6 +122,13 @@ jobs:
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
           build-args: ${{ matrix.build_args || '' }}
+          # Persists the BuildKit cache (including each Dockerfile's
+          # --mount=type=cache,target=/root/.gradle) across workflow runs via GitHub's
+          # cache backend -- without this, every run starts cold and every Spring service
+          # re-resolves and re-downloads its entire dependency tree from scratch. Scoped
+          # per service so the matrix jobs don't overwrite each other's cache entries.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # ------------------------------------------------------------------
   # Deploy to the RKE2 Kubernetes cluster via Helm.
