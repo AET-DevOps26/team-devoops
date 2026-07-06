@@ -202,8 +202,6 @@ class OrganizationTeamServiceTest {
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
 
         Team result = service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), DIRECTOR_ID, false);
 
@@ -252,11 +250,6 @@ class OrganizationTeamServiceTest {
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID,
-                List.of(trainerEntity(TEAM_ID, TRAINER_ID)),
-                List.of(traineeEntity(TEAM_ID, TRAINEE_ID)));
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
-
         TeamCreate body = new TeamCreate("Team Alpha", SPORT_ID);
         body.setTrainers(List.of(TRAINER_ID.toString()));
         body.setTrainees(List.of(TRAINEE_ID.toString()));
@@ -279,9 +272,6 @@ class OrganizationTeamServiceTest {
             t.setId(TEAM_ID);
             return t;
         });
-        TeamEntity saved = teamEntity(TEAM_ID, SPORT_ID, List.of(), List.of());
-        when(teamRepository.findById(TEAM_ID)).thenReturn(Optional.of(saved));
-
         Team result = service.createTeam(new TeamCreate("Team Alpha", SPORT_ID), ADMIN_ID, true);
 
         verify(teamRepository).save(any(TeamEntity.class));

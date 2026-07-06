@@ -1,11 +1,16 @@
 {
   "realm": "devops",
   "enabled": true,
+  "loginTheme": "roost",
   "users": [
     {
+      "id": "32bd2021-1e95-4951-bd1d-3d756c579dce",
       "username": "admin",
       "enabled": true,
       "emailVerified": true,
+      "email": "teamdevoops2026+admin@gmail.com",
+      "firstName": "Admin",
+      "lastName": "Admin",
       "credentials": [
         {
           "type": "password",
@@ -16,9 +21,13 @@
       "realmRoles": ["admin", "member"]
     },
     {
+      "id": "3f3864aa-1d24-42ba-9d64-055b86bc92df",
       "username": "user",
       "enabled": true,
       "emailVerified": true,
+      "email": "teamdevoops2026+user@gmail.com",
+      "firstName": "User",
+      "lastName": "User",
       "credentials": [
         {
           "type": "password",
@@ -126,6 +135,40 @@
         "https://team-devoops.polandcentral.cloudapp.azure.com",
         "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
         "http://localhost"
+      ]
+    },
+    {
+      "clientId": "grafana",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "grafana-oauth-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://team-devoops.polandcentral.cloudapp.azure.com/dashboard/login/generic_oauth",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard/login/generic_oauth",
+        "http://localhost/dashboard/login/generic_oauth"
+      ],
+      "webOrigins": [
+        "https://team-devoops.polandcentral.cloudapp.azure.com",
+        "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de",
+        "http://localhost"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-for-oauth",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
       ]
     }
   ]

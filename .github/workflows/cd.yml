@@ -35,6 +35,11 @@ jobs:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
         run: printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
 
+      - name: Write letter .env file
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+
       - name: Create inventory
         run: |
           cat > /tmp/inventory.yml << INVENTORY
@@ -54,7 +59,8 @@ jobs:
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
             -e "branch=${{ github.ref_name }}" \
-            -e "genai_env_file=/tmp/genai.env"
+            -e "genai_env_file=/tmp/genai.env" \
+            -e "letter_env_file=/tmp/letter.env"
 
   # ------------------------------------------------------------------
   # Build & push all service images to GitHub Container Registry.
@@ -92,9 +98,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
+        # Default docker-container driver (not `driver: docker`): the docker driver
+        # can't export cache at all ("Cache export is not supported for the docker
+        # driver"), which breaks the type=gha cache-to below. This job only pushes
+        # to ghcr, so nothing needs the image loaded into the local docker daemon.
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -116,6 +124,13 @@ jobs:
             ${{ steps.img.outputs.repo }}:${{ github.sha }}
             ${{ steps.img.outputs.repo }}:latest
           build-args: ${{ matrix.build_args || '' }}
+          # Persists the BuildKit cache (including each Dockerfile's
+          # --mount=type=cache,target=/root/.gradle) across workflow runs via GitHub's
+          # cache backend -- without this, every run starts cold and every Spring service
+          # re-resolves and re-downloads its entire dependency tree from scratch. Scoped
+          # per service so the matrix jobs don't overwrite each other's cache entries.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # ------------------------------------------------------------------
   # Deploy to the RKE2 Kubernetes cluster via Helm.
@@ -153,6 +168,64 @@ jobs:
           printf '%s\n' "$GENAI_ENV_CONTENT" > /tmp/genai.env
           kubectl -n "$NAMESPACE" create secret generic genai-env \
             --from-env-file=/tmp/genai.env \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh letter-env secret
+        env:
+          LETTER_ENV_CONTENT: ${{ secrets.LETTER_ENV_CONTENT }}
+        run: |
+          printf '%s\n' "$LETTER_ENV_CONTENT" > /tmp/letter.env
+          kubectl -n "$NAMESPACE" create secret generic letter-env \
+            --from-env-file=/tmp/letter.env \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh monitoring ConfigMaps
+        # Same pattern as genai-env above: the chart only references these by name
+        # (Helm can't reach outside its own chart directory via .Files.Get), so the
+        # canonical files under infra/prometheus/ and infra/grafana/ -- the same
+        # ones docker-compose bind-mounts -- are loaded into ConfigMaps here.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap prometheus-config \
+            --from-file=infra/prometheus/prometheus.yml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap loki-config \
+            --from-file=infra/loki/loki-config.yaml \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-datasources \
+            --from-file=infra/grafana/provisioning/datasources \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboard-providers \
+            --from-file=infra/grafana/provisioning/dashboards \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-alerting \
+            --from-file=infra/grafana/provisioning/alerting \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap grafana-dashboards \
+            --from-file=infra/grafana/dashboards \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap ollama-entrypoint \
+            --from-file=infra/ollama/entrypoint_ollama.sh \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
+      - name: Create/refresh keycloak theme ConfigMaps
+        # infra/keycloak/themes/roost/ has nested subdirectories (css/fonts/img); a single
+        # ConfigMap can't hold those (--from-file=<dir> only picks up files directly inside
+        # that directory, silently dropping subdirectories), so each subdirectory gets its
+        # own ConfigMap here and the chart's projected volume (keycloak-deployment.yaml)
+        # stitches them back into the theme's real directory layout.
+        run: |
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-root \
+            --from-file=infra/keycloak/themes/roost/login/template.ftl \
+            --from-file=infra/keycloak/themes/roost/login/theme.properties \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-css \
+            --from-file=infra/keycloak/themes/roost/login/resources/css \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-fonts \
+            --from-file=infra/keycloak/themes/roost/login/resources/fonts \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+          kubectl -n "$NAMESPACE" create configmap keycloak-theme-img \
+            --from-file=infra/keycloak/themes/roost/login/resources/img \
             --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Unlock stuck Helm release (if any)

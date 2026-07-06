@@ -1,0 +1,16 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "grafana" "root" $) | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "team-devoops.selectorLabels" (dict "name" "grafana") | nindent 4 }}
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+{{- end }}

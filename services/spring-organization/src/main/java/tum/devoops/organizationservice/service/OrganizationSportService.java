@@ -79,7 +79,10 @@ public class OrganizationSportService {
 
         memberRoleSyncService.scheduleSync(new HashSet<>(directorIds));
 
-        return toSport(findSportOrThrow(entity.getId()));
+        // Build the response from the resolved ids: within this transaction findById returns
+        // the same managed instance, whose directors collection doesn't see the rows saved above.
+        return new Sport(entity.getId(), entity.getName(), entity.getDescription(),
+                entity.getCreatedAt(), memberReferences(directorIds));
     }
 
     @Transactional
@@ -107,17 +110,25 @@ public class OrganizationSportService {
         // null means the directors list was omitted (no change); a non-null list (including empty)
         // replaces the current directors, so an empty list clears them. Only admins may change it.
         Set<UUID> affected = new HashSet<>();
+        List<UUID> directorIds;
         if (isAdmin && body.getDirectors() != null) {
             directorRepository.findAllById_SportId(sportId)
                     .forEach(d -> affected.add(d.getId().getMemberId()));
             directorRepository.deleteAllById_SportId(sportId);
-            List<UUID> newDirectorIds = resolveDirectorUuids(body.getDirectors());
-            saveDirectors(sportId, newDirectorIds);
-            affected.addAll(newDirectorIds);
+            directorIds = resolveDirectorUuids(body.getDirectors());
+            saveDirectors(sportId, directorIds);
+            affected.addAll(directorIds);
+        } else {
+            directorIds = directorRepository.findAllById_SportId(sportId).stream()
+                    .map(d -> d.getId().getMemberId())
+                    .collect(Collectors.toList());
         }
         memberRoleSyncService.scheduleSync(affected);
 
-        return toSport(findSportOrThrow(sportId));
+        // Build the response from the resolved ids rather than sport.getDirectors(): within this
+        // transaction the entity's lazy directors collection doesn't see the rows saved above.
+        return new Sport(sport.getId(), sport.getName(), sport.getDescription(),
+                sport.getCreatedAt(), memberReferences(directorIds));
     }
 
     @Transactional

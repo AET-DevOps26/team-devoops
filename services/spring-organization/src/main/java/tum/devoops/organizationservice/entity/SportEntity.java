@@ -1,6 +1,7 @@
 package tum.devoops.organizationservice.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,5 +39,5 @@ public class SportEntity {
     // Each Director row links this sport to a member (director role).
     @OneToMany
     @JoinColumn(name = "sport_id", referencedColumnName = "id", insertable = false, updatable = false)
-    private List<DirectorEntity> directors;
+    private List<DirectorEntity> directors = new ArrayList<>();
 }

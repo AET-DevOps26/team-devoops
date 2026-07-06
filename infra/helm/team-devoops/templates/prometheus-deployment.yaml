@@ -1,0 +1,62 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    {{- include "team-devoops.labels" (dict "name" "prometheus" "root" $) | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "team-devoops.selectorLabels" (dict "name" "prometheus") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "team-devoops.selectorLabels" (dict "name" "prometheus") | nindent 8 }}
+    spec:
+      # The cluster's CSI-provisioned PVC mounts root-owned by default, but the
+      # official prom/prometheus image runs as non-root (nobody, uid/gid 65534) --
+      # without this, Prometheus panics on startup with a permission-denied
+      # writing to /prometheus (verified live against the cluster).
+      securityContext:
+        fsGroup: 65534
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: prometheus
+          image: {{ .Values.monitoring.prometheus.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.monitoring.prometheus.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.monitoring.prometheus.configMapName }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-data
+{{- end }}

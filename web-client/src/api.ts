@@ -631,6 +631,14 @@ export interface components {
             id: string;
             name: string;
         };
+        /** @description Optional per-request options for report generation. */
+        GenerateReportRequest: {
+            /**
+             * @description Optional per-request model switch: `true` forces the local Ollama model, `false`
+             *     forces OpenAI. When omitted, the service's configured default provider is used.
+             */
+            uselocal?: boolean;
+        };
         /** @description Summary of a stored member report, without its generated text. */
         MemberReportSummary: {
             /** Format: uuid */
@@ -2030,7 +2038,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description Optional per-request generation options. */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GenerateReportRequest"];
+            };
+        };
         responses: {
             /** @description The request was accepted and report generation has been started. */
             202: {
@@ -2078,7 +2091,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description Optional per-request generation options. */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GenerateReportRequest"];
+            };
+        };
         responses: {
             /** @description The request was accepted and report generation has been started. */
             202: {

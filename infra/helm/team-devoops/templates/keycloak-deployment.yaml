@@ -65,6 +65,8 @@ spec:
                   key: KC_BOOTSTRAP_ADMIN_PASSWORD
             - name: KC_HEALTH_ENABLED
               value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
             - name: KC_HTTP_RELATIVE_PATH
               value: {{ .Values.keycloak.path | quote }}
             - name: KC_HTTP_MANAGEMENT_RELATIVE_PATH
@@ -78,6 +80,9 @@ spec:
           volumeMounts:
             - name: realm-config
               mountPath: /opt/keycloak/data/import
+              readOnly: true
+            - name: theme
+              mountPath: /opt/keycloak/themes/roost
               readOnly: true
           startupProbe:
             httpGet:
@@ -107,4 +112,45 @@ spec:
         - name: realm-config
           configMap:
             name: keycloak-realm-config
+        # infra/keycloak/themes/roost/ has nested subdirectories (css/fonts/img), which a
+        # single ConfigMap can't hold (kubectl create configmap --from-file=<dir> only picks
+        # up files directly inside that directory, silently dropping subdirectories). Each
+        # subdirectory is loaded into its own ConfigMap out-of-band (same pattern as
+        # prometheus-config/loki-config), and this projected volume stitches all four back
+        # into the theme's real directory layout under one mount point.
+        - name: theme
+          projected:
+            sources:
+              - configMap:
+                  name: keycloak-theme-root
+                  items:
+                    - key: template.ftl
+                      path: login/template.ftl
+                    - key: theme.properties
+                      path: login/theme.properties
+              - configMap:
+                  name: keycloak-theme-css
+                  items:
+                    - key: roost.css
+                      path: login/resources/css/roost.css
+              - configMap:
+                  name: keycloak-theme-fonts
+                  items:
+                    - key: bebas-neue-latin-400-normal.woff2
+                      path: login/resources/fonts/bebas-neue-latin-400-normal.woff2
+                    - key: poppins-latin-400-normal.woff2
+                      path: login/resources/fonts/poppins-latin-400-normal.woff2
+                    - key: poppins-latin-500-normal.woff2
+                      path: login/resources/fonts/poppins-latin-500-normal.woff2
+                    - key: poppins-latin-600-normal.woff2
+                      path: login/resources/fonts/poppins-latin-600-normal.woff2
+                    - key: poppins-latin-700-normal.woff2
+                      path: login/resources/fonts/poppins-latin-700-normal.woff2
+              - configMap:
+                  name: keycloak-theme-img
+                  items:
+                    - key: RoostFavIcon.svg
+                      path: login/resources/img/RoostFavIcon.svg
+                    - key: RoostIcon.svg
+                      path: login/resources/img/RoostIcon.svg
 {{- end }}

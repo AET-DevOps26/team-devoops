@@ -53,6 +53,8 @@ The Spring Boot services and the GenAI service share a **PostgreSQL** database.
 | Web Client | `/` | 8080 | React, Vite |
 | Swagger UI | `/docs` | 8080 | swaggerapi/swagger-ui |
 | Keycloak | `/auth` | 8080 | Keycloak 26 |
+| Grafana | `/dashboard` (admin only) | 3000 | Grafana 11 |
+| Prometheus | internal only | 9090 | Prometheus v2 |
 | Traefik dashboard | `http://localhost:8080` (local only) | — | Traefik v3 |
 | PostgreSQL | internal only | 5432 | postgres:15 |
 
@@ -132,6 +134,7 @@ everything is reachable on plain HTTP:
 |---|---|
 | <http://localhost/> | Web client |
 | <http://localhost/docs> | Swagger UI |
+| <http://localhost/dashboard> | Grafana (monitoring, admin only) |
 | <http://localhost/api/v1/&lt;service&gt;/…> | APIs (organization, members, events, feedback, finance, letters, helper) |
 | <http://localhost/auth> | Keycloak (via Traefik) |
 | <http://localhost:8081/auth> | Keycloak (direct, for admin console) |
@@ -182,6 +185,7 @@ automated; no manual VM access is required for normal deploys.
 | Secret | `SSH_PRIVATE_KEY` | Matching private key for Ansible to SSH in |
 | Secret | `VM_HOST` | Host Ansible connects to — use the FQDN above |
 | Secret | `GENAI_ENV_CONTENT` | Contents of `services/py-genai-helper/.env` |
+| Secret | `LETTER_ENV_CONTENT` | Contents of `services/spring-letter/.env` (mail credentials) |
 | Secret | `KUBECONFIG` | Kubeconfig for the RKE2 cluster (used by the `deploy-k8s` job) |
 
 The OIDC service principal needs `Contributor` on the subscription (to manage
@@ -224,6 +228,8 @@ push to `main`; the VM path is unchanged.
 | Ingress | cluster `nginx` ingress (path-prefix routing, prefix stripped per service) |
 | Images | built and pushed to `ghcr.io/aet-devops26/team-devoops/<service>` |
 | Database | in-cluster PostgreSQL `StatefulSet` + PVC (cluster default StorageClass) |
+| Monitoring | in-cluster Prometheus + Grafana, each with its own PVC (see [Monitoring](#monitoring)) |
+| Local LLM | in-cluster Ollama + PVC, reachable only by `py-genai-helper` (see [`services/py-genai-helper/README.md`](services/py-genai-helper/README.md)) |
 
 The `cd` workflow's `docker-push` job builds and pushes all service images to
 ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
@@ -231,7 +237,8 @@ ghcr (tagged with the commit SHA), then `deploy-k8s` runs `helm upgrade
 `helm-validate` job lints and schema-validates the chart with `kubeconform`.
 
 See [`infra/helm/README.md`](infra/helm/README.md) for the chart layout, required
-one-time secrets (`genai-env`, `ghcr-pull`), and manual deploy instructions.
+one-time secrets (`genai-env`, `ghcr-pull`), the Prometheus/Grafana ConfigMaps,
+and manual deploy instructions.
 
 ## Database
 
@@ -271,6 +278,7 @@ All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/J
 |---|---|---|
 | `devops-client` | public, PKCE S256 | React frontend |
 | `traefik-forward-auth` | confidential | Traefik forward-auth middleware |
+| `grafana` | confidential | Grafana's own generic-OAuth login (admin-only, see [Monitoring](#monitoring)) |
 
 ### Local login
 
@@ -292,6 +300,101 @@ Each Spring service is a stateless OAuth2 resource server. It validates Bearer J
 | `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | URL to fetch Keycloak's public signing keys |
 
 These are set in each service's `src/main/resources/application.properties` as defaults (pointing at the local Keycloak on `localhost:8081/auth`). On the Azure VM, `docker-compose.yml` overrides `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` with the public HTTPS issuer so it matches the `iss` claim in tokens issued by production Keycloak. The JWK set URI always uses the internal Docker hostname `http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs`. On Kubernetes they are injected via the `env:` block in `infra/helm/team-devoops/values.yaml` using the internal `keycloak` ClusterIP DNS name.
+
+## Monitoring
+
+Monitoring runs in **all three environments** (local, Azure VM, and the
+Kubernetes cluster) from the same underlying config.
+
+**Prometheus** scrapes request count, latency, and error-rate metrics from
+every Spring service (`/actuator/prometheus`, via Micrometer), the GenAI
+service (`/metrics`, via `prometheus-flask-exporter`), Keycloak (`/metrics` on
+its management port, `KC_METRICS_ENABLED=true`), and Traefik itself
+(edge-level metrics; Kubernetes uses the cluster's own nginx ingress instead of
+Traefik, so this one is compose-only). Scrape targets are statically
+configured in [`infra/prometheus/prometheus.yml`](infra/prometheus/prometheus.yml)
+— the same file is used unchanged across all three environments, since
+Docker Compose service names and Kubernetes Service names are identical
+strings and both resolve the same way. Prometheus itself is never exposed
+outside the internal network/cluster in any environment.
+
+**Grafana** visualizes these metrics and is reachable at `/dashboard`
+(`http://localhost/dashboard` locally, `https://team-devoops.polandcentral.cloudapp.azure.com/dashboard`
+on the Azure VM, `https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/dashboard`
+on Kubernetes). Dashboards and datasources are provisioned as code from
+[`infra/grafana/`](infra/grafana/) — nothing is configured by hand in the
+running instance.
+
+Grafana is **admin-only**: it authenticates exclusively through its own
+Keycloak generic-OAuth login (client `grafana`, no local username/password
+form). `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` maps the realm `admin`
+role to Grafana's `Admin` org role and everything else to an empty string;
+combined with `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=true`, logging in
+with any account that doesn't hold the `admin` realm role is rejected
+outright. (Mapping the non-admin branch to the literal string `"None"`
+instead does *not* reject the login — verified locally: Grafana treats
+`"None"` as a real, if content-less, org role and still creates a session;
+only an empty string actually triggers `role_attribute_strict`'s rejection.)
+Prometheus itself is never routed through Traefik/ingress at all, so it has
+no login of its own to configure.
+
+Three dashboards ship out of the box ([`infra/grafana/dashboards/`](infra/grafana/dashboards/)):
+
+| Dashboard | Covers |
+|---|---|
+| `service-overview.json` | Request rate, p95 latency, and error rate per Spring service (dropdown to filter), plus up/down status, Keycloak login rate, and letters sent/generated |
+| `genai-service.json` | Request rate, p95 latency, and error rate for the GenAI service, plus RAG query rate/latency and report-generation rate by kind/status, each broken out by LLM provider (OpenAI vs. local Ollama) |
+| `logs.json` | Centralized logs from every service (Loki), filterable by container, plus a log-volume graph |
+
+Beyond the generic per-request metrics above, a few **business-level custom
+metrics** are tracked so the dashboards reflect what the system is actually
+doing, not just HTTP noise:
+
+| Metric | Service | What it shows |
+|---|---|---|
+| `letters_sent_total{status}` | letter-service | Actual mail delivery outcomes — ties directly to the mail credentials/health-check work above |
+| `letters_generated_total` | letter-service | PDF letters generated |
+| `genai_rag_queries_total{status,provider}`, `genai_rag_query_duration_seconds{provider}` | py-genai-helper | RAG question-answering usage and latency, split by OpenAI vs. local Ollama |
+| `genai_report_generation_total{kind,status,provider}` | py-genai-helper | Member/team AI report generation attempts, split by OpenAI vs. local Ollama |
+| `http_server_requests_seconds_count{job="keycloak", uri=".../protocol/openid-connect/token"}` | Keycloak | Login rate — Keycloak already exposes Micrometer-style HTTP metrics on its management port (`KC_METRICS_ENABLED=true`), reused as-is rather than building a separate login-tracking mechanism |
+
+Two alert rules are provisioned in Grafana's unified alerting
+([`infra/grafana/provisioning/alerting/rules.yaml`](infra/grafana/provisioning/alerting/rules.yaml))
+and surface directly in the Grafana UI/dashboards — no notification
+channel is configured, by design:
+
+- **Service down** — any scraped target reporting `up == 0` for 1 minute
+- **High p95 latency** — a Spring service's p95 request latency above 1s for 5 minutes
+
+### Log aggregation
+
+**Loki** centralizes logs from every container/pod, browsable and searchable
+in Grafana's `logs.json` dashboard (or Grafana's Explore view) instead of
+`docker logs`/`kubectl logs` one container at a time. Same three-environment
+scope as everything else above, with **Grafana Alloy** as the log shipper —
+but the shipping mechanism deliberately differs by environment:
+
+- **Local/VM**: Alloy uses `discovery.docker` + `loki.source.docker`
+  ([`infra/alloy/config.alloy`](infra/alloy/config.alloy)), reading every
+  container's logs via the Docker socket.
+- **Kubernetes**: Alloy uses `loki.source.kubernetes`
+  ([`infra/helm/team-devoops/files/alloy-config.alloy`](infra/helm/team-devoops/files/alloy-config.alloy)),
+  which fetches pod logs **through the Kubernetes API** (the `pods/log`
+  subresource) rather than reading node-local log files. This is a deliberate
+  choice, not the more common Promtail-as-DaemonSet setup: a DaemonSet reading
+  `/var/log/pods` via hostPath needs a `ClusterRole` and would also be able to
+  read *every other team's* pod logs on the same shared node — neither is
+  appropriate (or, for the `ClusterRole` part, even possible: verified against
+  the actual cluster that this identity can create namespaced `Role`/
+  `RoleBinding` but not `ClusterRole`/`ClusterRoleBinding`). Alloy instead runs
+  as a plain namespace-scoped `Deployment` with a `Role` granting only
+  `list pods` / `get pods/log` inside `ge83mom-devops26`.
+
+Both variants need explicit relabeling (`discovery.relabel`) to turn
+`__meta_docker_container_name` / `__meta_kubernetes_pod_name` into real
+`container`/`pod` log labels — without it, every container's logs land in one
+indistinguishable `service_name="unknown_service"` stream, which was caught
+by actually querying Loki's label set while testing, not by inspection.
 
 ## Docs
 

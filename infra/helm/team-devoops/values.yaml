@@ -64,6 +64,105 @@ genai:
   secretName: genai-env
 
 # ---------------------------------------------------------------------------
+# Prometheus + Grafana. Like `genai` above, the scrape config / dashboards /
+# provisioning are plain files in infra/prometheus/ and infra/grafana/ (the
+# same ones docker-compose bind-mounts) — Helm can't reach outside its own
+# chart directory via .Files.Get, so the pipeline loads them into ConfigMaps
+# out-of-band (kubectl create configmap --from-file) and the chart only
+# references those ConfigMaps by name.
+monitoring:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    configMapName: prometheus-config
+    storageSize: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      # Actual usage on this cluster is ~50Mi; trimmed from 512Mi to make room for ollama
+      # within the namespace's fixed 6Gi memory quota.
+      limits:
+        cpu: 150m
+        memory: 150Mi
+  grafana:
+    image: grafana/grafana:11.4.0
+    storageSize: 2Gi
+    datasourcesConfigMapName: grafana-datasources
+    dashboardProvidersConfigMapName: grafana-dashboard-providers
+    dashboardsConfigMapName: grafana-dashboards
+    alertingConfigMapName: grafana-alerting
+    oauthClientId: grafana
+    # Matches the existing forwardAuth.clientSecret pattern: a hardcoded default
+    # for an internal-only confidential client, not treated as a rotated secret.
+    oauthClientSecret: grafana-oauth-secret
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      # Actual usage is ~166Mi in practice (higher than first estimated) -- the earlier
+      # 200Mi trim left almost no headroom, so it's bumped back up here.
+      limits:
+        cpu: 100m
+        memory: 280Mi
+  # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
+  # is the same file docker-compose uses).
+  loki:
+    image: grafana/loki:3.2.0
+    configMapName: loki-config
+    storageSize: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      # Actual usage is ~153Mi; trimmed to make room for ollama (see prometheus above).
+      limits:
+        cpu: 150m
+        memory: 220Mi
+  # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
+  # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
+  # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
+  # loaded out-of-band.
+  alloy:
+    image: grafana/alloy:v1.5.1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      # Actual usage is ~45Mi; trimmed to make room for ollama (see prometheus above).
+      limits:
+        cpu: 100m
+        memory: 100Mi
+
+# ---------------------------------------------------------------------------
+# Local LLM backend for py-genai-helper (see services.py-genai-helper.env.OLLAMA_BASE_URL
+# below). Reachable in-cluster only, on the same OLLAMA_BASE_URL used by docker-compose.
+# infra/ollama/entrypoint_ollama.sh is shared with docker-compose, so -- like
+# prometheus/loki above -- it's loaded into a ConfigMap out-of-band rather than via
+# .Files.Get.
+#
+# The 1Gi limit this shipped with OOMKilled on the very first real inference call --
+# it was sized from idle usage (~170Mi, nothing loaded), not actual model-loading cost.
+# Loading qwen3:0.6b alone takes ~940Mi (492Mi model buffers + 448Mi KV cache at the
+# default 4096-token context, verified live from the crashed container's own logs).
+# OLLAMA_MAX_LOADED_MODELS=1 (below, in ollama-deployment.yaml) keeps the chat and
+# embedding models from being resident at once, capping the peak to the larger of the
+# two rather than their sum.
+# ---------------------------------------------------------------------------
+ollama:
+  enabled: true
+  image: ollama/ollama:latest
+  configMapName: ollama-entrypoint
+  storageSize: 3Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1536Mi
+
+# ---------------------------------------------------------------------------
 # Keycloak identity provider.
 #   path     -> sub-path Keycloak listens on (KC_HTTP_RELATIVE_PATH).
 #   hostname -> public-facing hostname Keycloak puts in issued tokens.
@@ -100,10 +199,11 @@ keycloak:
     resources:
       requests:
         cpu: 100m
-        memory: 128Mi
+        memory: 64Mi
+      # Actual usage is ~45Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 150m
-        memory: 256Mi
+        cpu: 100m
+        memory: 100Mi
 
 ingress:
   enabled: true
@@ -235,6 +335,7 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    envFromSecret: letter-env
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -250,13 +351,16 @@ services:
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
+      OLLAMA_BASE_URL: "http://ollama:11434"
     resources:
       requests:
         cpu: 100m
         memory: 256Mi
+      # Actual usage is ~135Mi; trimmed a bit (still ~3x actual) to make room for ollama
+      # (see monitoring.prometheus above).
       limits:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 150m
+        memory: 400Mi
   web-client:
     path: /
     port: 8080
@@ -267,9 +371,10 @@ services:
       requests:
         cpu: 50m
         memory: 32Mi
+      # Actual usage is a few Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 80m
+        memory: 80Mi
   api-docs:
     path: /docs
     port: 8080
@@ -280,6 +385,7 @@ services:
       requests:
         cpu: 50m
         memory: 32Mi
+      # Actual usage is a few Mi; trimmed to make room for ollama (see monitoring.prometheus above).
       limits:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 80m
+        memory: 80Mi

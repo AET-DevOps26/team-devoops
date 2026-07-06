@@ -45,17 +45,17 @@ def test_unauthenticated_returns_401(client):
 def test_generate_member_report_self_returns_202(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_A)
     calls = []
-    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t: calls.append((m, t)))
+    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t, use_local=None: calls.append((m, t, use_local)))
 
     resp = client.post(f"/reports/member/{MEMBER_A}", headers=AUTH_HEADER)
 
     assert resp.status_code == 202
-    assert calls == [(MEMBER_A, "test")]
+    assert calls == [(MEMBER_A, "test", None)]
 
 
 def test_generate_member_report_forbidden_for_other(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_B)
-    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t: pytest.fail("not allowed"))
+    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t, use_local=None: pytest.fail("not allowed"))
 
     resp = client.post(f"/reports/member/{MEMBER_A}", headers=AUTH_HEADER)
 
@@ -65,12 +65,33 @@ def test_generate_member_report_forbidden_for_other(client, monkeypatch):
 def test_generate_member_report_admin_allowed(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_B, roles=["admin"])
     calls = []
-    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t: calls.append((m, t)))
+    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t, use_local=None: calls.append((m, t, use_local)))
 
     resp = client.post(f"/reports/member/{MEMBER_A}", headers=AUTH_HEADER)
 
     assert resp.status_code == 202
-    assert calls == [(MEMBER_A, "test")]
+    assert calls == [(MEMBER_A, "test", None)]
+
+
+@pytest.mark.parametrize("value", [True, "true", "True"])
+def test_generate_member_report_uselocal_true_forces_local(client, monkeypatch, value):
+    authenticate(monkeypatch, sub=MEMBER_A)
+    calls = []
+    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t, use_local=None: calls.append((m, t, use_local)))
+
+    resp = client.post(f"/reports/member/{MEMBER_A}", json={"uselocal": value}, headers=AUTH_HEADER)
+
+    assert resp.status_code == 202
+    assert calls == [(MEMBER_A, "test", True)]
+
+
+def test_generate_member_report_uselocal_invalid_returns_400(client, monkeypatch):
+    authenticate(monkeypatch, sub=MEMBER_A)
+    monkeypatch.setattr(reports, "trigger_member_report", lambda m, t, use_local=None: pytest.fail("not allowed"))
+
+    resp = client.post(f"/reports/member/{MEMBER_A}", json={"uselocal": "maybe"}, headers=AUTH_HEADER)
+
+    assert resp.status_code == 400
 
 
 # --------------------------------------------------------------------------- #
@@ -80,22 +101,38 @@ def test_generate_team_report_trainer_allowed(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_A)
     monkeypatch.setattr(db, "is_trainer_of_team", lambda member_id, team_id: True)
     calls = []
-    monkeypatch.setattr(reports, "trigger_team_report", lambda t, tok: calls.append((t, tok)))
+    monkeypatch.setattr(
+        reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local))
+    )
 
     resp = client.post(f"/reports/team/{TEAM_A}", headers=AUTH_HEADER)
 
     assert resp.status_code == 202
-    assert calls == [(TEAM_A, "test")]
+    assert calls == [(TEAM_A, "test", None)]
 
 
 def test_generate_team_report_forbidden_non_trainer(client, monkeypatch):
     authenticate(monkeypatch, sub=MEMBER_A)
     monkeypatch.setattr(db, "is_trainer_of_team", lambda member_id, team_id: False)
-    monkeypatch.setattr(reports, "trigger_team_report", lambda t, tok: pytest.fail("not allowed"))
+    monkeypatch.setattr(reports, "trigger_team_report", lambda t, tok, use_local=None: pytest.fail("not allowed"))
 
     resp = client.post(f"/reports/team/{TEAM_A}", headers=AUTH_HEADER)
 
     assert resp.status_code == 403
+
+
+def test_generate_team_report_uselocal_false_forces_remote(client, monkeypatch):
+    authenticate(monkeypatch, sub=MEMBER_A)
+    monkeypatch.setattr(db, "is_trainer_of_team", lambda member_id, team_id: True)
+    calls = []
+    monkeypatch.setattr(
+        reports, "trigger_team_report", lambda t, tok, use_local=None: calls.append((t, tok, use_local))
+    )
+
+    resp = client.post(f"/reports/team/{TEAM_A}", json={"uselocal": False}, headers=AUTH_HEADER)
+
+    assert resp.status_code == 202
+    assert calls == [(TEAM_A, "test", False)]
 
 
 # --------------------------------------------------------------------------- #
@@ -257,20 +294,45 @@ def test_delete_report_not_found(client, monkeypatch):
 # Background worker persists the (stubbed) generated text
 # --------------------------------------------------------------------------- #
 def test_worker_persists_generated_member_text(monkeypatch):
-    monkeypatch.setattr(reports, "generate_member_report_text", lambda m, t: "generated text")
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setattr(reports, "generate_member_report_text", lambda m, t, use_local=None: "generated text")
     inserted = []
     monkeypatch.setattr(db, "insert_member_report", lambda member_id, text: inserted.append((member_id, text)))
+    before = reports.REPORT_GENERATION.labels(kind="member", status="success", provider="openai")._value.get()
 
     reports.generate_and_store_member_report(MEMBER_A, "test")
 
     assert inserted == [(MEMBER_A, "generated text")]
+    assert (
+        reports.REPORT_GENERATION.labels(kind="member", status="success", provider="openai")._value.get() == before + 1
+    )
 
 
 def test_worker_persists_generated_team_text(monkeypatch):
-    monkeypatch.setattr(reports, "generate_team_report_text", lambda t, tok: "team text")
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setattr(reports, "generate_team_report_text", lambda t, tok, use_local=None: "team text")
     inserted = []
     monkeypatch.setattr(db, "insert_team_report", lambda team_id, text: inserted.append((team_id, text)))
+    before = reports.REPORT_GENERATION.labels(kind="team", status="success", provider="openai")._value.get()
 
     reports.generate_and_store_team_report(TEAM_A, "test")
 
     assert inserted == [(TEAM_A, "team text")]
+    assert reports.REPORT_GENERATION.labels(kind="team", status="success", provider="openai")._value.get() == before + 1
+
+
+def test_worker_records_failure_metric_when_db_insert_raises(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setattr(reports, "generate_member_report_text", lambda m, t: "generated text")
+
+    def raise_error(member_id, text):
+        raise RuntimeError("db is down")
+
+    monkeypatch.setattr(db, "insert_member_report", raise_error)
+    before = reports.REPORT_GENERATION.labels(kind="member", status="failure", provider="openai")._value.get()
+
+    reports.generate_and_store_member_report(MEMBER_A, "test")
+
+    assert (
+        reports.REPORT_GENERATION.labels(kind="member", status="failure", provider="openai")._value.get() == before + 1
+    )

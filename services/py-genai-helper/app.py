@@ -1,4 +1,5 @@
 from flask import Flask, g, jsonify, request
+from prometheus_flask_exporter import PrometheusMetrics
 
 import db
 import reports
@@ -9,9 +10,12 @@ from generated.models import (
     Report,
     TeamReportSummary,
 )
-from service import generate_rag_response, hello
+from service import hello
 
 app = Flask("genai-service")
+# Exposes /metrics with request count, latency, and status-code histograms for every
+# route below with no per-route instrumentation needed.
+metrics = PrometheusMetrics(app)
 
 # Ensure the report tables exist. This intentionally fails loudly: if the database (or the tables it
 # references) isn't ready yet, startup aborts and the container restarts and retries — the same
@@ -32,20 +36,6 @@ def health():
     return {"status": "ok"}, 200
 
 
-@app.route("/rag-response", methods=["POST"])
-@require_auth
-def rag_response():
-    # Get the json of the object. force=True ignores the stated MimeType
-    data = request.get_json(force=True) or {}
-    question = data.get("question")
-
-    if not question:
-        return {"error": "Missing required field: 'question'"}, 400
-
-    response = generate_rag_response(question)
-    return {"response": response}, 200
-
-
 # --------------------------------------------------------------------------- #
 # Reports
 # --------------------------------------------------------------------------- #
@@ -57,12 +47,45 @@ def _team_reference(team_id) -> Reference:
     return Reference(id=team_id, name=db.resolve_team_name(team_id) or "")
 
 
+def _parse_bool(value):
+    """Parse a JSON bool or "true"/"false" string; None means unparseable."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.lower()
+        if lowered == "true":
+            return True
+        if lowered == "false":
+            return False
+    return None
+
+
+def _parse_use_local():
+    """Read the optional `uselocal` flag from the request body.
+
+    Returns (use_local, error_response). error_response is None unless the value couldn't be
+    parsed as a bool, in which case use_local is None and error_response is the (body, status)
+    tuple to return.
+    """
+    data = request.get_json(silent=True, force=True) or {}
+    value = data.get("uselocal")
+    if value is None:
+        return None, None
+    parsed = _parse_bool(value)
+    if parsed is None:
+        return None, ({"error": "Invalid value for 'uselocal': expected true or false"}, 400)
+    return parsed, None
+
+
 @app.route("/reports/member/<member_id>", methods=["POST"])
 @require_auth
 def generate_member_report(member_id):
     if g.user_id != member_id and not is_admin():
         return {"error": "Access denied"}, 403
-    reports.trigger_member_report(member_id, g.token)
+    use_local, error = _parse_use_local()
+    if error:
+        return error
+    reports.trigger_member_report(member_id, g.token, use_local)
     return "", 202
 
 
@@ -84,7 +107,10 @@ def list_member_reports(member_id):
 def generate_team_report(team_id):
     if not is_admin() and not db.is_trainer_of_team(g.user_id, team_id):
         return {"error": "Access denied"}, 403
-    reports.trigger_team_report(team_id, g.token)
+    use_local, error = _parse_use_local()
+    if error:
+        return error
+    reports.trigger_team_report(team_id, g.token, use_local)
     return "", 202
 
 

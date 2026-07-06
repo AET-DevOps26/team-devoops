@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+
+# Static targets: every service is a fixed container name on the compose "proxy"
+# network, in both local dev and the Azure VM deploy (only the externally-facing
+# Traefik Host() rules differ between environments, not these internal names).
+scrape_configs:
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8080"]
+
+  - job_name: organization-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["organization-service:8080"]
+
+  - job_name: member-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["member-service:8080"]
+
+  - job_name: event-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["event-service:8080"]
+
+  - job_name: feedback-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["feedback-service:8080"]
+
+  - job_name: finance-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["finance-service:8080"]
+
+  - job_name: letter-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["letter-service:8080"]
+
+  - job_name: py-genai-helper
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["py-genai-helper:5000"]
+
+  # Management port (KC_HTTP_MANAGEMENT_RELATIVE_PATH), same port the health probes use.
+  # Requires KC_METRICS_ENABLED=true. Proxy for login rate: request rate on the
+  # protocol/openid-connect/token and .../auth endpoints.
+  - job_name: keycloak
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["keycloak:9000"]
