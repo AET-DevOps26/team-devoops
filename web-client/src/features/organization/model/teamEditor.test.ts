@@ -4,25 +4,43 @@ import type { AuthUser, MemberRef, Sport, Team } from '@/types'
 import {
   adminTeamEditorFields,
   buildMemberPickerOptions,
+  buildTeamCreatePayload,
   buildTeamEditorInitialState,
   buildTeamUpdatePayload,
   coachTeamEditorFields,
   directorTeamEditorFields,
+  teamCreatorFields,
+  teamCreatorFieldsForUser,
   teamEditorFieldsForUser,
   validateTeamEditorForm,
 } from './teamEditor'
 
-const sport = { id: 'sport-1', name: 'Football' }
+const director = ref('director-1', 'Director One')
+const coach = ref('coach-1', 'Coach One')
+const trainee = ref('member-1', 'Member One')
+const secondTrainee = ref('member-2', 'Member Two')
+const nextCoach = ref('coach-2', 'Coach Two')
+const nextTrainee = ref('member-3', 'Member Three')
 
-function ref(id: string, name: string): MemberRef {
-  return { id, name }
-}
+const sport = { id: 'sport-1', name: 'Football' }
 
 const sportDetails: Sport = {
   ...sport,
   description: 'Football squads.',
   created_at: '2026-01-01',
-  directors: [ref('director-1', 'Director One')],
+  directors: [director],
+}
+
+const otherSport: Sport = {
+  id: 'sport-2',
+  name: 'Handball',
+  description: 'Handball squads.',
+  created_at: '2026-01-01',
+  directors: [],
+}
+
+function ref(id: string, name: string): MemberRef {
+  return { id, name }
 }
 
 function user(member: MemberRef, role: AuthUser['role']): AuthUser {
@@ -42,8 +60,8 @@ function team(overrides: Partial<Team> = {}): Team {
     created_at: '2026-01-01',
     address: 'Club grounds',
     sport,
-    trainers: [ref('coach-1', 'Coach One')],
-    trainees: [ref('member-1', 'Member One'), ref('member-2', 'Member Two')],
+    trainers: [coach],
+    trainees: [trainee, secondTrainee],
     ...overrides,
   }
 }
@@ -70,10 +88,10 @@ describe('team editor helpers', () => {
     expect(
       buildTeamUpdatePayload(
         baseTeam,
-        { ...buildTeamEditorInitialState(baseTeam), traineeIds: ['member-2', 'member-3'] },
+        { ...buildTeamEditorInitialState(baseTeam), traineeIds: [secondTrainee.id, nextTrainee.id] },
         coachTeamEditorFields,
       ),
-    ).toEqual({ trainees: ['member-2', 'member-3'] })
+    ).toEqual({ trainees: [secondTrainee.id, nextTrainee.id] })
 
     expect(
       buildTeamUpdatePayload(
@@ -90,17 +108,38 @@ describe('team editor helpers', () => {
     expect(
       buildTeamUpdatePayload(
         baseTeam,
-        { ...buildTeamEditorInitialState(baseTeam), traineeIds: ['member-2', 'member-1'] },
+        { ...buildTeamEditorInitialState(baseTeam), traineeIds: [secondTrainee.id, trainee.id] },
         coachTeamEditorFields,
       ),
     ).toEqual({})
   })
 
   it('validates the required name field only when it is enabled', () => {
-    const form = { name: ' ', description: '', address: '', traineeIds: [] }
+    const form = {
+      name: ' ',
+      description: '',
+      address: '',
+      sportId: '',
+      trainerIds: [],
+      traineeIds: [],
+    }
 
     expect(validateTeamEditorForm(form, coachTeamEditorFields)).toBe('Name is required.')
     expect(validateTeamEditorForm(form, ['trainees'])).toBeNull()
+  })
+
+  it('validates the required sport field only when it is enabled', () => {
+    const form = {
+      name: 'Team',
+      description: '',
+      address: '',
+      sportId: '',
+      trainerIds: [],
+      traineeIds: [],
+    }
+
+    expect(validateTeamEditorForm(form, teamCreatorFields)).toBe('Select a sport.')
+    expect(validateTeamEditorForm(form, coachTeamEditorFields)).toBeNull()
   })
 
   it('detects raw whitespace edits and trims only the submitted values', () => {
@@ -124,8 +163,6 @@ describe('team editor helpers', () => {
   })
 
   it('derives editable fields from the current role and team relationship', () => {
-    const coach = ref('coach-1', 'Coach One')
-    const director = ref('director-1', 'Director One')
     const outsider = ref('member-9', 'Member Nine')
     const baseTeam = team({ trainers: [coach] })
 
@@ -160,5 +197,57 @@ describe('team editor helpers', () => {
       { id: 'member-2', name: 'Current Member' },
       { id: 'member-1', name: 'Known Member', meta: 'known@example.test' },
     ])
+  })
+})
+
+describe('team editor management helpers', () => {
+  it('scopes create fields to admin or directed sports', () => {
+    expect(teamCreatorFieldsForUser([sportDetails], user(director, 'director'))).toEqual(
+      teamCreatorFields,
+    )
+    expect(teamCreatorFieldsForUser([otherSport], user(director, 'director'))).toEqual([])
+    expect(teamCreatorFieldsForUser([otherSport], user(ref('admin-1', 'Admin'), 'admin'))).toEqual(
+      teamCreatorFields,
+    )
+  })
+
+  it('sends changed sport and full replacement rosters for admin edits', () => {
+    const baseTeam = team()
+    const form = buildTeamEditorInitialState(baseTeam)
+    const payload = buildTeamUpdatePayload(
+      baseTeam,
+      {
+        ...form,
+        sportId: otherSport.id,
+        trainerIds: [nextCoach.id],
+        traineeIds: [trainee.id, nextTrainee.id],
+      },
+      adminTeamEditorFields,
+    )
+
+    expect(payload).toEqual({
+      sport: otherSport.id,
+      trainers: [nextCoach.id],
+      trainees: [trainee.id, nextTrainee.id],
+    })
+  })
+
+  it('builds create payloads with bare ids', () => {
+    expect(
+      buildTeamCreatePayload({
+        name: ' New Team ',
+        description: '',
+        address: '  Main gym  ',
+        sportId: sportDetails.id,
+        trainerIds: [coach.id],
+        traineeIds: [trainee.id],
+      }),
+    ).toEqual({
+      name: 'New Team',
+      address: 'Main gym',
+      sport: sportDetails.id,
+      trainers: [coach.id],
+      trainees: [trainee.id],
+    })
   })
 })

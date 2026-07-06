@@ -116,11 +116,22 @@ describe('scopeTransactions', () => {
 
     expect(ids(scopeTransactions(transactionFixtures, users.admin))).toEqual(ids(transactionFixtures))
     expect(ids(scopeTransactions(transactionFixtures, users.member))).toEqual(
-      ids(transactionFixtures.filter((row) => row.member.id === users.member.id)),
+      ids(
+        transactionFixtures.filter(
+          (row) => row.member.id === users.member.id || row.creator?.id === users.member.id,
+        ),
+      ),
     )
     expect(scopeTransactions(transactionFixtures, users.trainer)).toEqual([])
     expect(ids(scopeTransactions(transactionFixtures, users.director))).toEqual(
-      ids(transactionFixtures.filter((row) => directorIds.has(row.member.id))),
+      ids(
+        transactionFixtures.filter(
+          (row) =>
+            row.member.id === users.director.id ||
+            row.creator?.id === users.director.id ||
+            directorIds.has(row.member.id),
+        ),
+      ),
     )
   })
 })

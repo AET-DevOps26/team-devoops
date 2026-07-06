@@ -111,4 +111,21 @@ describe('buildTeamsView', () => {
     expect(view.stats.myTeams).toBe(1)
     expect(view.stats.mySports).toBe(1)
   })
+
+  it('counts directed sports for a director with no team membership', () => {
+    const director = ref('director-1', 'Director One')
+    const directedSport: Sport = {
+      ...football,
+      id: 'sport-directed',
+      name: 'Handball',
+      directors: [director],
+    }
+
+    const view = buildTeamsView([football, directedSport], [], user(director, 'director'))
+
+    expect(view.myTeams).toEqual([])
+    expect(view.mySports.map((sport) => sport.name)).toEqual(['Handball'])
+    expect(view.stats.myTeams).toBe(0)
+    expect(view.stats.mySports).toBe(1)
+  })
 })

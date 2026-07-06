@@ -20,9 +20,10 @@ export function useMembersHello() {
   })
 }
 
-export function useMembers() {
+export function useMembers(enabled = true) {
   return useQuery<MemberSummary[]>({
     queryKey: membersKeys.all,
+    enabled,
     queryFn: () =>
       mockOr(
         () => Promise.resolve(scopeMembers(memberSummaryFixtures, getCurrentUser())),
