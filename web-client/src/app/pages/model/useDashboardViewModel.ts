@@ -48,6 +48,11 @@ export interface DashboardFeedbackSection {
   items: DashboardFeedbackItem[]
 }
 
+export interface DashboardTeamSection {
+  teamName: string
+  totalMembers: number
+}
+
 export interface DashboardAdminCountsSection {
   totalTeams: number
   directors: number
@@ -74,6 +79,7 @@ export interface DashboardView {
   myEvents?: DashboardEventsSection
   myBalance?: DashboardBalanceSection
   myFeedback?: DashboardFeedbackSection
+  myTeam?: DashboardTeamSection
   adminCounts?: DashboardAdminCountsSection
   sports?: DashboardSportSection[]
 }
@@ -88,6 +94,7 @@ export interface DashboardViewModel {
   states: {
     myEvents?: DashboardSectionState
     myBalance?: DashboardSectionState
+    myTeam?: DashboardSectionState
     myFeedback?: DashboardSectionState
     adminCounts?: DashboardSectionState
     sports?: DashboardSectionState
@@ -281,6 +288,9 @@ function fillSections(
       if (shouldShowBalance(view.role)) {
         states.myBalance = state
       }
+      if (view.role === 'trainer') {
+        states.myTeam = state
+      }
       states.myEvents = state
     }
     return
@@ -297,8 +307,13 @@ function fillSections(
       break
 
     case 'trainer':
+      view.myTeam = {
+        teamName: data.team.name,
+        totalMembers: data.total_members,
+      }
       view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
       view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      states.myTeam = state
       states.myEvents = org.eventsState
       states.myFeedback = state
       break

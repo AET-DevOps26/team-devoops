@@ -22,10 +22,13 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tum.devoops.eventservice.entity.AttendanceEntity;
+import tum.devoops.eventservice.entity.DirectorEntity;
 import tum.devoops.eventservice.entity.MemberEntity;
 import tum.devoops.eventservice.entity.EventEntity;
 import tum.devoops.eventservice.entity.SportEventEntity;
+import tum.devoops.eventservice.entity.TeamEntity;
 import tum.devoops.eventservice.entity.TeamEventEntity;
+import tum.devoops.eventservice.entity.TrainerEntity;
 import tum.devoops.eventservice.exception.BadRequestException;
 import tum.devoops.eventservice.exception.ForbiddenException;
 import tum.devoops.eventservice.exception.NotFoundException;
@@ -35,12 +38,14 @@ import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
 import tum.devoops.eventservice.model.Reference;
 import tum.devoops.eventservice.repository.AttendanceRepository;
+import tum.devoops.eventservice.repository.DirectorRepository;
 import tum.devoops.eventservice.repository.EventRepository;
 import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
 import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
 import tum.devoops.eventservice.repository.TeamRepository;
+import tum.devoops.eventservice.repository.TrainerRepository;
 
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
@@ -59,6 +64,10 @@ class EventServiceTest {
     private SportRepository sportRepository;
     @Mock
     private TeamRepository teamRepository;
+    @Mock
+    private TrainerRepository trainerRepository;
+    @Mock
+    private DirectorRepository directorRepository;
 
     @InjectMocks
     private EventService service;
@@ -216,6 +225,65 @@ class EventServiceTest {
 
         assertThatThrownBy(() -> service.createEvent(body, REQUESTER_ID, true))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void createEventAsPlainMemberThrowsForbidden() {
+        EventCreate body = validCreate().teamsLinked(List.of(TEAM_ID.toString()));
+
+        assertThatThrownBy(() -> service.createEvent(body, REQUESTER_ID, false))
+                .isInstanceOf(ForbiddenException.class);
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void createEventAsTrainerOfLinkedTeamSucceeds() {
+        when(trainerRepository.existsById(new TrainerEntity.Id(TEAM_ID, REQUESTER_ID))).thenReturn(true);
+        when(eventRepository.save(any())).thenReturn(eventEntity(EVENT_ID, REQUESTER_ID));
+        EventCreate body = validCreate().teamsLinked(List.of(TEAM_ID.toString()));
+
+        Event result = service.createEvent(body, REQUESTER_ID, false);
+
+        assertThat(result.getId()).isEqualTo(EVENT_ID);
+    }
+
+    @Test
+    void createEventAsTrainerOfUnrelatedTeamThrowsForbidden() {
+        // Trainer of some other team, not the one this event links to.
+        when(trainerRepository.existsById(new TrainerEntity.Id(TEAM_ID, REQUESTER_ID))).thenReturn(false);
+        when(teamRepository.findAllById(List.of(TEAM_ID))).thenReturn(List.of());
+        EventCreate body = validCreate().teamsLinked(List.of(TEAM_ID.toString()));
+
+        assertThatThrownBy(() -> service.createEvent(body, REQUESTER_ID, false))
+                .isInstanceOf(ForbiddenException.class);
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void createEventAsDirectorOfLinkedTeamsSportSucceeds() {
+        TeamEntity team = new TeamEntity();
+        team.setId(TEAM_ID);
+        team.setSportId(SPORT_ID);
+        when(trainerRepository.existsById(new TrainerEntity.Id(TEAM_ID, REQUESTER_ID))).thenReturn(false);
+        when(teamRepository.findAllById(List.of(TEAM_ID))).thenReturn(List.of(team));
+        when(directorRepository.existsById(new DirectorEntity.Id(SPORT_ID, REQUESTER_ID))).thenReturn(true);
+        when(eventRepository.save(any())).thenReturn(eventEntity(EVENT_ID, REQUESTER_ID));
+        EventCreate body = validCreate().teamsLinked(List.of(TEAM_ID.toString()));
+
+        Event result = service.createEvent(body, REQUESTER_ID, false);
+
+        assertThat(result.getId()).isEqualTo(EVENT_ID);
+    }
+
+    @Test
+    void createEventAsDirectorOfExplicitSportSucceeds() {
+        when(directorRepository.existsById(new DirectorEntity.Id(SPORT_ID, REQUESTER_ID))).thenReturn(true);
+        when(eventRepository.save(any())).thenReturn(eventEntity(EVENT_ID, REQUESTER_ID));
+        EventCreate body = validCreate().sportsLinked(List.of(SPORT_ID));
+
+        Event result = service.createEvent(body, REQUESTER_ID, false);
+
+        assertThat(result.getId()).isEqualTo(EVENT_ID);
     }
 
     // ─── getEventDetails ───────────────────────────────────────────────────────

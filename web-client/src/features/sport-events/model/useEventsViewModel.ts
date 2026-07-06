@@ -10,9 +10,11 @@ import type { EventsFilters } from './eventsUiStore'
 import { useEventsUiStore } from './eventsUiStore'
 
 export type EventStatus = 'attended' | 'missed' | 'upcoming' | 'past'
+type TimelineEventStatus = Extract<EventStatus, 'upcoming' | 'past'>
 type AttendanceUser = Pick<AuthUser, 'id'> & {
   teamIds?: ReadonlySet<string>
 }
+type EventsViewUser = AttendanceUser & Pick<AuthUser, 'role'>
 
 export interface EventRow extends EventListItem {
   status: EventStatus
@@ -66,6 +68,20 @@ export function eventAttendanceStatus(
   return 'past'
 }
 
+function eventTimelineStatus(event: EventListItem | SportEvent, now: Date): TimelineEventStatus {
+  return new Date(event.start_time) >= now ? 'upcoming' : 'past'
+}
+
+export function eventStatusForRole(
+  event: EventListItem | SportEvent,
+  user: EventsViewUser,
+  now: Date,
+): EventStatus {
+  return user.role === 'member'
+    ? eventAttendanceStatus(event, user, now)
+    : eventTimelineStatus(event, now)
+}
+
 export function userTeamIds(teams: Team[], userId: string): ReadonlySet<string> {
   return new Set(
     teams
@@ -81,7 +97,7 @@ export function userTeamIds(teams: Team[], userId: string): ReadonlySet<string> 
 export function buildEventsView(
   summaries: EventListItem[],
   now: Date,
-  user: AttendanceUser,
+  user: EventsViewUser,
   filters: EventsFilters = {
     search: '',
     status: 'all',
@@ -92,23 +108,27 @@ export function buildEventsView(
 ): EventsView {
   const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
   const rows = summaries.map((event) => {
-      const status = eventAttendanceStatus(event, user, now)
+    const status = eventStatusForRole(event, user, now)
 
-      return {
-        ...event,
-        status,
-        formattedWhen: formatDateTime(event.start_time),
-        duration: formatDuration(event.start_time, event.end_time),
-      }
-    })
+    return {
+      ...event,
+      status,
+      formattedWhen: formatDateTime(event.start_time),
+      duration: formatDuration(event.start_time, event.end_time),
+    }
+  })
   const search = filters.search.trim().toLocaleLowerCase()
+  const statusFilter =
+    user.role === 'member' || (filters.status !== 'attended' && filters.status !== 'missed')
+      ? filters.status
+      : 'all'
   const fromTime = filters.fromDate ? new Date(`${filters.fromDate}T00:00:00`).getTime() : null
   const toTime = filters.toDate ? new Date(`${filters.toDate}T23:59:59.999`).getTime() : null
   const filteredRows = rows
     .filter((event) => {
       const eventTime = new Date(event.start_time).getTime()
       const matchesText = search.length === 0 || event.name.toLocaleLowerCase().includes(search)
-      const matchesStatus = filters.status === 'all' || event.status === filters.status
+      const matchesStatus = statusFilter === 'all' || event.status === statusFilter
 
       return (
         matchesText &&
@@ -153,11 +173,17 @@ export function useEventsViewModel(now = new Date()) {
 
   const view = useMemo(
     () =>
-      buildEventsView(eventsQuery.data ?? [], new Date(nowTime), {
-        id: user.id,
-        teamIds: userTeamIds(teamsQuery.data ?? [], user.id),
-      }, filters),
-    [eventsQuery.data, nowTime, teamsQuery.data, user.id, filters],
+      buildEventsView(
+        eventsQuery.data ?? [],
+        new Date(nowTime),
+        {
+          id: user.id,
+          role: user.role,
+          teamIds: userTeamIds(teamsQuery.data ?? [], user.id),
+        },
+        filters,
+      ),
+    [eventsQuery.data, nowTime, teamsQuery.data, user.id, user.role, filters],
   )
 
   return {
@@ -174,10 +200,11 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
   const sportsQuery = useSportsList()
   const detail = eventQuery.data
   const status = detail
-    ? eventAttendanceStatus(
+    ? eventStatusForRole(
         detail,
         {
           id: user.id,
+          role: user.role,
           teamIds: userTeamIds(teamsQuery.data ?? [], user.id),
         },
         now,

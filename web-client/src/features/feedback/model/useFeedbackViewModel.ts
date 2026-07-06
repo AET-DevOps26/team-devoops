@@ -1,7 +1,20 @@
 import { useMemo } from 'react'
 
-import { formatDateShort } from '@/lib/format'
-import { creatorName, memberRefName } from '@/types'
+import { useAuth } from '@/features/auth'
+import { useMembers } from '@/features/members/api/queries'
+import { buildComposableMemberIds } from '@/features/members/model/useMembersViewModel'
+import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
+import { useEventsList } from '@/features/sport-events/api/queries'
+import { formatDateShort, formatDateTime } from '@/lib/format'
+import {
+  type AuthUser,
+  creatorName,
+  type EventListItem,
+  memberRefName,
+  type MemberSummary,
+  type Sport,
+  type Team,
+} from '@/types'
 import { useFeedback, useFeedbackList } from '../api/queries'
 import type { Feedback, FeedbackSummary } from '../types'
 import type { FeedbackFilters, FeedbackRatingFilter } from './feedbackUiStore'
@@ -11,11 +24,41 @@ export interface FeedbackRow {
   id: string
   eventId: string
   coachId: string
+  creatorId: string | null
   memberName: string
   creatorName: string
   eventName: string
   createdAt: string
   rating: number
+}
+
+export interface FeedbackCoverageTrainee {
+  id: string
+  name: string
+}
+
+export interface FeedbackCoverageEvent {
+  id: string
+  name: string
+  formattedWhen: string
+  missing: FeedbackCoverageTrainee[]
+}
+
+export interface FeedbackCoverageTeam {
+  id: string
+  name: string
+  events: FeedbackCoverageEvent[]
+}
+
+export interface FeedbackCoverageSport {
+  name: string
+  teams: FeedbackCoverageTeam[]
+}
+
+export interface FeedbackCoverage {
+  coveredCount: number
+  totalCount: number
+  sports: FeedbackCoverageSport[]
 }
 
 export interface FeedbackView {
@@ -28,6 +71,7 @@ export interface FeedbackView {
     avgRatingLabel: string
     latestLabel: string
   }
+  coverage: FeedbackCoverage | null
 }
 
 export interface FeedbackDetailView {
@@ -101,14 +145,104 @@ function sortFeedbackRows(rows: FeedbackRow[], sort: FeedbackFilters['sort']): F
   })
 }
 
+function buildFeedbackCoverage(
+  summaries: FeedbackSummary[],
+  members: MemberSummary[],
+  teams: Team[],
+  sports: Sport[],
+  events: EventListItem[],
+  user: AuthUser,
+): FeedbackCoverage | null {
+  if (user.role !== 'trainer') return null
+
+  const composableMemberIds = buildComposableMemberIds(members, teams, user)
+  if (composableMemberIds.size === 0) return null
+
+  const membersById = new Map(members.map((member) => [member.id, member]))
+  const traineeName = (id: string) => {
+    const member = membersById.get(id)
+    return member ? `${member.first_name} ${member.last_name}` : id
+  }
+
+  // Feedback already given by this coach, keyed by `${eventId}:${memberId}`.
+  const covered = new Set(
+    summaries
+      .filter((feedback) => feedback.creator?.id === user.id)
+      .map((feedback) => `${feedback.event.id}:${feedback.member?.id ?? ''}`),
+  )
+
+  const coachedTeams = teams.filter((team) => team.trainers.some((t) => t.id === user.id))
+  const teamsBySportId = new Map<string, Team[]>()
+  for (const team of coachedTeams) {
+    const sportTeams = teamsBySportId.get(team.sport.id) ?? []
+    sportTeams.push(team)
+    teamsBySportId.set(team.sport.id, sportTeams)
+  }
+
+  let coveredCount = 0
+  let totalCount = 0
+
+  const coverageSports: FeedbackCoverageSport[] = sports
+    .filter((sport) => teamsBySportId.has(sport.id))
+    .map((sport) => {
+      const sportTeams = teamsBySportId.get(sport.id) ?? []
+
+      const coverageTeams: FeedbackCoverageTeam[] = sportTeams.map((team) => {
+        const teamEvents = events.filter((event) =>
+          event.teams_linked?.some((linked) => linked.id === team.id),
+        )
+
+        const coverageEvents: FeedbackCoverageEvent[] = teamEvents
+          .map((event) => {
+            const scoped = (event.attendees ?? []).filter((attendee) =>
+              team.trainees.some((trainee) => trainee.id === attendee.id),
+            )
+            const missing = scoped
+              .filter((attendee) => !covered.has(`${event.id}:${attendee.id}`))
+              .map((attendee) => ({ id: attendee.id, name: traineeName(attendee.id) }))
+              .toSorted((a, b) => a.name.localeCompare(b.name))
+
+            totalCount += scoped.length
+            coveredCount += scoped.length - missing.length
+
+            return {
+              id: event.id,
+              name: event.name,
+              formattedWhen: formatDateTime(event.start_time),
+              missing,
+            }
+          })
+          .filter((event) => event.missing.length > 0)
+          .toSorted((a, b) => a.name.localeCompare(b.name))
+
+        return { id: team.id, name: team.name, events: coverageEvents }
+      }).filter((team) => team.events.length > 0)
+
+      return { name: sport.name, teams: coverageTeams }
+    })
+    .filter((sport) => sport.teams.length > 0)
+
+  return {
+    coveredCount,
+    totalCount,
+    sports: coverageSports,
+  }
+}
+
 export function buildFeedbackView(
   summaries: FeedbackSummary[],
   filters: FeedbackFilters,
+  members: MemberSummary[] = [],
+  teams: Team[] = [],
+  sports: Sport[] = [],
+  events: EventListItem[] = [],
+  user?: AuthUser,
 ): FeedbackView {
   const rows = summaries.map((feedback) => ({
     id: feedback.id,
     eventId: feedback.event.id,
     coachId: feedback.creator?.id ?? 'unknown',
+    creatorId: feedback.creator?.id ?? null,
     memberName: memberRefName(feedback.member),
     creatorName: creatorName(feedback.creator),
     eventName: feedback.event.name,
@@ -147,16 +281,41 @@ export function buildFeedbackView(
       avgRatingLabel: avgRating === null ? '--' : `${avgRating.toFixed(1)} / 10`,
       latestLabel: latestCreatedAt === null ? '--' : formatDateShort(latestCreatedAt),
     },
+    coverage: user
+      ? buildFeedbackCoverage(summaries, members, teams, sports, events, user)
+      : null,
   }
 }
 
 export function useFeedbackViewModel() {
+  const { user } = useAuth()
   const feedbackQuery = useFeedbackList()
+  const membersQuery = useMembers()
+  const teamsQuery = useTeamsList()
+  const sportsQuery = useSportsList(user.role === 'trainer')
+  const eventsQuery = useEventsList(user.role === 'trainer')
   const filters = useFeedbackUiStore((state) => state.filters)
 
   const view = useMemo(
-    () => buildFeedbackView(feedbackQuery.data ?? [], filters),
-    [feedbackQuery.data, filters],
+    () =>
+      buildFeedbackView(
+        feedbackQuery.data ?? [],
+        filters,
+        membersQuery.data ?? [],
+        teamsQuery.data ?? [],
+        sportsQuery.data ?? [],
+        eventsQuery.data ?? [],
+        user,
+      ),
+    [
+      feedbackQuery.data,
+      filters,
+      membersQuery.data,
+      teamsQuery.data,
+      sportsQuery.data,
+      eventsQuery.data,
+      user,
+    ],
   )
 
   return {

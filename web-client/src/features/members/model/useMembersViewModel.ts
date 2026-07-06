@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 
+import { useAuth } from '@/features/auth'
 import { useTeamsList } from '@/features/organization/api/queries'
-import { type MemberSummary, type Team } from '@/types'
+import { type AuthUser, type MemberSummary, type Team } from '@/types'
 import { useMembers } from '../api/queries'
 import type { MembersFilters } from './membersUiStore'
 import { useMembersUiStore } from './membersUiStore'
@@ -18,6 +19,7 @@ export interface MemberRow {
 export interface MembersView {
   rows: MemberRow[]
   totalRows: number
+  composableMemberIds: Set<string>
   teamOptions: { value: string; label: string }[]
   sportOptions: { value: string; label: string }[]
 }
@@ -67,12 +69,18 @@ export function buildMembersView(
   members: MemberSummary[],
   teams: Team[],
   filters: MembersFilters,
+  user: AuthUser,
 ): MembersView {
   const rows = memberTeamRows(members, teams).toSorted((a, b) => a.name.localeCompare(b.name))
+  const composableMemberIds = buildComposableMemberIds(members, teams, user)
+
+  const scopedTeamIds = new Set(rows.flatMap((row) => row.teamIds))
   const teamOptions = teams
+    .filter((team) => scopedTeamIds.has(team.id))
     .map((team) => ({ value: team.id, label: team.name }))
     .toSorted((a, b) => a.label.localeCompare(b.label))
-  const sportOptions = Array.from(new Set(teams.map((team) => team.sport.name)), (sport) => ({
+  const scopedSports = new Set(rows.flatMap((row) => row.sports))
+  const sportOptions = Array.from(scopedSports, (sport) => ({
     value: sport,
     label: sport,
   })).toSorted((a, b) => a.label.localeCompare(b.label))
@@ -80,19 +88,41 @@ export function buildMembersView(
   return {
     rows: filterMemberRows(rows, filters),
     totalRows: rows.length,
+    composableMemberIds,
     teamOptions,
     sportOptions,
   }
 }
 
+export function buildComposableMemberIds(
+  members: MemberSummary[],
+  teams: Team[],
+  user: AuthUser,
+): Set<string> {
+  if (user.role === 'admin') {
+    return new Set(members.map((member) => member.id))
+  }
+
+  if (user.role !== 'trainer') {
+    return new Set()
+  }
+
+  return new Set(
+    teams
+      .filter((team) => team.trainers.some((trainer) => trainer.id === user.id))
+      .flatMap((team) => team.trainees.map((trainee) => trainee.id)),
+  )
+}
+
 export function useMembersViewModel() {
+  const { user } = useAuth()
   const membersQuery = useMembers()
   const teamsQuery = useTeamsList()
   const filters = useMembersUiStore((state) => state.filters)
 
   const view = useMemo(
-    () => buildMembersView(membersQuery.data ?? [], teamsQuery.data ?? [], filters),
-    [filters, membersQuery.data, teamsQuery.data],
+    () => buildMembersView(membersQuery.data ?? [], teamsQuery.data ?? [], filters, user),
+    [filters, membersQuery.data, teamsQuery.data, user],
   )
 
   return {

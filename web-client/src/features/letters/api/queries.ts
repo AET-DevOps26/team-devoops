@@ -4,13 +4,6 @@ import { mockOr } from '@/mocks/mockSwitch'
 import { lettersClient } from './client'
 import type { GeneratePdfRequest, SendMailRequest } from '../types'
 
-const LETTER_SERVICE_LIVE_ENABLED = false
-
-function lettersMockOr<T>(mock: () => T, live: () => T): T {
-  // MOCK: Letter service is hello-world; live branch is contract-ready but unexercised.
-  return LETTER_SERVICE_LIVE_ENABLED ? mockOr(mock, live) : mock()
-}
-
 export const lettersKeys = {
   hello: ['letters', 'hello'] as const,
 }
@@ -19,7 +12,7 @@ export function useLettersHello() {
   return useQuery<string>({
     queryKey: lettersKeys.hello,
     queryFn: () =>
-      lettersMockOr(
+      mockOr(
         () => Promise.resolve('Letters service mock'),
         () => lettersClient.get<string>('/hello').then(r => r.data),
       ),
@@ -29,7 +22,7 @@ export function useLettersHello() {
 export function useSendMail() {
   return useMutation<void, Error, SendMailRequest>({
     mutationFn: data =>
-      lettersMockOr(
+      mockOr(
         () => Promise.resolve(),
         () =>
           lettersClient.post<void>('/mail', data, {
@@ -42,7 +35,7 @@ export function useSendMail() {
 export function useGeneratePdf() {
   return useMutation<Blob, Error, GeneratePdfRequest>({
     mutationFn: data =>
-      lettersMockOr(
+      mockOr(
         () => Promise.resolve(new Blob([data.template], { type: 'application/pdf' })),
         () =>
           lettersClient.post<Blob>('/pdf', data, {
