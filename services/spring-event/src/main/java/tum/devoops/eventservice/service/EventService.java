@@ -15,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import tum.devoops.eventservice.converter.EventConverter;
 import tum.devoops.eventservice.entity.AttendanceEntity;
+import tum.devoops.eventservice.entity.DirectorEntity;
 import tum.devoops.eventservice.entity.EventEntity;
 import tum.devoops.eventservice.entity.SportEventEntity;
 import tum.devoops.eventservice.entity.TeamEventEntity;
+import tum.devoops.eventservice.entity.TrainerEntity;
 import tum.devoops.eventservice.exception.BadRequestException;
 import tum.devoops.eventservice.exception.ForbiddenException;
 import tum.devoops.eventservice.exception.NotFoundException;
@@ -26,12 +28,14 @@ import tum.devoops.eventservice.model.EventCreate;
 import tum.devoops.eventservice.model.EventPartialUpdate;
 import tum.devoops.eventservice.model.EventSummary;
 import tum.devoops.eventservice.repository.AttendanceRepository;
+import tum.devoops.eventservice.repository.DirectorRepository;
 import tum.devoops.eventservice.repository.EventRepository;
 import tum.devoops.eventservice.repository.MemberRepository;
 import tum.devoops.eventservice.repository.SportEventRepository;
 import tum.devoops.eventservice.repository.SportRepository;
 import tum.devoops.eventservice.repository.TeamEventRepository;
 import tum.devoops.eventservice.repository.TeamRepository;
+import tum.devoops.eventservice.repository.TrainerRepository;
 
 @Service
 public class EventService {
@@ -50,6 +54,10 @@ public class EventService {
     private SportRepository sportRepository;
     @Autowired
     private TeamRepository teamRepository;
+    @Autowired
+    private TrainerRepository trainerRepository;
+    @Autowired
+    private DirectorRepository directorRepository;
 
     @Transactional(readOnly = true)
     public List<EventSummary> getAllEvents(UUID requesterId, boolean isAdmin) {
@@ -97,6 +105,10 @@ public class EventService {
         if (body.getStartTime() == null || body.getEndTime() == null
                 || !body.getEndTime().isAfter(body.getStartTime())) {
             throw new BadRequestException("Event end time must be after start time");
+        }
+
+        if (!isAdmin && !canCreateEvent(requesterId, body)) {
+            throw new ForbiddenException("Access denied");
         }
 
         EventEntity entity = new EventEntity();
@@ -175,6 +187,30 @@ public class EventService {
         sportEventRepository.deleteAllById_EventId(eventId);
         teamEventRepository.deleteAllById_EventId(eventId);
         eventRepository.delete(entity);
+    }
+
+    // Per the API contract: trainers may only create events for a team they coach; directors
+    // only for a sport they direct (either linked directly via sports_linked, or via one of the
+    // linked teams' sport). Admins bypass this entirely (checked by the caller).
+    private boolean canCreateEvent(UUID requesterId, EventCreate body) {
+        List<UUID> teamIds = body.getTeamsLinked() == null
+                ? List.of()
+                : body.getTeamsLinked().stream().map(t -> parseUuid(t, "teams_linked")).collect(Collectors.toList());
+
+        boolean isTrainerOfTeam = teamIds.stream()
+                .anyMatch(teamId -> trainerRepository.existsById(new TrainerEntity.Id(teamId, requesterId)));
+        if (isTrainerOfTeam) {
+            return true;
+        }
+
+        Set<UUID> sportIds = new HashSet<>();
+        if (body.getSportsLinked() != null) {
+            sportIds.addAll(body.getSportsLinked());
+        }
+        teamRepository.findAllById(teamIds).forEach(team -> sportIds.add(team.getSportId()));
+
+        return sportIds.stream()
+                .anyMatch(sportId -> directorRepository.existsById(new DirectorEntity.Id(sportId, requesterId)));
     }
 
     private void persistLinks(UUID eventId, List<String> attendees, List<UUID> sports, List<String> teams) {

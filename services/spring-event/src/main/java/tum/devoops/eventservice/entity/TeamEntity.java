@@ -25,4 +25,7 @@ public class TeamEntity {
 
     @Column(name = "name", insertable = false, updatable = false)
     private String name;
+
+    @Column(name = "sport_id", insertable = false, updatable = false)
+    private UUID sportId;
 }
