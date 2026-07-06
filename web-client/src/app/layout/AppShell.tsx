@@ -1,13 +1,34 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { ChevronsUpDown, HelpCircle, LayoutGrid, LogOut, Settings, User } from 'lucide-react'
+import {
+  CalendarDays,
+  ChevronsUpDown,
+  CreditCard,
+  LayoutDashboard,
+  LineChart,
+  LogOut,
+  Mail,
+  type LucideIcon,
+  MessageSquareText,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  User,
+  Users,
+} from 'lucide-react'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { ThemeToggle } from '@/app/theme/ThemeToggle'
+import { useTheme } from '@/app/theme/useTheme'
+import type { Theme } from '@/app/theme/ThemeContext'
 import { useAuth } from '@/features/auth'
+import type { Role } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -21,114 +42,194 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 
-const NAV_ITEMS = [
-  { to: '/members', label: 'Members' },
-  { to: '/sport-events', label: 'Sport Events' },
-  { to: '/payments', label: 'Payments' },
-  { to: '/letters', label: 'Letters' },
-  { to: '/organization', label: 'Organization' },
-  { to: '/feedback', label: 'Feedback' },
-  { to: '/helper', label: 'GenAI Helper' },
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  roles: Role[]
+  end?: boolean
+}
+
+// Dashboard stays pinned at the top, then role-eligible destinations render as
+// one flat list. Icons let the sidebar collapse to an icon rail.
+const ALL_ROLES: Role[] = ['member', 'trainer', 'director', 'admin']
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    to: '/',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    roles: ALL_ROLES,
+    end: true,
+  },
+  { to: '/sport-events', label: 'Events', icon: CalendarDays, roles: ALL_ROLES },
+  {
+    to: '/feedback',
+    label: 'Feedback',
+    icon: MessageSquareText,
+    roles: ['member', 'trainer', 'admin'],
+  },
+  {
+    to: '/organization',
+    label: 'Teams',
+    icon: Users,
+    roles: ALL_ROLES,
+  },
+  {
+    to: '/payments',
+    label: 'Payments',
+    icon: CreditCard,
+    roles: ['member', 'director', 'admin'],
+  },
+  {
+    to: '/helper',
+    label: 'Development',
+    icon: LineChart,
+    roles: ['member', 'trainer', 'admin'],
+  },
+  {
+    to: '/members',
+    label: 'Members',
+    icon: Users,
+    roles: ['trainer', 'director', 'admin'],
+  },
+  {
+    to: '/letters',
+    label: 'Letters',
+    icon: Mail,
+    roles: ['trainer', 'director', 'admin'],
+  },
+]
+
+const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
 ]
 
 export function AppShell() {
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const userInitial = user.name.trim().charAt(0).toUpperCase() || 'U'
+  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(user.role))
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 text-caption uppercase tracking-[0.32em] text-text-tertiary">
-            <LayoutGrid className="size-4 text-sidebar-primary" />
-            Sports Club Platform
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="gap-0">
+          <div className="flex items-start justify-between gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <div className="min-w-0 pt-6 group-data-[collapsible=icon]:hidden">
+              <div className="flex items-center gap-1.5">
+                <img
+                  src="/RoostIcon.svg"
+                  alt=""
+                  aria-hidden
+                  className="h-11 w-11 shrink-0 -translate-y-1"
+                />
+                <h1 className="font-display text-display-lg uppercase tracking-wide text-balance text-sidebar-foreground">
+                  Roost
+                </h1>
+              </div>
+            </div>
+            <SidebarTrigger className="text-text-tertiary" />
           </div>
-          <div className="space-y-1 px-2">
-            <h1 className="font-display text-display-lg uppercase tracking-wide text-balance text-sidebar-foreground">
-              Team Devoops
-            </h1>
-          </div>
+          <img
+            src="/RoostIcon.svg"
+            alt="Roost"
+            className="mx-auto hidden size-6 group-data-[collapsible=icon]:block"
+          />
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarMenu>
-            {NAV_ITEMS.map(({ to, label }) => (
+          <SidebarMenu className="gap-1.5">
+            {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
               <SidebarMenuItem key={to}>
-                <NavLink to={to}>
-                  {({ isActive }) => (
-                    <SidebarMenuButton isActive={isActive}>
-                      {label}
-                    </SidebarMenuButton>
-                  )}
-                </NavLink>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={label}
+                  className="group-data-[collapsible=icon]:mx-auto"
+                >
+                  <NavLink to={to} end={end}>
+                    <Icon />
+                    <span>{label}</span>
+                  </NavLink>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
 
         <SidebarFooter>
-          <div className="space-y-3 px-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 border border-sidebar-border px-3 py-2 text-left text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-primary/30"
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="gap-3 group-data-[collapsible=icon]:mx-auto"
+                  >
+                    <Avatar className="bg-sidebar-accent text-sidebar-foreground">
+                      <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
+                        {userInitial}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                      <p className="truncate text-sm font-medium text-sidebar-foreground">
+                        {user.name}
+                      </p>
+                      <p className="truncate text-xs text-text-tertiary">{user.email}</p>
+                    </div>
+                    <ChevronsUpDown className="size-4 shrink-0 text-text-tertiary group-data-[collapsible=icon]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="right"
+                  align="end"
+                  className="w-56 border border-sidebar-border"
                 >
-                  <Avatar className="bg-sidebar-accent text-sidebar-foreground">
-                    <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
-                      {userInitial}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-sidebar-foreground">
-                      {user.name}
-                    </p>
-                    <p className="truncate text-xs text-text-tertiary">
-                      {user.email}
-                    </p>
-                  </div>
-                  <ChevronsUpDown className="size-4 shrink-0 text-text-tertiary" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="right"
-                align="end"
-                className="border border-sidebar-border"
-              >
-                <DropdownMenuItem disabled>
-                  <User className="size-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <Settings className="size-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <HelpCircle className="size-4" />
-                  Help
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={logout}>
-                  <LogOut className="size-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem disabled>
+                    <User className="size-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <Settings className="size-4" />
+                    Settings
+                  </DropdownMenuItem>
 
-          </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-caption uppercase tracking-[0.12em] text-text-tertiary">
+                    Theme
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={theme}
+                    onValueChange={(v) => setTheme(v as Theme)}
+                  >
+                    {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+                      <DropdownMenuRadioItem key={value} value={value}>
+                        <Icon className="size-4" />
+                        {label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={logout}>
+                    <LogOut className="size-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b border-border px-4">
-          <SidebarTrigger />
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
-        </header>
         <main className="min-w-0 px-page-x py-page-y">
           <Outlet />
         </main>

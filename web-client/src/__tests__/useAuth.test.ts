@@ -12,7 +12,7 @@ vi.mock('@/lib/keycloak', () => ({
 const { useAuth } = await import('@/features/auth/useAuth')
 
 describe('useAuth', () => {
-  it('reads the member_roles claim into user.roles', () => {
+  it('collapses the member_roles claim into user.role', () => {
     keycloakMock.tokenParsed = {
       name: 'Jane Coach',
       email: 'jane@example.com',
@@ -21,14 +21,14 @@ describe('useAuth', () => {
 
     const { user } = useAuth()
 
-    expect(user.roles).toEqual(['Coach', 'Admin'])
+    expect(user.role).toBe('admin')
   })
 
-  it('defaults roles to an empty array when the claim is absent', () => {
+  it('defaults role to member when the claim is absent', () => {
     keycloakMock.tokenParsed = { name: 'Jane', email: 'jane@example.com' }
 
     const { user } = useAuth()
 
-    expect(user.roles).toEqual([])
+    expect(user.role).toBe('member')
   })
 })

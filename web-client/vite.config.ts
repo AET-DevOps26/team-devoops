@@ -18,11 +18,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost',
         changeOrigin: true,
+        // No rewrite needed: Traefik's stripprefix middlewares already leave the path in
+        // the shape each backend expects (`/api/v1` stripped for most services, leaving
+        // e.g. `/organization/teams`; the full `/api/v1/helper` stripped for py-genai-helper,
+        // leaving `/reports/...`), so the client's request path can be forwarded as-is.
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            // Strip cookies — backend services don't need them and
-            // the browser sends huge cookie jars from other localhost apps
-            // which can exceed http-proxy's header size limit (→ 400).
+            // Strip cookies: unused by services, and big localhost cookie jars can 400.
             proxyReq.removeHeader('cookie')
           })
         },

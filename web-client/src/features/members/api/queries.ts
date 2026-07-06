@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { getCurrentUser } from '@/features/auth/currentUser'
+import { memberFixtures, memberSummaryFixtures } from '@/mocks/fixtures'
+import { mockOr } from '@/mocks/mockSwitch'
+import { scopeMembers } from '@/mocks/scope'
 import { membersClient } from './client'
 import type { Member, MemberCreate, MemberPartialUpdate, MemberSummary } from '../types'
 
@@ -19,14 +23,27 @@ export function useMembersHello() {
 export function useMembers() {
   return useQuery<MemberSummary[]>({
     queryKey: membersKeys.all,
-    queryFn: () => membersClient.get<MemberSummary[]>('/').then(r => r.data),
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve(scopeMembers(memberSummaryFixtures, getCurrentUser())),
+        () => membersClient.get<MemberSummary[]>('').then(r => r.data),
+      ),
   })
 }
 
 export function useMember(id: string) {
   return useQuery<Member>({
     queryKey: membersKeys.detail(id),
-    queryFn: () => membersClient.get<Member>(`/${id}`).then(r => r.data),
+    queryFn: () =>
+      mockOr(
+        () => {
+          const found = memberFixtures.find(m => m.id === id)
+          const scoped = found ? scopeMembers([found], getCurrentUser()) : []
+          if (!scoped[0]) throw new Error('Member not found')
+          return Promise.resolve(scoped[0])
+        },
+        () => membersClient.get<Member>(`/${id}`).then(r => r.data),
+      ),
     enabled: !!id,
   })
 }
@@ -35,7 +52,7 @@ export function useCreateMember() {
   const qc = useQueryClient()
 
   return useMutation<Member, Error, MemberCreate>({
-    mutationFn: data => membersClient.post<Member>('/', data).then(r => r.data),
+    mutationFn: data => membersClient.post<Member>('', data).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: membersKeys.all }),
   })
 }

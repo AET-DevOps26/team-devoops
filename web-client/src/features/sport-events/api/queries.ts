@@ -1,42 +1,69 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { getCurrentUser } from '@/features/auth/currentUser'
+import { eventDetailsById, eventSummaryFixtures } from '@/mocks/fixtures'
+import { mockOr } from '@/mocks/mockSwitch'
+import { scopeEvents } from '@/mocks/scope'
 import { sportEventsClient } from './client'
 import type { SportEvent, EventCreate, EventPartialUpdate, EventSummary } from '../types'
 
-export const sportEventsKeys = {
+export const eventKeys = {
   hello: ['sport-events', 'hello'] as const,
   all: ['sport-events'] as const,
-  detail: (id: string) => ['sport-events', id] as const,
+  list: () => ['sport-events', 'list'] as const,
+  detail: (id: string | null | undefined) => ['sport-events', 'detail', id] as const,
 }
+
+export const sportEventsKeys = eventKeys
 
 export function useSportEventsHello() {
   return useQuery<string>({
-    queryKey: sportEventsKeys.hello,
+    queryKey: eventKeys.hello,
     queryFn: () => sportEventsClient.get<string>('/hello').then(r => r.data),
   })
 }
 
-export function useSportEvents() {
+export function useEventsList(enabled = true) {
   return useQuery<EventSummary[]>({
-    queryKey: sportEventsKeys.all,
-    queryFn: () => sportEventsClient.get<EventSummary[]>('/').then(r => r.data),
+    queryKey: eventKeys.list(),
+    staleTime: 30_000,
+    enabled,
+    queryFn: () =>
+      mockOr(
+        () => Promise.resolve(scopeEvents(eventSummaryFixtures, getCurrentUser())),
+        () => sportEventsClient.get<EventSummary[]>('').then(r => r.data),
+      ),
   })
 }
 
-export function useSportEvent(id: string) {
+export function useEvent(id: string | null | undefined) {
   return useQuery<SportEvent>({
-    queryKey: sportEventsKeys.detail(id),
-    queryFn: () => sportEventsClient.get<SportEvent>(`/${id}`).then(r => r.data),
+    queryKey: eventKeys.detail(id),
+    queryFn: () =>
+      mockOr(
+        () => {
+          const found = id ? eventDetailsById[id] : undefined
+          const scoped = found ? scopeEvents([found], getCurrentUser()) : []
+          if (!scoped[0]) {
+            throw new Error('Event not found')
+          }
+          return Promise.resolve(scoped[0])
+        },
+        () => sportEventsClient.get<SportEvent>(`/${id}`).then(r => r.data),
+      ),
     enabled: !!id,
   })
 }
+
+export const useSportEvents = useEventsList
+export const useSportEvent = useEvent
 
 export function useCreateSportEvent() {
   const qc = useQueryClient()
 
   return useMutation<SportEvent, Error, EventCreate>({
-    mutationFn: data => sportEventsClient.post<SportEvent>('/', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: sportEventsKeys.all }),
+    mutationFn: data => sportEventsClient.post<SportEvent>('', data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: eventKeys.all }),
   })
 }
 
@@ -46,8 +73,8 @@ export function useUpdateSportEvent() {
   return useMutation<SportEvent, Error, { id: string } & EventPartialUpdate>({
     mutationFn: ({ id, ...data }) => sportEventsClient.patch<SportEvent>(`/${id}`, data).then(r => r.data),
     onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: sportEventsKeys.all })
-      qc.invalidateQueries({ queryKey: sportEventsKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: eventKeys.all })
+      qc.invalidateQueries({ queryKey: eventKeys.detail(id) })
     },
   })
 }
@@ -58,8 +85,8 @@ export function useDeleteSportEvent() {
   return useMutation<void, Error, string>({
     mutationFn: id => sportEventsClient.delete(`/${id}`).then(() => undefined),
     onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: sportEventsKeys.all })
-      qc.removeQueries({ queryKey: sportEventsKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: eventKeys.all })
+      qc.removeQueries({ queryKey: eventKeys.detail(id) })
     },
   })
 }
