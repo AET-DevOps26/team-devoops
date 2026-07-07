@@ -47,8 +47,10 @@ public class KeycloakService {
                 ? member.getEmail()
                 : (member.getFirstName() + member.getLastName()).toLowerCase();
 
+        // temporary=true: Keycloak forces an UPDATE_PASSWORD required action on first login,
+        // so the admin-chosen initial password never lingers as the member's permanent one.
         List<Credential> credentials = member.getPassword() != null
-                ? List.of(new Credential("password", member.getPassword(), false))
+                ? List.of(new Credential("password", member.getPassword(), true))
                 : List.of();
 
         UserRepresentation body = new UserRepresentation(
