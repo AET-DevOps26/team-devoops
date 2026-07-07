@@ -1,5 +1,14 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
-import { MinusCircle, Plus, PlusCircle, Trash2, X } from 'lucide-react'
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { Check, ChevronsUpDown, MinusCircle, Plus, PlusCircle, Trash2, X } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -25,6 +34,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
   SelectContent,
@@ -36,19 +47,29 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
 import { Textarea } from '@/components/ui/textarea'
-import { serverErrorMessage } from '@/lib/server-error'
+import { serverErrorFieldMessages, serverErrorMessage } from '@/lib/server-error'
 import { cn } from '@/lib/utils'
 import { useCreateTransaction, useDeleteTransaction } from '../api/queries'
 import { usePaymentsUiStore } from '../model/paymentsUiStore'
 import {
+  type BalanceFilters,
   type ManagedPaymentsView,
   type PaymentMemberOption,
   type PaymentRow,
   type PaymentsView,
+  filterBalanceRows,
   usePaymentsViewModel,
 } from '../model/usePaymentsViewModel'
 
 type TransactionKind = 'charge' | 'payment'
+
+const MEMBER_PICKER_RESULT_LIMIT = 8
+
+const DEFAULT_BALANCE_FILTERS: BalanceFilters = {
+  search: '',
+  status: 'all',
+  sort: 'name-asc',
+}
 
 export function PaymentsPage() {
   const { view, isLoading, error } = usePaymentsViewModel()
@@ -412,6 +433,50 @@ function PaymentsToolbar({
   )
 }
 
+function BalanceToolbar({
+  filters,
+  setSearch,
+  setStatus,
+  setSort,
+}: {
+  filters: BalanceFilters
+  setSearch: (search: string) => void
+  setStatus: (status: BalanceFilters['status']) => void
+  setSort: (sort: BalanceFilters['sort']) => void
+}) {
+  return (
+    <TableToolbar
+      searchValue={filters.search}
+      onSearchChange={setSearch}
+      searchLabel="Search members"
+      searchPlaceholder="Search members"
+    >
+      <Select value={filters.status} onValueChange={setStatus}>
+        <SelectTrigger aria-label="Filter balances by status">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="overdue">Overdue</SelectItem>
+          <SelectItem value="clear">Clear</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.sort} onValueChange={setSort}>
+        <SelectTrigger aria-label="Sort balances">
+          <SelectValue placeholder="Sort" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="name-asc">Name A-Z</SelectItem>
+          <SelectItem value="balance-asc">Most owed first</SelectItem>
+          <SelectItem value="balance-desc">Highest balance first</SelectItem>
+          <SelectItem value="transactions-desc">Most transactions</SelectItem>
+        </SelectContent>
+      </Select>
+    </TableToolbar>
+  )
+}
+
 function BalanceTable({
   view,
   onSelectMember,
@@ -419,6 +484,21 @@ function BalanceTable({
   view: ManagedPaymentsView
   onSelectMember: (memberId: string | null) => void
 }) {
+  const [balanceFilters, setBalanceFilters] = useState<BalanceFilters>(DEFAULT_BALANCE_FILTERS)
+  const filteredBalances = useMemo(
+    () => filterBalanceRows(view.balances, balanceFilters),
+    [balanceFilters, view.balances],
+  )
+  const setBalanceSearch = useCallback((search: string) => {
+    setBalanceFilters((current) => ({ ...current, search }))
+  }, [])
+  const setBalanceStatus = useCallback((status: BalanceFilters['status']) => {
+    setBalanceFilters((current) => ({ ...current, status }))
+  }, [])
+  const setBalanceSort = useCallback((sort: BalanceFilters['sort']) => {
+    setBalanceFilters((current) => ({ ...current, sort }))
+  }, [])
+
   if (view.balances.length === 0) {
     return (
       <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
@@ -430,57 +510,70 @@ function BalanceTable({
   return (
     <div className="space-y-3">
       <h2 className="text-h3 font-semibold tracking-tight text-text-primary">Balances</h2>
-      <DataTable>
-        <thead>
-          <tr>
-            <THead>Member</THead>
-            <THead>Status</THead>
-            <THead className="text-right">Transactions</THead>
-            <THead className="text-right">Balance</THead>
-          </tr>
-        </thead>
-        <tbody>
-          {view.balances.map((balance) => (
-            <TRow
-              key={balance.memberId}
-              role="button"
-              tabIndex={0}
-              aria-pressed={balance.isSelected}
-              onClick={() => onSelectMember(balance.isSelected ? null : balance.memberId)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  onSelectMember(balance.isSelected ? null : balance.memberId)
-                }
-              }}
-              className={cn(
-                'cursor-pointer outline-none focus-visible:bg-surface-sunken/70 focus-visible:ring-2 focus-visible:ring-ring/30',
-                balance.isSelected && 'bg-primary/8 hover:bg-primary/10',
-              )}
-            >
-              <TCell className="font-medium">{balance.memberName}</TCell>
-              <TCell>
-                <Badge tone={balance.status === 'overdue' ? 'negative' : 'positive'} size="sm">
-                  {balance.status === 'overdue' ? 'Overdue' : 'Clear'}
-                </Badge>
-              </TCell>
-              <TCell className="text-right tabular-nums text-text-secondary">
-                {balance.transactionCount}
-              </TCell>
-              <TCell
+      <BalanceToolbar
+        filters={balanceFilters}
+        setSearch={setBalanceSearch}
+        setStatus={setBalanceStatus}
+        setSort={setBalanceSort}
+      />
+
+      {filteredBalances.length === 0 ? (
+        <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
+          No members match the current filters.
+        </p>
+      ) : (
+        <DataTable>
+          <thead>
+            <tr>
+              <THead>Member</THead>
+              <THead>Status</THead>
+              <THead className="text-right">Transactions</THead>
+              <THead className="text-right">Balance</THead>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBalances.map((balance) => (
+              <TRow
+                key={balance.memberId}
+                role="button"
+                tabIndex={0}
+                aria-pressed={balance.isSelected}
+                onClick={() => onSelectMember(balance.isSelected ? null : balance.memberId)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelectMember(balance.isSelected ? null : balance.memberId)
+                  }
+                }}
                 className={cn(
-                  'text-right font-semibold tabular-nums',
-                  balance.status === 'overdue'
-                    ? 'text-destructive'
-                    : 'text-[oklch(0.5_0.17_145)] dark:text-[oklch(0.72_0.17_145)]',
+                  'cursor-pointer outline-none focus-visible:bg-surface-sunken/70 focus-visible:ring-2 focus-visible:ring-ring/30',
+                  balance.isSelected && 'bg-primary/8 hover:bg-primary/10',
                 )}
               >
-                {balance.balanceFormatted}
-              </TCell>
-            </TRow>
-          ))}
-        </tbody>
-      </DataTable>
+                <TCell className="font-medium">{balance.memberName}</TCell>
+                <TCell>
+                  <Badge tone={balance.status === 'overdue' ? 'negative' : 'positive'} size="sm">
+                    {balance.status === 'overdue' ? 'Overdue' : 'Clear'}
+                  </Badge>
+                </TCell>
+                <TCell className="text-right tabular-nums text-text-secondary">
+                  {balance.transactionCount}
+                </TCell>
+                <TCell
+                  className={cn(
+                    'text-right font-semibold tabular-nums',
+                    balance.status === 'overdue'
+                      ? 'text-destructive'
+                      : 'text-[oklch(0.5_0.17_145)] dark:text-[oklch(0.72_0.17_145)]',
+                  )}
+                >
+                  {balance.balanceFormatted}
+                </TCell>
+              </TRow>
+            ))}
+          </tbody>
+        </DataTable>
+      )}
     </div>
   )
 }
@@ -559,16 +652,14 @@ function ManagedTransactionsTable({
             <AmountCell transaction={transaction} />
             <TCell className="text-right">
               {transaction.canDelete && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon-xs"
-                  title={`Delete ${transaction.title}`}
-                  onClick={() => onDelete(transaction.id)}
-                >
-                  <Trash2 />
-                  <span className="sr-only">Delete {transaction.title}</span>
-                </Button>
+                <RowActions>
+                  <RowActionButton
+                    icon={Trash2}
+                    label={`Delete ${transaction.title}`}
+                    destructive
+                    onClick={() => onDelete(transaction.id)}
+                  />
+                </RowActions>
               )}
             </TCell>
           </TRow>
@@ -593,6 +684,203 @@ function AmountCell({ transaction }: { transaction: PaymentRow }) {
   )
 }
 
+function MemberSearchPicker({
+  triggerId,
+  members,
+  value,
+  onChange,
+  disabled,
+  invalid,
+}: {
+  triggerId: string
+  members: PaymentMemberOption[]
+  value: string
+  onChange: (memberId: string) => void
+  disabled: boolean
+  invalid: boolean
+}) {
+  const inputId = useId()
+  const listId = useId()
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const selectedMember = useMemo(
+    () => members.find((member) => member.id === value) ?? null,
+    [members, value],
+  )
+  const matchingMembers = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase()
+
+    if (normalizedSearch.length === 0) return members
+
+    return members.filter((member) =>
+      member.name.toLocaleLowerCase().includes(normalizedSearch),
+    )
+  }, [members, search])
+  const visibleMembers = matchingMembers.slice(0, MEMBER_PICKER_RESULT_LIMIT)
+  const clampedActiveIndex =
+    visibleMembers.length === 0
+      ? -1
+      : Math.min(Math.max(activeIndex, 0), visibleMembers.length - 1)
+  const activeOptionId =
+    isOpen && clampedActiveIndex >= 0 && visibleMembers[clampedActiveIndex]
+      ? `${listId}-option-${clampedActiveIndex}`
+      : undefined
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const timeout = window.setTimeout(() => inputRef.current?.focus(), 0)
+
+    return () => window.clearTimeout(timeout)
+  }, [isOpen])
+
+  const handleOpenChange = (open: boolean) => {
+    if (disabled) return
+
+    setIsOpen(open)
+
+    if (open) {
+      setSearch('')
+      setActiveIndex(0)
+    }
+  }
+
+  const selectMember = (memberId: string) => {
+    onChange(memberId)
+    setIsOpen(false)
+    setSearch('')
+    setActiveIndex(0)
+    window.setTimeout(() => triggerRef.current?.focus(), 0)
+  }
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveIndex((currentIndex) =>
+        visibleMembers.length === 0
+          ? -1
+          : Math.min(currentIndex + 1, visibleMembers.length - 1),
+      )
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveIndex((currentIndex) =>
+        visibleMembers.length === 0
+          ? -1
+          : Math.max(currentIndex - 1, 0),
+      )
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      const activeMember = visibleMembers[clampedActiveIndex]
+
+      if (activeMember) {
+        selectMember(activeMember.id)
+      }
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsOpen(false)
+      triggerRef.current?.focus()
+    }
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          ref={triggerRef}
+          id={triggerId}
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-controls={listId}
+          aria-expanded={isOpen}
+          aria-invalid={invalid || undefined}
+          disabled={disabled}
+          className={cn(
+            'w-full justify-between px-3 text-left text-sm font-medium normal-case tracking-normal',
+            !selectedMember && 'text-text-tertiary',
+          )}
+        >
+          <span className="truncate">{selectedMember?.name ?? 'Select member'}</span>
+          <ChevronsUpDown data-icon="inline-end" className="opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] min-w-72 p-0"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <div className="border-b border-border p-2">
+          <Label htmlFor={inputId} className="sr-only">
+            Search members
+          </Label>
+          <Input
+            ref={inputRef}
+            id={inputId}
+            type="search"
+            value={search}
+            placeholder="Search members"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls={listId}
+            aria-expanded={isOpen}
+            aria-activedescendant={activeOptionId}
+            className="h-9 bg-card"
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setActiveIndex(0)
+            }}
+            onKeyDown={handleInputKeyDown}
+          />
+        </div>
+        <div id={listId} role="listbox" className="roost-scroll max-h-64 overflow-y-auto p-1">
+          {visibleMembers.length > 0 ? (
+            visibleMembers.map((member, index) => (
+              <button
+                key={member.id}
+                id={`${listId}-option-${index}`}
+                type="button"
+                role="option"
+                aria-selected={member.id === value}
+                className={cn(
+                  'flex h-9 w-full items-center justify-between gap-2 px-3 text-left text-sm text-text-primary outline-none',
+                  index === clampedActiveIndex && 'bg-muted',
+                  member.id === value && 'font-semibold',
+                )}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectMember(member.id)}
+              >
+                <span className="truncate">{member.name}</span>
+                <Check
+                  className={cn(
+                    'size-4 text-primary opacity-0',
+                    member.id === value && 'opacity-100',
+                  )}
+                />
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-6 text-center text-body-sm text-text-secondary">
+              No members found.
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }) {
   const isOpen = usePaymentsUiStore((state) => state.isCreateDialogOpen)
   const closeCreateDialog = usePaymentsUiStore((state) => state.closeCreateDialog)
@@ -604,11 +892,13 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const sortedMembers = useMemo(
     () => members.toSorted((a, b) => a.name.localeCompare(b.name)),
     [members],
   )
-  const selectedMemberId = memberId || sortedMembers[0]?.id || ''
+  const memberStillListed = sortedMembers.some((member) => member.id === memberId)
+  const effectiveMemberId = memberStillListed ? memberId : ''
 
   const resetForm = () => {
     setMemberId('')
@@ -617,6 +907,7 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
     setTitle('')
     setDescription('')
     setFormError(null)
+    setFieldErrors(null)
   }
 
   const handleClose = () => {
@@ -630,7 +921,7 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
     const amountCents = parseEuroAmountCents(amount)
     const trimmedTitle = title.trim()
 
-    if (!selectedMemberId) {
+    if (!effectiveMemberId) {
       setFormError('Select a member.')
       return
     }
@@ -644,10 +935,11 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
     }
 
     setFormError(null)
+    setFieldErrors(null)
 
     try {
       const created = await createTransaction.mutateAsync({
-        member: selectedMemberId,
+        member: effectiveMemberId,
         amount_cents: kind === 'charge' ? -amountCents : amountCents,
         title: trimmedTitle,
         description: description.trim() || undefined,
@@ -657,12 +949,13 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
       handleClose()
     } catch (error) {
       setFormError(serverErrorMessage(error))
+      setFieldErrors(serverErrorFieldMessages(error))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New Transaction</DialogTitle>
         </DialogHeader>
@@ -670,50 +963,55 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-1.5">
             <Label htmlFor="payment-member">Member</Label>
-            <Select
-              value={selectedMemberId}
-              onValueChange={setMemberId}
+            <MemberSearchPicker
+              triggerId="payment-member"
+              members={sortedMembers}
+              value={effectiveMemberId}
+              onChange={setMemberId}
               disabled={createTransaction.isPending || sortedMembers.length === 0}
-            >
-              <SelectTrigger id="payment-member" className="w-full">
-                <SelectValue placeholder="Select member" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedMembers.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              invalid={(formError !== null && !effectiveMemberId) || fieldErrors?.member !== undefined}
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Type</Label>
-            <div className="grid grid-cols-2 border border-border bg-card p-1">
+            <div className="grid grid-cols-2 gap-1 border border-border bg-card p-1">
               <Button
                 type="button"
-                variant={kind === 'charge' ? 'secondary' : 'ghost'}
+                variant="ghost"
                 aria-pressed={kind === 'charge'}
                 onClick={() => setKind('charge')}
                 disabled={createTransaction.isPending}
-                className="w-full"
+                className={cn(
+                  'h-auto w-full flex-col gap-1 border px-3 py-3 text-center',
+                  kind === 'charge'
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive shadow-sm hover:bg-destructive/15'
+                    : 'border-transparent text-text-secondary hover:bg-destructive/8 hover:text-destructive',
+                )}
               >
-                <MinusCircle data-icon="inline-start" />
-                Charge
+                <MinusCircle className="size-4" />
+                <span>Charge</span>
               </Button>
               <Button
                 type="button"
-                variant={kind === 'payment' ? 'secondary' : 'ghost'}
+                variant="ghost"
                 aria-pressed={kind === 'payment'}
                 onClick={() => setKind('payment')}
                 disabled={createTransaction.isPending}
-                className="w-full"
+                className={cn(
+                  'h-auto w-full flex-col gap-1 border px-3 py-3 text-center',
+                  kind === 'payment'
+                    ? 'border-emerald-500/40 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+                    : 'border-transparent text-text-secondary hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300',
+                )}
               >
-                <PlusCircle data-icon="inline-start" />
-                Payment
+                <PlusCircle className="size-4" />
+                <span>Payment</span>
               </Button>
             </div>
+            <p className="text-body-sm text-text-secondary">
+              Charge increases what the member owes; payment reduces it.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -727,8 +1025,14 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
                 placeholder="0.00"
                 required
                 disabled={createTransaction.isPending}
-                aria-invalid={formError !== null && parseEuroAmountCents(amount) === null}
+                aria-invalid={
+                  (formError !== null && parseEuroAmountCents(amount) === null) ||
+                  fieldErrors?.amount_cents !== undefined
+                }
               />
+              {fieldErrors?.amount_cents && (
+                <p className="text-caption text-destructive">{fieldErrors.amount_cents}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -739,8 +1043,13 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
                 onChange={(event) => setTitle(event.target.value)}
                 required
                 disabled={createTransaction.isPending}
-                aria-invalid={formError !== null && title.trim() === ''}
+                aria-invalid={
+                  (formError !== null && title.trim() === '') || fieldErrors?.title !== undefined
+                }
               />
+              {fieldErrors?.title && (
+                <p className="text-caption text-destructive">{fieldErrors.title}</p>
+              )}
             </div>
           </div>
 

@@ -2,6 +2,7 @@ package tum.devoops.memberservice.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tum.devoops.memberservice.converter.MemberConverter;
 import tum.devoops.memberservice.entity.MemberEntity;
 import tum.devoops.memberservice.exception.BadRequestException;
@@ -42,14 +43,15 @@ public class MemberService {
                 .map(MemberConverter::convertMemberEntityToMember);
     }
 
-    public Member createMember(MemberCreate memberCreate, String bearerToken) {
+    @Transactional
+    public Member createMember(MemberCreate memberCreate) {
         if (memberRepository.findByEmail(memberCreate.getEmail()).isPresent()) {
             throw new ConflictException("Email already in use by another member");
         }
 
         UUID id;
         try {
-            id = keycloakService.createUser(memberCreate, bearerToken);
+            id = keycloakService.createUser(memberCreate);
         } catch (Exception e) {
             throw new BadRequestException("Failed to create member: " + e.getMessage());
         }
@@ -60,7 +62,8 @@ public class MemberService {
         return MemberConverter.convertMemberEntityToMember(memberEntity);
     }
 
-    public Member updateMember(UUID memberId, MemberPartialUpdate update, String bearerToken) {
+    @Transactional
+    public Member updateMember(UUID memberId, MemberPartialUpdate update) {
         MemberEntity entity = memberRepository.findById(memberId)
                 .orElseThrow(() -> new NotFoundException("Member not found: " + memberId));
 
@@ -72,28 +75,36 @@ public class MemberService {
                     });
         }
 
+        boolean requiresKeycloakSync = requiresKeycloakSync(update);
         MemberConverter.applyPartialUpdate(entity, update);
 
-        try {
-            keycloakService.updateUser(MemberConverter.convertMemberEntityToMember(entity), bearerToken);
-        } catch (Exception e) {
-            throw new BadRequestException("Failed to update member: " + e.getMessage());
+        if (requiresKeycloakSync) {
+            try {
+                keycloakService.updateUser(MemberConverter.convertMemberEntityToMember(entity));
+            } catch (Exception e) {
+                throw new BadRequestException("Failed to update member: " + e.getMessage());
+            }
         }
 
         MemberEntity saved = memberRepository.save(entity);
         return MemberConverter.convertMemberEntityToMember(saved);
     }
 
-    public void deleteMember(UUID id, String bearerToken) {
+    @Transactional
+    public void deleteMember(UUID id) {
         MemberEntity entity = memberRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Member not found: " + id));
 
         try {
-            keycloakService.deleteUser(id, bearerToken);
+            keycloakService.deleteUser(id);
         } catch (Exception e) {
             throw new BadRequestException("Failed to delete member: " + e.getMessage());
         }
 
         memberRepository.delete(entity);
+    }
+
+    private static boolean requiresKeycloakSync(MemberPartialUpdate update) {
+        return update.getFirstName() != null || update.getLastName() != null || update.getEmail() != null;
     }
 }

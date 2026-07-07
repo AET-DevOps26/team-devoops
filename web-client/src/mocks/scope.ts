@@ -57,6 +57,14 @@ function memberIdsInTrainerScope(user: AuthUser): Set<string> {
   return teamMemberIds(trainerTeamIds(user.id))
 }
 
+export function directorManagesMember(userId: string, memberId: string): boolean {
+  return teamMemberIds(sportTeamIds(directorSports(userId))).has(memberId)
+}
+
+export function trainerManagesMember(userId: string, memberId: string): boolean {
+  return teamMemberIds(trainerTeamIds(userId)).has(memberId)
+}
+
 function eventHasTeam(row: EventRow, teamIds: Set<string>): boolean {
   return row.teams_linked?.some((team) => teamIds.has(team.id)) ?? false
 }

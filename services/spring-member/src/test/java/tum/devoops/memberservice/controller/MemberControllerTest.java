@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -241,7 +240,7 @@ public class MemberControllerTest {
 
     @Test
     void createMemberAllowedForAdmin() throws Exception {
-        when(memberService.createMember(eq(memberCreate), anyString())).thenReturn(member);
+        when(memberService.createMember(eq(memberCreate))).thenReturn(member);
 
         mockMvc.perform(post("/members")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -276,7 +275,7 @@ public class MemberControllerTest {
 
     @Test
     void createMemberReturnsBadRequestOnKeycloakFailure() throws Exception {
-        when(memberService.createMember(any(), anyString()))
+        when(memberService.createMember(any()))
                 .thenThrow(new BadRequestException("Failed to create member: keycloak down"));
 
         mockMvc.perform(post("/members")
@@ -292,7 +291,7 @@ public class MemberControllerTest {
 
     @Test
     void createMemberReturnsConflictOnEmailConflict() throws Exception {
-        when(memberService.createMember(any(), anyString()))
+        when(memberService.createMember(any()))
                 .thenThrow(new ConflictException("Email already in use"));
 
         mockMvc.perform(post("/members")
@@ -310,7 +309,7 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberAllowedForAdmin() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(updatedMember);
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class))).thenReturn(updatedMember);
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -340,7 +339,7 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberAllowedForMemberSameId() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString())).thenReturn(updatedMember);
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class))).thenReturn(updatedMember);
 
         mockMvc.perform(patch("/members/{id}", id)
                         .with(jwt()
@@ -392,7 +391,7 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberReturnsNotFoundForMissingMember() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString()))
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class)))
                 .thenThrow(new NotFoundException("Member not found: " + id));
 
         mockMvc.perform(patch("/members/{id}", id)
@@ -408,7 +407,7 @@ public class MemberControllerTest {
 
     @Test
     void updateMemberReturnsConflictOnEmailConflict() throws Exception {
-        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class), anyString()))
+        when(memberService.updateMember(eq(id), any(MemberPartialUpdate.class)))
                 .thenThrow(new ConflictException("Email already in use"));
 
         mockMvc.perform(patch("/members/{id}", id)
@@ -467,7 +466,7 @@ public class MemberControllerTest {
     @Test
     void deleteMemberReturnsNotFoundForMissingMember() throws Exception {
         doThrow(new NotFoundException("Member not found: " + id))
-                .when(memberService).deleteMember(eq(id), anyString());
+                .when(memberService).deleteMember(eq(id));
 
         mockMvc.perform(delete("/members/{id}", id)
                         .with(jwt()

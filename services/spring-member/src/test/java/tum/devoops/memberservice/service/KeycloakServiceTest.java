@@ -4,8 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import tum.devoops.memberservice.model.Member;
 import tum.devoops.memberservice.model.MemberCreate;
@@ -15,6 +17,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
@@ -22,7 +26,10 @@ class KeycloakServiceTest {
 
     private static final String BASE_URL = "http://keycloak.test";
     private static final String REALM = "test-realm";
-    private static final String TOKEN = "mock-token";
+    private static final String SERVICE_ACCOUNT_CLIENT_ID = "member-service";
+    private static final String SERVICE_ACCOUNT_CLIENT_SECRET = "member-service-secret";
+    private static final String SERVICE_ACCOUNT_TOKEN = "service-account-token";
+    private static final String TOKEN_URI = BASE_URL + "/realms/" + REALM + "/protocol/openid-connect/token";
     private static final String USERS_URI = BASE_URL + "/admin/realms/" + REALM + "/users";
 
     private MockRestServiceServer server;
@@ -37,8 +44,7 @@ class KeycloakServiceTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
 
-        keycloakService = new KeycloakService(builder, BASE_URL);
-        ReflectionTestUtils.setField(keycloakService, "realm", REALM);
+        keycloakService = new KeycloakService(builder, BASE_URL, REALM, SERVICE_ACCOUNT_CLIENT_ID, SERVICE_ACCOUNT_CLIENT_SECRET);
 
         id = UUID.randomUUID();
 
@@ -64,11 +70,13 @@ class KeycloakServiceTest {
     // Verifies that a successful creation returns the id parsed from the Location header
     @Test
     void createUserReturnsIdFromLocationHeader() throws Exception {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
 
-        UUID result = keycloakService.createUser(memberCreate, TOKEN);
+        UUID result = keycloakService.createUser(memberCreate);
 
         assertEquals(id, result);
     }
@@ -78,11 +86,13 @@ class KeycloakServiceTest {
     void createUserWithoutEmailReturnsId() throws Exception {
         memberCreate.setEmail(null);
 
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
 
-        UUID result = keycloakService.createUser(memberCreate, TOKEN);
+        UUID result = keycloakService.createUser(memberCreate);
 
         assertEquals(id, result);
     }
@@ -90,81 +100,113 @@ class KeycloakServiceTest {
     // Verifies that a 409 conflict is translated into an IllegalAccessException
     @Test
     void createUserThrowsOnConflict() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CONFLICT));
 
-        assertThrows(IllegalAccessException.class, () -> keycloakService.createUser(memberCreate, TOKEN));
+        assertThrows(IllegalAccessException.class, () -> keycloakService.createUser(memberCreate));
     }
 
     // Verifies that a 403 forbidden is translated into a SecurityException
     @Test
     void createUserThrowsOnForbidden() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-        assertThrows(SecurityException.class, () -> keycloakService.createUser(memberCreate, TOKEN));
+        assertThrows(SecurityException.class, () -> keycloakService.createUser(memberCreate));
     }
 
     // Verifies that a creation without a Location header fails with an IllegalStateException
     @Test
     void createUserThrowsWhenNoLocationHeader() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
-        assertThrows(IllegalStateException.class, () -> keycloakService.createUser(memberCreate, TOKEN));
+        assertThrows(IllegalStateException.class, () -> keycloakService.createUser(memberCreate));
     }
 
     // Verifies that a successful update completes without throwing
     @Test
     void updateUserSucceeds() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        keycloakService.updateUser(member, TOKEN);
+        keycloakService.updateUser(member);
     }
 
     // Verifies that a 409 conflict is translated into an IllegalArgumentException
     @Test
     void updateUserThrowsOnConflict() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CONFLICT));
 
-        assertThrows(IllegalArgumentException.class, () -> keycloakService.updateUser(member, TOKEN));
+        assertThrows(IllegalArgumentException.class, () -> keycloakService.updateUser(member));
     }
 
     // Verifies that a 403 forbidden is translated into a SecurityException
     @Test
     void updateUserThrowsOnForbidden() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-        assertThrows(SecurityException.class, () -> keycloakService.updateUser(member, TOKEN));
+        assertThrows(SecurityException.class, () -> keycloakService.updateUser(member));
     }
 
     // Verifies that a successful deletion completes without throwing
     @Test
     void deleteUserSucceeds() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        keycloakService.deleteUser(id, TOKEN);
+        keycloakService.deleteUser(id);
     }
 
     // Verifies that a 404 not found is translated into an IllegalArgumentException
     @Test
     void deleteUserThrowsOnNotFound() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThrows(IllegalArgumentException.class, () -> keycloakService.deleteUser(id, TOKEN));
+        assertThrows(IllegalArgumentException.class, () -> keycloakService.deleteUser(id));
     }
 
     // Verifies that a 403 forbidden is translated into a SecurityException
     @Test
     void deleteUserThrowsOnForbidden() {
+        expectServiceAccountTokenRequest();
         server.expect(requestTo(USERS_URI + "/" + id))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
-        assertThrows(SecurityException.class, () -> keycloakService.deleteUser(id, TOKEN));
+        assertThrows(SecurityException.class, () -> keycloakService.deleteUser(id));
+    }
+
+    private void expectServiceAccountTokenRequest() {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "client_credentials");
+        form.add("client_id", SERVICE_ACCOUNT_CLIENT_ID);
+        form.add("client_secret", SERVICE_ACCOUNT_CLIENT_SECRET);
+
+        server.expect(requestTo(TOKEN_URI))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_FORM_URLENCODED))
+                .andExpect(content().formData(form))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"access_token\":\"" + SERVICE_ACCOUNT_TOKEN + "\",\"expires_in\":300}"));
     }
 }

@@ -9,6 +9,11 @@ const mockState = vi.hoisted(() => ({
   persona: 'coach' as PersonaKey,
 }))
 
+const organizationQueryMocks = vi.hoisted(() => ({
+  useSportsList: vi.fn(),
+  useTeamsList: vi.fn(),
+}))
+
 vi.mock('@/features/auth', async () => {
   const { MOCK_PERSONAS } = await import('@/mocks/personas')
 
@@ -46,22 +51,26 @@ vi.mock('@/features/sport-events/api/queries', async () => {
 vi.mock('@/features/organization/api/queries', async () => {
   const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
 
+  organizationQueryMocks.useSportsList.mockImplementation((enabled = true) => ({
+    data: enabled ? sportFixtures : undefined,
+    isLoading: false,
+    error: null,
+  }))
+  organizationQueryMocks.useTeamsList.mockImplementation((enabled = true) => ({
+    data: enabled ? teamFixtures : undefined,
+    isLoading: false,
+    error: null,
+  }))
+
   return {
-    useSportsList: () => ({
-      data: sportFixtures,
-      isLoading: false,
-      error: null,
-    }),
-    useTeamsList: () => ({
-      data: teamFixtures,
-      isLoading: false,
-      error: null,
-    }),
+    useSportsList: organizationQueryMocks.useSportsList,
+    useTeamsList: organizationQueryMocks.useTeamsList,
   }
 })
 
 const { DashboardPage } = await import('@/app/pages/DashboardPage')
 const { dashboardFixtures } = await import('@/mocks/fixtures/dashboard')
+const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
 const { formatCents } = await import('@/lib/format')
 
 describe('DashboardPage', () => {
@@ -93,7 +102,7 @@ describe('DashboardPage', () => {
     })
   }
 
-  it('renders the coach team and roster size from the dashboard fixture', async () => {
+  it('renders the coach team and member count from the dashboard fixture', async () => {
     const dashboard = dashboardFixtures.coach
 
     expect(dashboard.role).toBe('trainer')
@@ -102,7 +111,7 @@ describe('DashboardPage', () => {
 
     if (dashboard.role === 'trainer') {
       expect(container.textContent).toContain(dashboard.team.name)
-      expect(container.textContent).toContain(`${dashboard.total_members} roster members`)
+      expect(container.textContent).toContain(`${dashboard.total_members} members`)
     }
   })
 
@@ -132,7 +141,7 @@ describe('DashboardPage', () => {
     }
   })
 
-  it('renders admin club balance and weekly event count from the dashboard fixture', async () => {
+  it('renders admin counts and organization insight charts from the dashboard fixture', async () => {
     mockState.persona = 'admin'
     const dashboard = dashboardFixtures.admin
 
@@ -144,10 +153,30 @@ describe('DashboardPage', () => {
       const text = container.textContent ?? ''
 
       expect(text).toContain('Total Teams')
+      expect(text).toContain(String(dashboard.total_teams))
+      expect(text).toContain('Total Sports')
+      expect(text).toContain(String(dashboard.total_sports))
+      expect(text).toContain('Total Members')
+      expect(text).toContain(String(dashboard.total_members))
+      expect(text).toContain('Directors')
+      expect(text).toContain(String(dashboard.total_directors))
+      expect(text).toContain('Coaches')
+      expect(text).toContain(String(dashboard.total_trainers))
       expect(text).toContain('Club Balance')
       expect(text).toContain(formatCents(dashboard.total_balance_cents))
       expect(text).toContain('Events This Week')
       expect(text).toContain(String(dashboard.events_this_week))
+      expect(text).toContain('Organization Summary')
+      expect(text).toContain('Members by sport')
+      expect(text).toContain('Busiest sport')
+      expect(text).toContain('Role assignments')
+      expect(text).toContain('Average team size')
+      expect(container.querySelector('a[href="/organization"]')?.textContent).toContain('View all')
+      expect(text.toLowerCase()).not.toContain('unique')
+      expect(text).toContain(sportFixtures[0].name)
+      expect(text).not.toContain(teamFixtures[0].name)
+      expect(organizationQueryMocks.useSportsList).toHaveBeenCalledWith(true)
+      expect(organizationQueryMocks.useTeamsList).toHaveBeenCalledWith(true)
     }
   })
 })

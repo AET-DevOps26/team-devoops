@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useAuth } from '@/features/auth'
 import { useMembers } from '@/features/members/api/queries'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
-import { formatDateShort, formatEuroCents } from '@/lib/format'
+import { formatDateShort, formatCents, memberSummaryName } from '@/lib/format'
 import { creatorName, memberRefName } from '@/types'
 import type { AuthUser, Balance, MemberSummary, Reference, Sport, Team } from '@/types'
 import { useBalances, useTransactions } from '../api/queries'
@@ -13,6 +13,15 @@ import { usePaymentsUiStore } from './paymentsUiStore'
 
 type PaymentStatus = 'clear' | 'overdue'
 type PaymentKind = 'charge' | 'payment'
+
+export type BalanceStatusFilter = 'all' | PaymentStatus
+export type BalanceSort = 'name-asc' | 'balance-asc' | 'balance-desc' | 'transactions-desc'
+
+export interface BalanceFilters {
+  search: string
+  status: BalanceStatusFilter
+  sort: BalanceSort
+}
 
 export interface PaymentRow {
   id: string
@@ -119,6 +128,35 @@ export function filterPaymentRows(
   })
 }
 
+export function filterBalanceRows(
+  rows: BalanceRow[],
+  filters: BalanceFilters,
+): BalanceRow[] {
+  const search = filters.search.trim().toLocaleLowerCase()
+
+  return rows
+    .filter(
+      (balance) =>
+        (search.length === 0 || includesSearch(balance.memberName, search)) &&
+        (filters.status === 'all' || balance.status === filters.status),
+    )
+    .toSorted((a, b) => {
+      const nameSort =
+        a.memberName.localeCompare(b.memberName) || a.memberId.localeCompare(b.memberId)
+
+      switch (filters.sort) {
+        case 'balance-asc':
+          return a.balanceCents - b.balanceCents || nameSort
+        case 'balance-desc':
+          return b.balanceCents - a.balanceCents || nameSort
+        case 'transactions-desc':
+          return b.transactionCount - a.transactionCount || nameSort
+        case 'name-asc':
+          return nameSort
+      }
+    })
+}
+
 function sortPaymentRows(rows: PaymentRow[], sort: PaymentsFilters['sort']): PaymentRow[] {
   return rows.toSorted((a, b) => {
     const aTime = new Date(a.createdAt).getTime()
@@ -140,7 +178,7 @@ function transactionToPaymentRow(transaction: Transaction, user: AuthUser): Paym
     description: transaction.description
       ? `${transaction.title} - ${transaction.description}`
       : transaction.title,
-    amountFormatted: `${transaction.amount_cents > 0 ? '+' : ''}${formatEuroCents(transaction.amount_cents)}`,
+    amountFormatted: `${transaction.amount_cents > 0 ? '+' : ''}${formatCents(transaction.amount_cents)}`,
     kind: transaction.amount_cents < 0 ? 'charge' : 'payment',
     creatorName: creatorName(transaction.creator),
     creatorId: transaction.creator?.id ?? null,
@@ -169,11 +207,11 @@ export function buildPaymentsView(
 
   return {
     balanceCents,
-    balanceFormatted: formatEuroCents(balanceCents),
+    balanceFormatted: formatCents(balanceCents),
     paidInCents,
-    paidInFormatted: formatEuroCents(paidInCents),
+    paidInFormatted: formatCents(paidInCents),
     chargedCents,
-    chargedFormatted: formatEuroCents(Math.abs(chargedCents)),
+    chargedFormatted: formatCents(Math.abs(chargedCents)),
     status: balanceCents < 0 ? 'overdue' : 'clear',
     rows: sortPaymentRows(
       filterPaymentRows(
@@ -233,7 +271,7 @@ export function buildManagedPaymentsView({
         memberId: member.id,
         memberName: member.name,
         balanceCents,
-        balanceFormatted: formatEuroCents(balanceCents),
+        balanceFormatted: formatCents(balanceCents),
         status: balanceCents < 0 ? 'overdue' : 'clear',
         transactionCount: transactionCounts.get(member.id) ?? 0,
         isSelected: selectedMemberId === member.id,
@@ -268,18 +306,14 @@ export function buildManagedPaymentsView({
     selectedMemberId,
     selectedMemberName: selectedMemberId ? memberMap.get(selectedMemberId)?.name ?? null : null,
     balanceCents,
-    balanceFormatted: formatEuroCents(balanceCents),
+    balanceFormatted: formatCents(balanceCents),
     paidInCents,
-    paidInFormatted: formatEuroCents(paidInCents),
+    paidInFormatted: formatCents(paidInCents),
     chargedCents,
-    chargedFormatted: formatEuroCents(Math.abs(chargedCents)),
+    chargedFormatted: formatCents(Math.abs(chargedCents)),
     overdueCount: balanceRows.filter((row) => row.status === 'overdue').length,
     memberCount: balanceRows.length,
   }
-}
-
-function memberSummaryName(member: MemberSummary): string {
-  return `${member.first_name} ${member.last_name}`
 }
 
 function memberSummaryOption(member: MemberSummary): PaymentMemberOption {

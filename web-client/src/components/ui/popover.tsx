@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 
+import { useDialogContentContainer } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -17,10 +18,17 @@ function PopoverContent({
   className,
   align = 'start',
   sideOffset = 4,
+  container,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Content> & {
+  container?: HTMLElement | null
+}) {
+  // Defaults to the nearest DialogContent so Radix Dialog's scroll-lock (which only allows
+  // wheel/touch events inside its own content node) doesn't swallow scrolling in this popover.
+  const dialogContainer = useDialogContentContainer()
+
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container ?? dialogContainer ?? undefined}>
       <PopoverPrimitive.Content
         data-slot="popover-content"
         align={align}

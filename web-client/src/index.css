@@ -236,4 +236,10 @@
   ::selection {
     background: color-mix(in oklch, var(--primary) 30%, transparent);
   }
+
+  .roost-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+    scrollbar-gutter: stable;
+  }
 }

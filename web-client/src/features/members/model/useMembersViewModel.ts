@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 
 import { useAuth } from '@/features/auth'
 import { useTeamsList } from '@/features/organization/api/queries'
+import { memberSummaryName } from '@/lib/format'
 import { type AuthUser, type MemberSummary, type Team } from '@/types'
 import { useMembers } from '../api/queries'
 import type { MembersFilters } from './membersUiStore'
@@ -24,9 +25,21 @@ export interface MembersView {
   sportOptions: { value: string; label: string }[]
 }
 
-// MemberSummary is the list model with split names (not an FK ref) — combine them here.
-function memberName(member: MemberSummary): string {
-  return `${member.first_name} ${member.last_name}`
+export interface MemberPickerOption {
+  id: string
+  name: string
+}
+
+export function buildMemberPickerOptions(
+  members: MemberSummary[],
+  search: string,
+): MemberPickerOption[] {
+  const query = search.trim().toLocaleLowerCase()
+
+  return members
+    .map((member) => ({ id: member.id, name: memberSummaryName(member) }))
+    .filter((member) => query.length === 0 || member.name.toLocaleLowerCase().includes(query))
+    .toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
 function memberTeamRows(members: MemberSummary[], teams: Team[]): MemberRow[] {
@@ -39,7 +52,7 @@ function memberTeamRows(members: MemberSummary[], teams: Team[]): MemberRow[] {
 
     return {
       id: member.id,
-      name: memberName(member),
+      name: memberSummaryName(member),
       email: member.email,
       teamIds: memberTeams.map((team) => team.id),
       teamNames: memberTeams.map((team) => team.name),

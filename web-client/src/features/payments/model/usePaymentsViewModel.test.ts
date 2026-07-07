@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import type { AuthUser, Balance, Reference, Sport, Team, Transaction } from '@/types'
 import type { PaymentsFilters } from './paymentsUiStore'
 import {
+  type BalanceRow,
   buildManagedPaymentsView,
   buildPaymentsView,
+  filterBalanceRows,
   managedMembersForDirector,
 } from './usePaymentsViewModel'
 
@@ -71,6 +73,7 @@ function transaction({
   amountCents,
   title = 'Monthly dues',
   description = 'Membership fee',
+  createdAt = '2026-06-01T00:00:00.000Z',
 }: {
   id: string
   member: Reference
@@ -78,15 +81,40 @@ function transaction({
   amountCents: number
   title?: string
   description?: string
+  createdAt?: string
 }): Transaction {
   return {
     id,
     member,
     creator,
     amount_cents: amountCents,
-    created_at: '2026-06-01T00:00:00.000Z',
+    created_at: createdAt,
     title,
     description,
+  }
+}
+
+function balanceRow({
+  memberId,
+  memberName,
+  balanceCents,
+  transactionCount,
+  isSelected = false,
+}: {
+  memberId: string
+  memberName: string
+  balanceCents: number
+  transactionCount: number
+  isSelected?: boolean
+}): BalanceRow {
+  return {
+    memberId,
+    memberName,
+    balanceCents,
+    balanceFormatted: `${balanceCents}`,
+    status: balanceCents < 0 ? 'overdue' : 'clear',
+    transactionCount,
+    isSelected,
   }
 }
 
@@ -167,6 +195,143 @@ describe('payments view-model builders', () => {
     expect(view.rows.map((row) => row.id)).toEqual(['transaction-2'])
     expect(view.rows[0].canDelete).toBe(true)
     expect(view.totalRows).toBe(1)
+  })
+
+  it('filters managed transactions by member search, type, and date range', () => {
+    const admin = ref('admin-1', 'Admin One')
+    const memberOne = ref('member-1', 'Member One')
+    const memberTwo = ref('member-2', 'Member Two')
+    const transactions = [
+      transaction({
+        id: 'transaction-1',
+        member: memberOne,
+        creator: admin,
+        amountCents: -1000,
+        title: 'Monthly dues',
+        createdAt: '2026-06-10T00:00:00.000Z',
+      }),
+      transaction({
+        id: 'transaction-2',
+        member: memberOne,
+        creator: admin,
+        amountCents: 500,
+        title: 'Payment received',
+        createdAt: '2026-06-12T00:00:00.000Z',
+      }),
+      transaction({
+        id: 'transaction-3',
+        member: memberTwo,
+        creator: admin,
+        amountCents: -700,
+        title: 'Monthly dues',
+        createdAt: '2026-06-15T00:00:00.000Z',
+      }),
+      transaction({
+        id: 'transaction-4',
+        member: memberOne,
+        creator: admin,
+        amountCents: -300,
+        title: 'Old charge',
+        createdAt: '2026-05-20T00:00:00.000Z',
+      }),
+    ]
+
+    const view = buildManagedPaymentsView({
+      transactions,
+      balances: [],
+      members: [
+        { id: memberOne.id, name: memberOne.name },
+        { id: memberTwo.id, name: memberTwo.name },
+      ],
+      filters: {
+        ...filters,
+        search: 'member one',
+        kind: 'charge',
+        fromDate: '2026-06-01',
+        toDate: '2026-06-30',
+      },
+      selectedMemberId: null,
+      user: user(admin, 'admin'),
+    })
+
+    expect(view.rows.map((row) => row.id)).toEqual(['transaction-1'])
+  })
+
+  it('filters balance rows by member search and status', () => {
+    const rows = [
+      balanceRow({
+        memberId: 'member-1',
+        memberName: 'Alice Rivera',
+        balanceCents: -1200,
+        transactionCount: 3,
+      }),
+      balanceRow({
+        memberId: 'member-2',
+        memberName: 'Bert Klein',
+        balanceCents: 0,
+        transactionCount: 0,
+      }),
+      balanceRow({
+        memberId: 'member-3',
+        memberName: 'Alicia Stern',
+        balanceCents: 500,
+        transactionCount: 1,
+      }),
+    ]
+
+    expect(
+      filterBalanceRows(rows, {
+        search: 'ali',
+        status: 'all',
+        sort: 'name-asc',
+      }).map((row) => row.memberId),
+    ).toEqual(['member-1', 'member-3'])
+
+    expect(
+      filterBalanceRows(rows, {
+        search: 'ali',
+        status: 'overdue',
+        sort: 'name-asc',
+      }).map((row) => row.memberId),
+    ).toEqual(['member-1'])
+
+    expect(
+      filterBalanceRows(rows, {
+        search: 'bert',
+        status: 'overdue',
+        sort: 'name-asc',
+      }),
+    ).toEqual([])
+  })
+
+  it('sorts balance rows by name, balance, and transaction count', () => {
+    const rows = [
+      balanceRow({
+        memberId: 'member-1',
+        memberName: 'Celine',
+        balanceCents: -500,
+        transactionCount: 2,
+      }),
+      balanceRow({
+        memberId: 'member-2',
+        memberName: 'Alex',
+        balanceCents: -1500,
+        transactionCount: 1,
+      }),
+      balanceRow({
+        memberId: 'member-3',
+        memberName: 'Bianca',
+        balanceCents: 700,
+        transactionCount: 4,
+      }),
+    ]
+    const rowIdsForSort = (sort: Parameters<typeof filterBalanceRows>[1]['sort']) =>
+      filterBalanceRows(rows, { search: '', status: 'all', sort }).map((row) => row.memberId)
+
+    expect(rowIdsForSort('name-asc')).toEqual(['member-2', 'member-3', 'member-1'])
+    expect(rowIdsForSort('balance-asc')).toEqual(['member-2', 'member-1', 'member-3'])
+    expect(rowIdsForSort('balance-desc')).toEqual(['member-3', 'member-1', 'member-2'])
+    expect(rowIdsForSort('transactions-desc')).toEqual(['member-3', 'member-1', 'member-2'])
   })
 
   it('does not search member or creator names in the self view', () => {

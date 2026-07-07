@@ -1,9 +1,9 @@
 import { CalendarIcon, XIcon } from 'lucide-react'
-import type { DateRange } from 'react-day-picker'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { dateRangeFromFilters, dateRangeLabel, dateToInputValue } from '@/lib/date-fields'
 import { cn } from '@/lib/utils'
 
 interface DateRangeFilterProps {
@@ -69,29 +69,4 @@ export function DateRangeFilter({
       )}
     </div>
   )
-}
-
-function dateToInputValue(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-function dateRangeFromFilters(fromDate: string, toDate: string): DateRange | undefined {
-  if (!fromDate && !toDate) return undefined
-
-  return {
-    from: fromDate ? new Date(`${fromDate}T00:00:00`) : undefined,
-    to: toDate ? new Date(`${toDate}T00:00:00`) : undefined,
-  }
-}
-
-function dateRangeLabel(fromDate: string, toDate: string): string {
-  if (fromDate && toDate) return `${fromDate} - ${toDate}`
-  if (fromDate) return `From ${fromDate}`
-  if (toDate) return `Until ${toDate}`
-
-  return 'Date range'
 }

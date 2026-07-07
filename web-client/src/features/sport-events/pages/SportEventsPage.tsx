@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarPlus, Pencil, Trash2 } from 'lucide-react'
+import { CalendarPlus, Eye, Pencil, Trash2 } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
 import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import { PageHeader } from '@/components/ui/page-header'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -67,6 +69,7 @@ export function SportEventsPage() {
   const filters = useEventsUiStore((state) => state.filters)
   const setSearch = useEventsUiStore((state) => state.setSearch)
   const setStatus = useEventsUiStore((state) => state.setStatus)
+  const setSport = useEventsUiStore((state) => state.setSport)
   const setDateRange = useEventsUiStore((state) => state.setDateRange)
   const setSort = useEventsUiStore((state) => state.setSort)
   const resetFilters = useEventsUiStore((state) => state.resetFilters)
@@ -74,10 +77,36 @@ export function SportEventsPage() {
   const openEvent = useEventsUiStore((state) => state.open)
   const closeEvent = useEventsUiStore((state) => state.close)
   const openCreate = useEventsUiStore((state) => state.openCreate)
+  const openEdit = useEventsUiStore((state) => state.openEdit)
+  const deleteTargetId = useEventsUiStore((state) => state.deleteTargetId)
+  const openDeleteConfirm = useEventsUiStore((state) => state.openDeleteConfirm)
+  const closeDeleteConfirm = useEventsUiStore((state) => state.closeDeleteConfirm)
   const mutationNotice = useEventsUiStore((state) => state.mutationNotice)
+  const setMutationNotice = useEventsUiStore((state) => state.setMutationNotice)
   const detailView = useEventDetailView(openEventId)
+  const deleteEvent = useDeleteSportEvent()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const canCreateEvent = user.role === 'trainer' || user.role === 'director' || user.role === 'admin'
   const showAttendanceStatusFilters = user.role === 'member'
+  const deleteTargetName =
+    view.rows.find((event) => event.id === deleteTargetId)?.name ??
+    (detailView.detail?.id === deleteTargetId ? detailView.detail.name : undefined)
+
+  const confirmDeleteEvent = async () => {
+    const targetId = deleteTargetId
+    if (!targetId) return
+
+    setDeleteError(null)
+
+    try {
+      await deleteEvent.mutateAsync(targetId)
+      setMutationNotice('Event deleted.')
+      closeDeleteConfirm()
+      if (openEventId === targetId) closeEvent()
+    } catch (deleteFailure) {
+      setDeleteError(serverErrorMessage(deleteFailure))
+    }
+  }
 
   useEffect(() => resetFilters, [resetFilters])
 
@@ -137,7 +166,7 @@ export function SportEventsPage() {
             searchValue={filters.search}
             onSearchChange={setSearch}
             searchLabel="Search events"
-            searchPlaceholder="Event name"
+            searchPlaceholder="Event name or sport"
           >
             <Select value={filters.status} onValueChange={setStatus}>
               <SelectTrigger aria-label="Filter events by status">
@@ -153,6 +182,20 @@ export function SportEventsPage() {
                 )}
                 <SelectItem value="upcoming">Upcoming</SelectItem>
                 <SelectItem value="past">Past</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.sport} onValueChange={setSport}>
+              <SelectTrigger aria-label="Filter events by sport">
+                <SelectValue placeholder="Sport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sports</SelectItem>
+                {view.sportOptions.map((sport) => (
+                  <SelectItem key={sport.value} value={sport.value}>
+                    {sport.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -186,6 +229,7 @@ export function SportEventsPage() {
                 <tr>
                   <THead>When</THead>
                   <THead>Event</THead>
+                  <THead>Sport</THead>
                   <THead>Status</THead>
                   <THead>Duration</THead>
                   <THead className="text-right">Details</THead>
@@ -199,15 +243,37 @@ export function SportEventsPage() {
                     </TCell>
                     <TCell className="font-medium">{event.name}</TCell>
                     <TCell>
+                      <FacetBadges values={event.sportNames} />
+                    </TCell>
+                    <TCell>
                       <Badge tone={statusTone[event.status]} size="sm">
                         {statusLabel[event.status]}
                       </Badge>
                     </TCell>
                     <TCell className="text-text-secondary">{event.duration}</TCell>
                     <TCell className="text-right">
-                      <Button variant="link" className="h-auto p-0" onClick={() => openEvent(event.id)}>
-                        View
-                      </Button>
+                      <RowActions>
+                        <RowActionButton
+                          icon={Eye}
+                          label={`View ${event.name}`}
+                          onClick={() => openEvent(event.id)}
+                        />
+                        {user.role === 'admin' && (
+                          <>
+                            <RowActionButton
+                              icon={Pencil}
+                              label={`Edit ${event.name}`}
+                              onClick={() => openEdit(event.id)}
+                            />
+                            <RowActionButton
+                              icon={Trash2}
+                              destructive
+                              label={`Delete ${event.name}`}
+                              onClick={() => openDeleteConfirm(event.id)}
+                            />
+                          </>
+                        )}
+                      </RowActions>
                     </TCell>
                   </TRow>
                 ))}
@@ -218,7 +284,7 @@ export function SportEventsPage() {
       )}
 
       <p className="text-caption italic text-text-tertiary">
-        Sport, description and attendees load when you open an event.
+        Description and attendees load when you open an event.
       </p>
 
       <Sheet open={openEventId !== null} onOpenChange={(open) => !open && closeEvent()}>
@@ -226,6 +292,36 @@ export function SportEventsPage() {
           <EventDetailSheet detailView={detailView} />
         </SheetContent>
       </Sheet>
+
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteError(null)
+            closeDeleteConfirm()
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {deleteTargetName ?? 'this event'} permanently? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteEvent.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteEvent.isPending} onClick={confirmDeleteEvent}>
+              {deleteEvent.isPending ? 'Deleting' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SportEventEditorDialog />
     </div>
@@ -236,13 +332,7 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
   const { detail, isLoading, error, missed, sportNames } = detailView
   const { user } = useAuth()
   const openEdit = useEventsUiStore((state) => state.openEdit)
-  const closeEvent = useEventsUiStore((state) => state.close)
-  const deleteTargetId = useEventsUiStore((state) => state.deleteTargetId)
   const openDeleteConfirm = useEventsUiStore((state) => state.openDeleteConfirm)
-  const closeDeleteConfirm = useEventsUiStore((state) => state.closeDeleteConfirm)
-  const setMutationNotice = useEventsUiStore((state) => state.setMutationNotice)
-  const deleteEvent = useDeleteSportEvent()
-  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   if (isLoading) {
     return (
@@ -272,20 +362,6 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
   }
 
   const canManage = user.role === 'admin' || detail.creator?.id === user.id
-  const confirmingDelete = deleteTargetId === detail.id
-
-  const handleDelete = async () => {
-    setDeleteError(null)
-
-    try {
-      await deleteEvent.mutateAsync(detail.id)
-      setMutationNotice('Event deleted.')
-      closeDeleteConfirm()
-      closeEvent()
-    } catch (deleteFailure) {
-      setDeleteError(serverErrorMessage(deleteFailure))
-    }
-  }
 
   return (
     <>
@@ -299,49 +375,7 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
         <SheetDescription>{detail.description}</SheetDescription>
       </SheetHeader>
 
-      <div className="space-y-6 px-4 py-2">
-        {canManage && (
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => openEdit(detail.id)}>
-              <Pencil />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                setDeleteError(null)
-                openDeleteConfirm(detail.id)
-              }}
-            >
-              <Trash2 />
-              Delete
-            </Button>
-          </div>
-        )}
-
-        {deleteError && <p className="text-body-sm text-destructive">{deleteError}</p>}
-
-        <AlertDialog
-          open={confirmingDelete}
-          onOpenChange={(open) => !open && closeDeleteConfirm()}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete event</AlertDialogTitle>
-              <AlertDialogDescription>
-                Delete {detail.name} permanently? This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteEvent.isPending}>Cancel</AlertDialogCancel>
-              <AlertDialogAction disabled={deleteEvent.isPending} onClick={handleDelete}>
-                {deleteEvent.isPending ? 'Deleting' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
+      <div className="roost-scroll flex-1 space-y-6 overflow-y-auto px-4 py-2">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field
             label="Start"
@@ -380,6 +414,23 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
           </>
         )}
       </div>
+
+      {canManage && (
+        <SheetFooter className="flex-row justify-end border-t">
+          <Button size="sm" variant="outline" onClick={() => openEdit(detail.id)}>
+            <Pencil />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => openDeleteConfirm(detail.id)}
+          >
+            <Trash2 />
+            Delete
+          </Button>
+        </SheetFooter>
+      )}
     </>
   )
 }
@@ -392,6 +443,22 @@ function EventsTableSkeleton() {
           <Skeleton key={index} className="h-9 w-full" />
         ))}
       </div>
+    </div>
+  )
+}
+
+function FacetBadges({ values }: { values: string[] }) {
+  if (values.length === 0) {
+    return <span className="text-text-tertiary">—</span>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((value) => (
+        <Badge key={value} size="sm">
+          {value}
+        </Badge>
+      ))}
     </div>
   )
 }
