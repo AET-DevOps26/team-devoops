@@ -8,7 +8,29 @@
 # OrganizationApi maps "/organization/teams"), so only the shared "/api/v1"
 # prefix must be removed -- Traefik stripPrefix parity, which strips
 # "/api/v1" and forwards the rest, name segment included.
-# Auth-protected when forwardAuth is enabled.
+#
+# Never routed through forwardAuth: every one of these services already runs
+# its own Bearer-JWT check against Keycloak (Spring's oauth2ResourceServer /
+# py-genai-helper's require_auth), so oauth2-proxy's cookie-based auth_request
+# gate was pure redundancy on top of it.
+#
+# rewrite-target is "$1", not "/$1": the capture group already starts with its
+# own leading slash (it captures e.g. "/organization/sports", not
+# "organization/sports"), so prefixing it with another "/" sent nginx's
+# actual rewritten request to the backend as "//organization/sports" --
+# confirmed via Tomcat's own access log on organization-service (temporarily
+# enabled via SERVER_TOMCAT_ACCESSLOG_* in values.yaml during this
+# investigation). Spring accepted that double-slash path fine for
+# unauthenticated requests (which is why every hand-built reproduction with
+# curl/nc looked like a clean 401 and never pointed here), but with a real
+# Bearer token attached it never reached a real controller method, which is
+# what actually caused the login loop: the SPA's axios interceptor treats any
+# 401 as a dead session and calls keycloak.login() again, and since Keycloak
+# still has an active SSO session that silently re-approves, the whole thing
+# loops between "/" and Keycloak's authorize endpoint instead of loading data.
+# team-devoops-stripped-full below never had this bug because its capture
+# group (from "(/|$)(.*)") does NOT include its own leading slash, so its
+# "/$2" is correct as-is.
 # ---------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -18,13 +40,9 @@ metadata:
     {{- include "team-devoops.labels" (dict "name" "ingress-stripped" "root" $) | nindent 4 }}
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/rewrite-target: $1
     {{- if and $tls.enabled $tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
-    {{- end }}
-    {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -42,7 +60,7 @@ spec:
         paths:
           {{- range $name, $svc := .Values.services }}
           {{- if and $svc.stripPrefix (not $svc.fullStrip) }}
-          - path: {{ printf "/api/v1(%s(?:/.*)?)$" (trimPrefix "/api/v1" $svc.path) }}
+          - path: {{ printf "/api/v1(%s(/|$)(.*))" (trimPrefix "/api/v1" $svc.path) }}
             pathType: ImplementationSpecific
             backend:
               service:
@@ -56,6 +74,11 @@ spec:
 # Full-strip ingress: services whose own routes carry no service-name
 # segment at all (py-genai-helper's Flask routes are bare, e.g. "/reports/..."),
 # so the whole "/api/v1/<name>" prefix must be removed, not just "/api/v1".
+#
+# Never routed through forwardAuth, for the same reason as
+# team-devoops-stripped above: py-genai-helper does its own Bearer-JWT
+# validation (see auth.py's require_auth), so the oauth2-proxy cookie gate
+# was pure redundancy on top of it.
 # ---------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -68,10 +91,6 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     {{- if and $tls.enabled $tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
-    {{- end }}
-    {{- if $fa.enabled }}
-    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
