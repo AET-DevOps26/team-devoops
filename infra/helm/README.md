@@ -281,4 +281,14 @@ services:
     stripPrefix: true   # strip the path prefix before forwarding
 ```
 
+`stripPrefix: true` strips only the shared `/api/v1` prefix, forwarding the rest
+as-is — this is what every OpenAPI-generated Spring controller expects, since
+they keep their own service name in the mapped path (e.g. `MembersApi` maps
+`/members`, `OrganizationApi` maps `/organization/teams`). Only add
+`fullStrip: true` alongside it if your service's own routes carry no name
+segment at all (like `py-genai-helper`'s bare Flask routes, e.g. `/reports/...`) —
+that strips the whole `/api/v1/<name>` prefix instead. Getting this wrong means
+every request 404s once it reaches the backend, since the path arriving at the
+app won't match any of its routes.
+
 No template changes are needed.
