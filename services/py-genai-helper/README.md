@@ -73,3 +73,13 @@ feedback service's own visibility rules decide which entries feed the report. Th
 (OpenAI or Ollama, per `LLM_PROVIDER`/`uselocal` — see Local LLM above) writes the report text,
 which is then persisted to the `reports` schema. Configure the feedback service location via
 `FEEDBACK_SERVICE_URL` (default `http://feedback-service:8080`).
+
+## Knowledge base (RAG)
+
+The PDFs in `file-storage/` are chunked, embedded, and indexed with Chroma (see `rag.py`) so report
+prompts can be augmented with relevant excerpts. The collection is persisted to `vector-store/<provider>/`
+(one subdirectory per embedding provider, since an OpenAI-embedded collection isn't valid to query with
+Ollama embeddings and vice versa) so the embedding step — a real API/model cost — only happens once
+per provider rather than on every process/worker start. A manifest of the source PDFs' filenames and
+modification times is stored alongside the collection; if `file-storage/` changes, the manifest no longer
+matches and the collection is rebuilt automatically.

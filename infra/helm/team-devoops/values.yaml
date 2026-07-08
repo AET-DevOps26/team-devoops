@@ -100,11 +100,14 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~166Mi in practice (higher than first estimated) -- the earlier
-      # 200Mi trim left almost no headroom, so it's bumped back up here.
+      # Documented peak usage is ~166Mi (the earlier 200Mi trim against that left "almost no
+      # headroom" and had to be reverted -- see history). Live `kubectl top` right now shows only
+      # ~70Mi, but that's an idle snapshot, not the peak. Trimmed from 280Mi to 240Mi: still ~74Mi
+      # above the documented 166Mi peak, clearly more headroom than the rejected 200Mi/34Mi attempt,
+      # while freeing some of the namespace's shared 6Gi quota for py-genai-helper.
       limits:
         cpu: 100m
-        memory: 280Mi
+        memory: 240Mi
   # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
   # is the same file docker-compose uses).
   loki:
@@ -115,10 +118,13 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~153Mi; trimmed to make room for ollama (see prometheus above).
+      # Documented peak usage is ~153Mi (previously trimmed to make room for ollama, see prometheus
+      # above). Live `kubectl top` right now shows only ~65Mi, but that's an idle snapshot, not the
+      # peak. Trimmed from 220Mi to 200Mi: keeps ~47Mi above the documented peak -- more than
+      # grafana's rejected 34Mi-headroom attempt above, so deliberately not pushed any lower.
       limits:
         cpu: 150m
-        memory: 220Mi
+        memory: 200Mi
   # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
   # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
   # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
@@ -260,6 +266,13 @@ resources:
 #   image/tag   -> optional: override the default ghcr image/tag for this service
 #   env         -> extra literal environment variables
 #   envFromSecret -> inject all keys of an existing Secret as env
+#   persistence -> optional: mount a PVC (RWO) into the container.
+#                  mountPath, size (PVC storage request), fsGroup (pod-level
+#                  securityContext.fsGroup, needed when the image runs as
+#                  non-root -- see loki/grafana/prometheus deployments for the
+#                  same reasoning). Only safe with a single replica and a
+#                  rolling strategy that fully terminates the old pod first
+#                  (see .Values.strategy below), which is the case here.
 # ---------------------------------------------------------------------------
 services:
   organization-service:
@@ -356,15 +369,32 @@ services:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
       OLLAMA_BASE_URL: "http://ollama:11434"
+    # Persists the Chroma vector store (see services/py-genai-helper/rag.py) across pod
+    # restarts/reschedules. fsGroup 1000 matches the Dockerfile's `adduser` app user
+    # (confirmed uid/gid 1000 on python:3.12.9-slim-bookworm), which the CSI-provisioned
+    # PVC would otherwise mount root-owned and unwritable to that user.
+    persistence:
+      mountPath: /code/vector-store
+      size: 1Gi
+      fsGroup: 1000
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
-      # Actual usage is ~135Mi; trimmed a bit (still ~3x actual) to make room for ollama
-      # (see monitoring.prometheus above).
+        memory: 350Mi
+      # The Chroma/onnxruntime RAG stack (see rag.py) alone -- before Flask/gunicorn/SQLAlchemy/auth
+      # are even loaded -- profiled at ~205Mi during a cold index build in a local container run, so
+      # the old 400Mi (sized for FAISS-era ~135Mi actual usage) is no longer enough headroom. Can't
+      # just raise it freely though: the namespace's ResourceQuota caps limits.memory at 6Gi total,
+      # and every other service's limit already commits ~5650Mi of that (verified live via
+      # `kubectl get resourcequota` + summing pod limits), leaving at most ~494Mi of quota room for
+      # this service -- a first attempt at 512Mi exceeded it, so the rollout couldn't schedule a
+      # single pod, hit progressDeadlineSeconds, and got auto-rolled-back by CD. 450Mi fits with a
+      # little quota slack left; re-check actual usage with `kubectl top` after this deploys, and if
+      # it needs to go higher, another service's limit has to come down first (same trimming pattern
+      # already used for prometheus/loki/grafana/alloy above).
       limits:
         cpu: 150m
-        memory: 400Mi
+        memory: 450Mi
   web-client:
     path: /
     port: 8080

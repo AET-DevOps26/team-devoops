@@ -1,20 +1,22 @@
 # Stage 1: builder
-FROM python:3.12.9-alpine3.21 AS builder
+FROM python:3.12.9-slim-bookworm AS builder
 WORKDIR /code
 
-# Installs gcc and other dependencies (postgresql-dev provides libpq + pg_config for psycopg2)
-RUN apk add --no-cache gcc musl-dev linux-headers postgresql-dev
+# Installs gcc and other dependencies (libpq-dev provides libpq + pg_config for psycopg2)
+RUN apt-get update && apt-get install --no-install-recommends -y gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Stage 2: run
-FROM python:3.12.9-alpine3.21
+FROM python:3.12.9-slim-bookworm
 WORKDIR /code
 
-# Runtime shared library for psycopg2 (libpq)
-RUN apk add --no-cache libpq
+# Runtime shared library for psycopg2 (libpq) and wget for the healthcheck
+RUN apt-get update && apt-get install --no-install-recommends -y libpq5 wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy installed python packages from builder stage
 COPY --from=builder /install /usr/local
@@ -23,7 +25,10 @@ COPY --from=builder /install /usr/local
 COPY . .
 
 # Switch user for increased security
-RUN adduser -D user
+RUN adduser --disabled-password --gecos "" user
+# The persisted vector store (see rag.py) is written at runtime, so the app user needs write
+# access to it; everything else stays read-only to that user.
+RUN mkdir -p vector-store && chown -R user:user vector-store
 USER user
 
 # Set environment variables
