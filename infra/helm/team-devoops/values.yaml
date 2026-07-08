@@ -370,12 +370,14 @@ services:
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
-      # Actual usage is ~135Mi; trimmed a bit (still ~3x actual) to make room for ollama
-      # (see monitoring.prometheus above).
+        memory: 350Mi
+      # The Chroma/onnxruntime RAG stack (see rag.py) alone -- before Flask/gunicorn/SQLAlchemy/auth
+      # are even loaded -- profiled at ~205Mi during a cold index build in a local container run.
+      # 400Mi (the old FAISS-era limit, sized for ~135Mi actual usage) is no longer enough headroom;
+      # re-check with `kubectl top` after this deploys and tighten if it's overprovisioned.
       limits:
         cpu: 150m
-        memory: 400Mi
+        memory: 512Mi
   web-client:
     path: /
     port: 8080
