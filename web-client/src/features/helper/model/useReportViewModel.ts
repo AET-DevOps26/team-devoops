@@ -76,7 +76,7 @@ export function useReportViewModel() {
     rows,
     isLoading: (isTrainer && teamsQuery.isLoading) || query.isLoading,
     isError: query.isError,
-    generate: () => generate.mutate(),
+    generate: (useLocal?: boolean) => generate.mutate(useLocal),
     isGenerating: generate.isPending,
     generateError: generate.error,
     listKey,

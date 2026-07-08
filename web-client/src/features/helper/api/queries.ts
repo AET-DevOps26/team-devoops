@@ -44,15 +44,18 @@ export function useHelperHello() {
 export function useGenerateMemberReport(memberId: string) {
   const qc = useQueryClient()
 
-  return useMutation<void, Error, void>({
-    mutationFn: () =>
+  return useMutation<void, Error, boolean | undefined>({
+    mutationFn: (useLocal) =>
       mockOr(
         () => {
           if (!scopeReport(memberId, getCurrentUser())) throw new Error('Report not allowed')
           mockGenerateMemberReport(memberId)
           return Promise.resolve()
         },
-        () => helperClient.post(`/reports/member/${memberId}`).then(() => undefined),
+        () =>
+          helperClient
+            .post(`/reports/member/${memberId}`, { uselocal: useLocal })
+            .then(() => undefined),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: helperKeys.memberReports(memberId) }),
   })
@@ -61,15 +64,18 @@ export function useGenerateMemberReport(memberId: string) {
 export function useGenerateTeamReport(teamId: string) {
   const qc = useQueryClient()
 
-  return useMutation<void, Error, void>({
-    mutationFn: () =>
+  return useMutation<void, Error, boolean | undefined>({
+    mutationFn: (useLocal) =>
       mockOr(
         () => {
           if (!scopeTeamReport(teamId, getCurrentUser())) throw new Error('Report not allowed')
           mockGenerateTeamReport(teamId)
           return Promise.resolve()
         },
-        () => helperClient.post(`/reports/team/${teamId}`).then(() => undefined),
+        () =>
+          helperClient
+            .post(`/reports/team/${teamId}`, { uselocal: useLocal })
+            .then(() => undefined),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: helperKeys.teamReports(teamId) }),
   })
