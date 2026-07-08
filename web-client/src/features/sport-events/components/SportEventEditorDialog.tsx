@@ -1,23 +1,21 @@
 import { type FormEvent, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { DateTimePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MultiSelectCombobox, type MultiSelectOption } from '@/components/ui/multi-select-combobox'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
 import { sameIds, toggleId } from '@/lib/id-selection'
 import { serverErrorMessage } from '@/lib/server-error'
-import { cn } from '@/lib/utils'
 import { memberRefName, type AuthUser, type Reference, type Sport, type Team } from '@/types'
 import {
   useCreateSportEvent,
@@ -37,11 +35,12 @@ interface EventFormState {
   attendeeIds: string[]
 }
 
-interface Option {
-  id: string
-  label: string
-  meta?: string
-}
+const eventSteps: DialogStep[] = [
+  { id: 'details', label: 'Details' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'sports-teams', label: 'Sports & Teams' },
+  { id: 'attendees', label: 'Attendees' },
+]
 
 export function SportEventEditorDialog() {
   const target = useEventsUiStore((state) => state.editorTarget)
@@ -71,7 +70,7 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
 
   if (queryError) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
         </DialogHeader>
@@ -84,7 +83,7 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
 
   if (isLoading || !teams || !sports) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
         </DialogHeader>
@@ -97,7 +96,7 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
 
   if (target.mode === 'edit' && !event) {
     return (
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
         </DialogHeader>
@@ -140,9 +139,12 @@ function SportEventEditorLoaded({
   const [form, setForm] = useState<EventFormState>(() =>
     buildInitialForm(target, user, teams, sports, event),
   )
+  const [stepIndex, setStepIndex] = useState(0)
   const [formError, setFormError] = useState<string | null>(null)
   const isPending = createEvent.isPending || updateEvent.isPending
   const isPastEvent = target.mode === 'edit' && event ? new Date(event.end_time) < new Date() : false
+  const isFirstStep = stepIndex === 0
+  const isLastStep = stepIndex === eventSteps.length - 1
 
   const scopedSports = useMemo(
     () => roleScopedSports(user, sports, teams),
@@ -178,6 +180,15 @@ function SportEventEditorLoaded({
   const attendeeOptions = useMemo(
     () => buildAttendeeOptions(form.teamIds, teams, event),
     [event, form.teamIds, teams],
+  )
+  const attendeeSelectOptions = useMemo(
+    (): MultiSelectOption[] =>
+      attendeeOptions.map((option) => ({
+        id: option.member.id,
+        label: memberRefName(option.member),
+        group: option.teamName,
+      })),
+    [attendeeOptions],
   )
 
   const handleSportToggle = (sportId: string) => {
@@ -220,13 +231,18 @@ function SportEventEditorLoaded({
   const handleSubmit = async (submitEvent: FormEvent<HTMLFormElement>) => {
     submitEvent.preventDefault()
 
-    const validationError = validateForm(form)
-    if (validationError) {
-      setFormError(validationError)
+    const stepError = validateStep(eventSteps[stepIndex].id, form)
+    if (stepError) {
+      setFormError(stepError)
       return
     }
 
     setFormError(null)
+
+    if (!isLastStep) {
+      setStepIndex((current) => current + 1)
+      return
+    }
 
     try {
       if (target.mode === 'create') {
@@ -260,96 +276,113 @@ function SportEventEditorLoaded({
   }
 
   return (
-    <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+    <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
       </DialogHeader>
 
+      <DialogStepperNav steps={eventSteps} currentStep={stepIndex} />
+
       <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="event-name">Name</Label>
-              <Input
-                id="event-name"
-                value={form.name}
-                onChange={(inputEvent) =>
-                  setForm({ ...form, name: inputEvent.target.value })
-                }
-                required
+          {eventSteps[stepIndex].id === 'details' && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="event-name">Name</Label>
+                <Input
+                  id="event-name"
+                  value={form.name}
+                  onChange={(inputEvent) =>
+                    setForm({ ...form, name: inputEvent.target.value })
+                  }
+                  required
+                  disabled={isPending}
+                  aria-invalid={formError !== null && form.name.trim() === ''}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="event-description">Description</Label>
+                <Textarea
+                  id="event-description"
+                  value={form.description}
+                  onChange={(inputEvent) =>
+                    setForm({ ...form, description: inputEvent.target.value })
+                  }
+                  disabled={isPending}
+                  className="min-h-24"
+                />
+              </div>
+            </div>
+          )}
+
+          {eventSteps[stepIndex].id === 'schedule' && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="event-start">Start</Label>
+                <DateTimePicker
+                  id="event-start"
+                  ariaLabel="Start"
+                  value={form.startLocal}
+                  onChange={(value) => setForm({ ...form, startLocal: value })}
+                  required
+                  disabled={isPending}
+                  aria-invalid={formError !== null && form.startLocal === ''}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="event-end">End</Label>
+                <DateTimePicker
+                  id="event-end"
+                  ariaLabel="End"
+                  value={form.endLocal}
+                  onChange={(value) => setForm({ ...form, endLocal: value })}
+                  required
+                  disabled={isPending}
+                  aria-invalid={formError !== null && form.endLocal === ''}
+                />
+              </div>
+            </div>
+          )}
+
+          {eventSteps[stepIndex].id === 'sports-teams' && (
+            <div className="space-y-5">
+              <MultiSelectCombobox
+                label="Sports"
+                placeholder="Search and select sports..."
+                emptyLabel="No sports available."
+                emptySearchLabel="No sports match your search."
+                options={sportOptions}
+                selectedIds={form.sportIds}
                 disabled={isPending}
-                aria-invalid={formError !== null && form.name.trim() === ''}
+                onToggle={handleSportToggle}
+              />
+
+              <MultiSelectCombobox
+                label="Teams"
+                placeholder="Search and select teams..."
+                emptyLabel="No teams available."
+                emptySearchLabel="No teams match your search."
+                options={teamOptions}
+                selectedIds={form.teamIds}
+                disabled={isPending}
+                onToggle={handleTeamToggle}
               />
             </div>
+          )}
 
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="event-description">Description</Label>
-              <Textarea
-                id="event-description"
-                value={form.description}
-                onChange={(inputEvent) =>
-                  setForm({ ...form, description: inputEvent.target.value })
-                }
-                disabled={isPending}
-                className="min-h-24"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="event-start">Start</Label>
-              <Input
-                id="event-start"
-                type="datetime-local"
-                value={form.startLocal}
-                onChange={(inputEvent) =>
-                  setForm({ ...form, startLocal: inputEvent.target.value })
-                }
-                required
-                disabled={isPending}
-                aria-invalid={formError !== null && form.startLocal === ''}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="event-end">End</Label>
-              <Input
-                id="event-end"
-                type="datetime-local"
-                value={form.endLocal}
-                onChange={(inputEvent) =>
-                  setForm({ ...form, endLocal: inputEvent.target.value })
-                }
-                required
-                disabled={isPending}
-                aria-invalid={formError !== null && form.endLocal === ''}
-              />
-            </div>
-          </div>
-
-          <SelectableGroup
-            label="Sports"
-            options={sportOptions}
-            selectedIds={form.sportIds}
-            emptyLabel="No sports available."
-            disabled={isPending}
-            onToggle={handleSportToggle}
-          />
-
-          <SelectableGroup
-            label="Teams"
-            options={teamOptions}
-            selectedIds={form.teamIds}
-            emptyLabel="No teams available."
-            disabled={isPending}
-            onToggle={handleTeamToggle}
-          />
-
-          <AttendeeSelector
-            isPastEvent={isPastEvent}
-            options={attendeeOptions}
-            selectedIds={form.attendeeIds}
-            disabled={isPending}
-            onToggle={handleAttendeeToggle}
-          />
+          {eventSteps[stepIndex].id === 'attendees' && (
+            <MultiSelectCombobox
+              label={isPastEvent ? 'Attendance Upkeep' : 'Attendees'}
+              placeholder="Search and add attendees..."
+              emptyLabel="No team attendees available"
+              emptySearchLabel="No attendees match your search."
+              options={attendeeSelectOptions}
+              selectedIds={form.attendeeIds}
+              disabled={isPending}
+              onToggle={handleAttendeeToggle}
+            />
+          )}
 
           {formError && (
             <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
@@ -357,154 +390,19 @@ function SportEventEditorLoaded({
             </p>
           )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeEditor} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving' : target.mode === 'create' ? 'Create Event' : 'Save Event'}
-            </Button>
-          </DialogFooter>
+          <DialogStepperFooter
+            isFirstStep={isFirstStep}
+            isLastStep={isLastStep}
+            isPending={isPending}
+            submitLabel={target.mode === 'create' ? 'Create Event' : 'Save Event'}
+            onCancel={closeEditor}
+            onBack={() => {
+              setFormError(null)
+              setStepIndex((current) => Math.max(current - 1, 0))
+            }}
+          />
       </form>
     </DialogContent>
-  )
-}
-
-function SelectableGroup({
-  label,
-  options,
-  selectedIds,
-  emptyLabel,
-  disabled,
-  onToggle,
-}: {
-  label: string
-  options: Option[]
-  selectedIds: string[]
-  emptyLabel: string
-  disabled: boolean
-  onToggle: (id: string) => void
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <Label>{label}</Label>
-        <Badge size="sm">{selectedIds.length}</Badge>
-      </div>
-      {options.length === 0 ? (
-        <p className="border bg-card px-3 py-2 text-body-sm text-text-secondary">{emptyLabel}</p>
-      ) : (
-        <div className="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-          {options.map((option) => {
-            const selected = selectedIds.includes(option.id)
-
-            return (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={selected}
-                disabled={disabled}
-                onClick={() => onToggle(option.id)}
-                className={cn(
-                  'min-h-12 border px-3 py-2 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
-                  selected
-                    ? 'border-primary bg-primary/10 text-text-primary'
-                    : 'border-border bg-card hover:bg-muted/60',
-                )}
-              >
-                <span className="block text-body-sm font-medium">{option.label}</span>
-                {option.meta && (
-                  <span className="mt-0.5 block text-caption text-text-tertiary">
-                    {option.meta}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AttendeeSelector({
-  isPastEvent,
-  options,
-  selectedIds,
-  disabled,
-  onToggle,
-}: {
-  isPastEvent: boolean
-  options: Reference[]
-  selectedIds: string[]
-  disabled: boolean
-  onToggle: (id: string) => void
-}) {
-  const selected = options.filter((option) => selectedIds.includes(option.id))
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <Label>{isPastEvent ? 'Attendance Upkeep' : 'Attendees'}</Label>
-        <Badge size="sm">{selectedIds.length}</Badge>
-      </div>
-
-      {selected.length > 0 && (
-        <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto border bg-card p-2">
-          {selected.map((attendee) => (
-            <Badge key={attendee.id} className="gap-1">
-              {memberRefName(attendee)}
-              <button
-                type="button"
-                className="inline-flex size-4 items-center justify-center text-text-tertiary hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
-                disabled={disabled}
-                onClick={() => onToggle(attendee.id)}
-              >
-                <X className="size-3" />
-                <span className="sr-only">Remove {memberRefName(attendee)}</span>
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {options.length === 0 ? (
-        <p className="border bg-card px-3 py-2 text-body-sm text-text-secondary">
-          No roster attendees available.
-        </p>
-      ) : (
-        <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-          {options.map((option) => {
-            const checked = selectedIds.includes(option.id)
-
-            return (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={checked}
-                disabled={disabled}
-                onClick={() => onToggle(option.id)}
-                className={cn(
-                  'flex min-h-10 items-center justify-between gap-3 border px-3 py-2 text-left text-body-sm transition-colors disabled:pointer-events-none disabled:opacity-50',
-                  checked
-                    ? 'border-primary bg-primary/10 text-text-primary'
-                    : 'border-border bg-card hover:bg-muted/60',
-                )}
-              >
-                <span>{memberRefName(option)}</span>
-                <span
-                  className={cn(
-                    'size-3 shrink-0 border',
-                    checked ? 'border-primary bg-primary' : 'border-border',
-                  )}
-                  aria-hidden="true"
-                />
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -592,21 +490,36 @@ function roleScopedTeams(user: AuthUser, teams: Team[], sports: Sport[]): Team[]
   return []
 }
 
+interface AttendeeOption {
+  member: Reference
+  teamName: string
+}
+
 function buildAttendeeOptions(
   teamIds: string[],
   teams: Team[],
   event: SportEvent | undefined,
-): Reference[] {
-  const refs = new Map<string, Reference>()
+): AttendeeOption[] {
+  const selectedTeams = new Set(teamIds)
+  const options = new Map<string, AttendeeOption>()
 
   teams
-    .filter((team) => teamIds.includes(team.id))
-    .flatMap((team) => team.trainees)
-    .forEach((member) => refs.set(member.id, member))
+    .filter((team) => selectedTeams.has(team.id))
+    .forEach((team) => {
+      team.trainees.forEach((member) => {
+        options.set(member.id, { member, teamName: team.name })
+      })
+    })
 
-  event?.attendees?.forEach((attendee) => refs.set(attendee.id, attendee))
+  event?.attendees?.forEach((attendee) => {
+    if (!options.has(attendee.id)) {
+      options.set(attendee.id, { member: attendee, teamName: 'Other' })
+    }
+  })
 
-  return Array.from(refs.values()).toSorted((a, b) => memberRefName(a).localeCompare(memberRefName(b)))
+  return Array.from(options.values()).toSorted((a, b) =>
+    memberRefName(a.member).localeCompare(memberRefName(b.member)),
+  )
 }
 
 function syncAttendeesForTeams(
@@ -639,11 +552,18 @@ function rosterIdsForTeams(teamIds: string[], teams: Team[]): string[] {
   )
 }
 
-function validateForm(form: EventFormState): string | null {
-  if (!form.name.trim()) return 'Name is required.'
-  if (!form.startLocal || !form.endLocal) return 'Start and end time are required.'
-  if (new Date(form.endLocal) <= new Date(form.startLocal)) {
-    return 'End time must be after start time.'
+function validateStep(stepId: string, form: EventFormState): string | null {
+  if (stepId === 'details') {
+    if (!form.name.trim()) return 'Name is required.'
+    return null
+  }
+
+  if (stepId === 'schedule') {
+    if (!form.startLocal || !form.endLocal) return 'Start and end time are required.'
+    if (new Date(form.endLocal) <= new Date(form.startLocal)) {
+      return 'End time must be after start time.'
+    }
+    return null
   }
 
   return null

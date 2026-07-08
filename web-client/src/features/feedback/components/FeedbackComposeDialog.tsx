@@ -1,13 +1,12 @@
 import { type FormEvent, useMemo, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -54,6 +53,20 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
   const [formError, setFormError] = useState<string | null>(null)
   const eventsQuery = useEventsList()
   const createFeedback = useCreateFeedback()
+  const skipEventStep = target.eventId !== undefined
+  const steps: DialogStep[] = useMemo(
+    () =>
+      skipEventStep
+        ? [{ id: 'details', label: 'Details' }]
+        : [
+            { id: 'event', label: 'Event' },
+            { id: 'details', label: 'Details' },
+          ],
+    [skipEventStep],
+  )
+  const [stepIndex, setStepIndex] = useState(0)
+  const isFirstStep = stepIndex === 0
+  const isLastStep = stepIndex === steps.length - 1
 
   const eventOptions = useMemo(
     () =>
@@ -68,6 +81,16 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (steps[stepIndex].id === 'event') {
+      if (!eventId) {
+        setFormError('Select an event.')
+        return
+      }
+      setFormError(null)
+      setStepIndex((current) => current + 1)
+      return
+    }
 
     const parsedRating = validateRating(rating)
 
@@ -106,69 +129,79 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
         <DialogTitle>Give Feedback</DialogTitle>
       </DialogHeader>
 
+      <div className="space-y-1.5">
+        <Label>Subject</Label>
+        <p className="border-b border-input py-2 text-body-sm font-medium">{target.name}</p>
+      </div>
+
+      {steps.length > 1 && <DialogStepperNav steps={steps} currentStep={stepIndex} />}
+
       <form className="space-y-5" onSubmit={handleSubmit}>
-        <div className="space-y-1.5">
-          <Label>Subject</Label>
-          <p className="border-b border-input py-2 text-body-sm font-medium">{target.name}</p>
-        </div>
+        {steps[stepIndex].id === 'event' && (
+          <div className="space-y-1.5">
+            <Label htmlFor="feedback-event">Event</Label>
+            <Select
+              value={eventId}
+              onValueChange={setEventId}
+              disabled={eventsQuery.isLoading || createFeedback.isPending}
+            >
+              <SelectTrigger id="feedback-event" className="w-full">
+                <SelectValue
+                  placeholder={eventsQuery.isLoading ? 'Loading events' : 'Select event'}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {eventOptions.map((event) => (
+                  <SelectItem key={event.value} value={event.value}>
+                    {event.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {eventsQuery.error && (
+              <p className="text-caption text-destructive">
+                {serverErrorMessage(eventsQuery.error)}
+              </p>
+            )}
+            {!eventsQuery.isLoading && !eventsQuery.error && eventOptions.length === 0 && (
+              <p className="text-caption text-text-tertiary">No events available.</p>
+            )}
+          </div>
+        )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="feedback-event">Event</Label>
-          <Select
-            value={eventId}
-            onValueChange={setEventId}
-            disabled={eventsQuery.isLoading || createFeedback.isPending}
-          >
-            <SelectTrigger id="feedback-event" className="w-full">
-              <SelectValue placeholder={eventsQuery.isLoading ? 'Loading events' : 'Select event'} />
-            </SelectTrigger>
-            <SelectContent>
-              {eventOptions.map((event) => (
-                <SelectItem key={event.value} value={event.value}>
-                  {event.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {eventsQuery.error && (
-            <p className="text-caption text-destructive">
-              {serverErrorMessage(eventsQuery.error)}
-            </p>
-          )}
-          {!eventsQuery.isLoading && !eventsQuery.error && eventOptions.length === 0 && (
-            <p className="text-caption text-text-tertiary">No events available.</p>
-          )}
-        </div>
+        {steps[stepIndex].id === 'details' && (
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="feedback-body">Feedback</Label>
+              <Textarea
+                id="feedback-body"
+                value={feedback}
+                onChange={(event) => setFeedback(event.target.value)}
+                required
+                disabled={createFeedback.isPending}
+                aria-invalid={formError !== null && feedback.trim() === ''}
+                className="min-h-28"
+              />
+            </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="feedback-body">Feedback</Label>
-          <Textarea
-            id="feedback-body"
-            value={feedback}
-            onChange={(event) => setFeedback(event.target.value)}
-            required
-            disabled={createFeedback.isPending}
-            aria-invalid={formError !== null && feedback.trim() === ''}
-            className="min-h-28"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="feedback-rating">Rating</Label>
-          <Input
-            id="feedback-rating"
-            type="number"
-            min={0}
-            max={10}
-            step={1}
-            inputMode="numeric"
-            value={rating}
-            onChange={(event) => setRating(event.target.value)}
-            required
-            disabled={createFeedback.isPending}
-            aria-invalid={formError !== null && validateRating(rating) === null}
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="feedback-rating">Rating</Label>
+              <Input
+                id="feedback-rating"
+                type="number"
+                min={0}
+                max={10}
+                step={1}
+                inputMode="numeric"
+                value={rating}
+                onChange={(event) => setRating(event.target.value)}
+                required
+                disabled={createFeedback.isPending}
+                aria-invalid={formError !== null && validateRating(rating) === null}
+              />
+            </div>
+          </div>
+        )}
 
         {formError && (
           <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
@@ -176,22 +209,18 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
           </p>
         )}
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={closeCompose}
-            disabled={createFeedback.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={createFeedback.isPending || eventOptions.length === 0}
-          >
-            {createFeedback.isPending ? 'Saving' : 'Save Feedback'}
-          </Button>
-        </DialogFooter>
+        <DialogStepperFooter
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          isPending={createFeedback.isPending}
+          nextLabel="Next"
+          submitLabel="Save Feedback"
+          onCancel={closeCompose}
+          onBack={() => {
+            setFormError(null)
+            setStepIndex((current) => Math.max(current - 1, 0))
+          }}
+        />
       </form>
     </DialogContent>
   )

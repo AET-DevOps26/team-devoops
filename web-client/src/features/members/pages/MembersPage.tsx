@@ -1,9 +1,21 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { MessageSquarePlus, Pencil, Plus, Trash2 } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
 import { PageHeader } from '@/components/ui/page-header'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
   SelectContent,
@@ -13,12 +25,17 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { useAuth } from '@/features/auth'
 import { FeedbackComposeDialog, FeedbackComposeNotice } from '@/features/feedback'
 import { useFeedbackUiStore } from '@/features/feedback/model/feedbackUiStore'
+import { serverErrorMessage } from '@/lib/server-error'
+import { useDeleteMember } from '../api/queries'
+import { MemberEditorDialog } from '../components/MemberEditorDialog'
 import { useMembersUiStore } from '../model/membersUiStore'
 import { useMembersViewModel } from '../model/useMembersViewModel'
 
 export function MembersPage() {
+  const { user } = useAuth()
   const { view, isLoading, error } = useMembersViewModel()
   const openCompose = useFeedbackUiStore((state) => state.openCompose)
   const filters = useMembersUiStore((state) => state.filters)
@@ -26,8 +43,37 @@ export function MembersPage() {
   const setTeamId = useMembersUiStore((state) => state.setTeamId)
   const setSport = useMembersUiStore((state) => state.setSport)
   const resetFilters = useMembersUiStore((state) => state.resetFilters)
+  const openCreateMember = useMembersUiStore((state) => state.openCreateMember)
+  const openEditMember = useMembersUiStore((state) => state.openEditMember)
+  const openDeleteConfirm = useMembersUiStore((state) => state.openDeleteConfirm)
+  const closeDeleteConfirm = useMembersUiStore((state) => state.closeDeleteConfirm)
+  const deleteTargetId = useMembersUiStore((state) => state.deleteTargetId)
+  const mutationNotice = useMembersUiStore((state) => state.mutationNotice)
+  const setMutationNotice = useMembersUiStore((state) => state.setMutationNotice)
+  const deleteMember = useDeleteMember()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const isAdmin = user.role === 'admin'
+  const deleteTarget = view.rows.find((row) => row.id === deleteTargetId) ?? null
 
   useEffect(() => resetFilters, [resetFilters])
+
+  const handleDeleteMember = (memberId: string) => {
+    setDeleteError(null)
+    openDeleteConfirm(memberId)
+  }
+
+  const confirmDeleteMember = async () => {
+    if (!deleteTargetId) return
+
+    try {
+      await deleteMember.mutateAsync(deleteTargetId)
+      setMutationNotice('Member deleted.')
+      setDeleteError(null)
+      closeDeleteConfirm()
+    } catch (deleteMemberError) {
+      setDeleteError(serverErrorMessage(deleteMemberError))
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6">
@@ -35,7 +81,24 @@ export function MembersPage() {
         eyebrow="My Club"
         title="Members"
         subtitle="People in your visible teams and sports."
+        action={
+          isAdmin ? (
+            <Button type="button" onClick={openCreateMember}>
+              <Plus />
+              New member
+            </Button>
+          ) : undefined
+        }
       />
+
+      {mutationNotice && (
+        <p
+          role="status"
+          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
+        >
+          {mutationNotice}
+        </p>
+      )}
 
       <FeedbackComposeNotice />
 
@@ -57,20 +120,6 @@ export function MembersPage() {
             searchLabel="Search members"
             searchPlaceholder="Name or email"
           >
-            <Select value={filters.teamId} onValueChange={setTeamId}>
-              <SelectTrigger aria-label="Filter members by team">
-                <SelectValue placeholder="Team" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All teams</SelectItem>
-                {view.teamOptions.map((team) => (
-                  <SelectItem key={team.value} value={team.value}>
-                    {team.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Select value={filters.sport} onValueChange={setSport}>
               <SelectTrigger aria-label="Filter members by sport">
                 <SelectValue placeholder="Sport" />
@@ -80,6 +129,20 @@ export function MembersPage() {
                 {view.sportOptions.map((sport) => (
                   <SelectItem key={sport.value} value={sport.value}>
                     {sport.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.teamId} onValueChange={setTeamId}>
+              <SelectTrigger aria-label="Filter members by team">
+                <SelectValue placeholder="Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All teams</SelectItem>
+                {view.teamOptions.map((team) => (
+                  <SelectItem key={team.value} value={team.value}>
+                    {team.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -98,7 +161,9 @@ export function MembersPage() {
                   <THead>Email</THead>
                   <THead>Teams</THead>
                   <THead>Sports</THead>
-                  {view.composableMemberIds.size > 0 && <THead className="text-right" />}
+                  {(view.composableMemberIds.size > 0 || isAdmin) && (
+                    <THead className="text-right" />
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -115,17 +180,33 @@ export function MembersPage() {
                       <TCell>
                         <FacetBadges values={member.sports} emptyLabel="No sport" />
                       </TCell>
-                      {view.composableMemberIds.size > 0 && (
+                      {(view.composableMemberIds.size > 0 || isAdmin) && (
                         <TCell className="text-right">
-                          {canGiveFeedback && (
-                            <Button
-                              variant="link"
-                              className="h-auto p-0"
-                              onClick={() => openCompose({ id: member.id, name: member.name })}
-                            >
-                              Give feedback
-                            </Button>
-                          )}
+                          <RowActions>
+                            {canGiveFeedback && (
+                              <RowActionButton
+                                icon={MessageSquarePlus}
+                                label={`Give feedback for ${member.name}`}
+                                onClick={() => openCompose({ id: member.id, name: member.name })}
+                              />
+                            )}
+                            {isAdmin && (
+                              <>
+                                <RowActionButton
+                                  icon={Pencil}
+                                  label={`Edit ${member.name}`}
+                                  onClick={() => openEditMember(member.id)}
+                                />
+                                <RowActionButton
+                                  icon={Trash2}
+                                  label={`Delete ${member.name}`}
+                                  destructive
+                                  disabled={deleteMember.isPending}
+                                  onClick={() => handleDeleteMember(member.id)}
+                                />
+                              </>
+                            )}
+                          </RowActions>
                         </TCell>
                       )}
                     </TRow>
@@ -138,6 +219,39 @@ export function MembersPage() {
       )}
 
       <FeedbackComposeDialog />
+      <MemberEditorDialog />
+
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteError(null)
+            closeDeleteConfirm()
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {deleteTarget?.name ?? 'this member'}? This removes their team and sport
+              memberships, deletes feedback about them, and clears their name from records they
+              authored. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMember.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteMember.isPending} onClick={confirmDeleteMember}>
+              {deleteMember.isPending ? 'Deleting' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

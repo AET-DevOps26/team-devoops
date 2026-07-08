@@ -4,12 +4,10 @@ import { getCurrentUser } from '@/features/auth/currentUser'
 import {
   balanceFixtures,
   memberNamesById,
-  sportFixtures,
-  teamFixtures,
   transactionFixtures,
 } from '@/mocks/fixtures'
-import { mockOr } from '@/mocks/mockSwitch'
-import { scopeBalances, scopeTransactions } from '@/mocks/scope'
+import { mockHttpError, mockOr } from '@/mocks/mockSwitch'
+import { directorManagesMember, scopeBalances, scopeTransactions, trainerManagesMember } from '@/mocks/scope'
 import { paymentsClient } from './client'
 import type { AuthUser, Reference } from '@/types'
 import type { Balance, Transaction, TransactionCreate, TransactionPartialUpdate } from '../types'
@@ -116,7 +114,11 @@ export function useUpdateTransaction() {
   const qc = useQueryClient()
 
   return useMutation<Transaction, Error, { id: string } & TransactionPartialUpdate>({
-    mutationFn: ({ id, ...data }) => paymentsClient.patch<Transaction>(`/transactions/${id}`, data).then(r => r.data),
+    mutationFn: ({ id, ...data }) =>
+      mockOr(
+        () => Promise.resolve(mockUpdateTransaction({ id, ...data })),
+        () => paymentsClient.patch<Transaction>(`/transactions/${id}`, data).then(r => r.data),
+      ),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
       qc.invalidateQueries({ queryKey: paymentsKeys.balances })
@@ -170,6 +172,43 @@ function mockCreateTransaction(data: TransactionCreate): Transaction {
   return cloneTransaction(transaction)
 }
 
+function mockUpdateTransaction({ id, ...data }: { id: string } & TransactionPartialUpdate): Transaction {
+  const user = getCurrentUser()
+  const index = transactionFixtures.findIndex((transaction) => transaction.id === id)
+  const existing = transactionFixtures[index]
+
+  if (!existing) throw mockHttpError(404, 'Transaction not found.')
+  // Same gate delete uses: only the creator or an admin may modify a transaction.
+  if (user.role !== 'admin' && existing.creator?.id !== user.id) {
+    throw mockHttpError(403, 'You are not allowed to update this transaction.')
+  }
+
+  // Resolve a new member only if the caller is moving the transaction; keep the ref otherwise.
+  const nextMember = data.member !== undefined ? memberRef(data.member) : existing.member
+
+  const title = data.title !== undefined ? data.title.trim() : existing.title
+  if (!title) throw mockHttpError(400, 'Title is required.')
+
+  const updated: Transaction = {
+    ...existing,
+    member: nextMember,
+    amount_cents: data.amount_cents !== undefined ? data.amount_cents : existing.amount_cents,
+    title,
+    description: data.description !== undefined ? data.description.trim() : existing.description,
+  }
+
+  transactionFixtures[index] = updated
+
+  // Re-sync the affected member balance(s). If the member changed, both the old and the new
+  // member's balances must be recomputed.
+  if (existing.member.id !== updated.member.id) {
+    syncMockBalance(existing.member)
+  }
+  syncMockBalance(updated.member)
+
+  return cloneTransaction(updated)
+}
+
 function mockDeleteTransaction(id: string): void {
   const user = getCurrentUser()
   const index = transactionFixtures.findIndex((transaction) => transaction.id === id)
@@ -192,31 +231,9 @@ function memberRef(memberId: string): Reference {
 
 function canCreateTransactionForMember(user: AuthUser, memberId: string): boolean {
   if (user.role === 'admin') return true
-  if (user.role === 'director') return directsMember(user.id, memberId)
-  if (user.role === 'trainer') return trainsMember(user.id, memberId)
+  if (user.role === 'director') return directorManagesMember(user.id, memberId)
+  if (user.role === 'trainer') return trainerManagesMember(user.id, memberId)
   return false
-}
-
-function directsMember(userId: string, memberId: string): boolean {
-  const sportIds = new Set(
-    sportFixtures
-      .filter((sport) => sport.directors.some((director) => director.id === userId))
-      .map((sport) => sport.id),
-  )
-
-  return teamFixtures.some(
-    (team) =>
-      sportIds.has(team.sport.id) &&
-      team.trainees.some((trainee) => trainee.id === memberId),
-  )
-}
-
-function trainsMember(userId: string, memberId: string): boolean {
-  return teamFixtures.some(
-    (team) =>
-      team.trainers.some((trainer) => trainer.id === userId) &&
-      team.trainees.some((trainee) => trainee.id === memberId),
-  )
 }
 
 function syncMockBalance(member: Reference): void {
@@ -252,14 +269,4 @@ function cloneTransaction(transaction: Transaction): Transaction {
     member: { ...transaction.member },
     creator: transaction.creator ? { ...transaction.creator } : null,
   }
-}
-
-function mockHttpError(status: number, message: string): Error {
-  return Object.assign(new Error(message), {
-    isAxiosError: true,
-    response: {
-      status,
-      data: { message },
-    },
-  })
 }

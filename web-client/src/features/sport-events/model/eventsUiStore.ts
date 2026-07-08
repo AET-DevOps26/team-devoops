@@ -8,6 +8,7 @@ export type EventsSort = 'date-asc' | 'date-desc' | 'duration-asc' | 'duration-d
 export interface EventsFilters {
   search: string
   status: EventsStatusFilter
+  sport: string
   fromDate: string
   toDate: string
   sort: EventsSort
@@ -20,6 +21,7 @@ export type EventEditorTarget =
 const defaultFilters: EventsFilters = {
   search: '',
   status: 'all',
+  sport: 'all',
   fromDate: '',
   toDate: '',
   sort: 'date-asc',
@@ -41,6 +43,7 @@ interface EventsUiState {
   setMutationNotice: (notice: string | null) => void
   setSearch: (search: string) => void
   setStatus: (status: EventsStatusFilter) => void
+  setSport: (sport: string) => void
   setDateRange: (range: Pick<EventsFilters, 'fromDate' | 'toDate'>) => void
   setSort: (sort: EventsSort) => void
   resetFilters: () => void
@@ -53,7 +56,7 @@ export const useEventsUiStore = create<EventsUiState>((set) => ({
   mutationNotice: null,
   filters: defaultFilters,
   open: (id) => set({ openEventId: id }),
-  close: () => set({ openEventId: null, deleteTargetId: null }),
+  close: () => set({ openEventId: null }),
   openCreate: () => set({ editorTarget: { mode: 'create' }, mutationNotice: null }),
   openEdit: (eventId) => set({ editorTarget: { mode: 'edit', eventId }, mutationNotice: null }),
   closeEditor: () => set({ editorTarget: null }),
@@ -62,6 +65,7 @@ export const useEventsUiStore = create<EventsUiState>((set) => ({
   setMutationNotice: (notice) => set({ mutationNotice: notice }),
   setSearch: (search) => set((state) => ({ filters: { ...state.filters, search } })),
   setStatus: (status) => set((state) => ({ filters: { ...state.filters, status } })),
+  setSport: (sport) => set((state) => ({ filters: { ...state.filters, sport } })),
   setDateRange: (range) =>
     set((state) => ({ filters: { ...state.filters, ...range } })),
   setSort: (sort) => set((state) => ({ filters: { ...state.filters, sort } })),

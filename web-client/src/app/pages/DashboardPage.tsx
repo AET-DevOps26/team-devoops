@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+import { BarList, DonutChart } from '@/components/ui/chart-primitives'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,10 +10,23 @@ import { StatCard } from '@/components/ui/stat-card'
 import {
   type DashboardDirectorSportSection,
   type DashboardFeedbackItem,
+  type DashboardAdminOrganizationSection,
   type DashboardSectionState,
-  type DashboardSportSection,
   useDashboardViewModel,
 } from './model/useDashboardViewModel'
+
+const SPORT_CHART_COLORS = [
+  'var(--primary)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+] as const
+
+const ROLE_CHART_COLORS = ['var(--primary)', 'var(--text-secondary)'] as const
+
+const plural = (count: number, singular: string, pluralLabel = `${singular}s`) =>
+  count === 1 ? singular : pluralLabel
 
 const initials = (name: string) =>
   name
@@ -40,7 +53,13 @@ export function DashboardPage() {
       />
 
       {view.adminCounts && (
-        <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
+        <>
+          <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
+          <AdminOrganizationSummary
+            organization={view.adminOrganization}
+            state={states.adminOrganization}
+          />
+        </>
       )}
 
       {showSportCards && <DirectorSportCards sport={view.mySport} state={states.mySport} />}
@@ -61,7 +80,6 @@ export function DashboardPage() {
       {view.myFeedback && (
         <FeedbackSection feedback={view.myFeedback.items} state={states.myFeedback} />
       )}
-      {view.sports && <SportsSection sports={view.sports} state={states.sports} />}
     </div>
   )
 }
@@ -75,8 +93,8 @@ function AdminCountsSection({
 }) {
   if (state?.isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {['teams', 'directors', 'trainers', 'balance', 'events'].map((key) => (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {['members', 'sports', 'teams', 'directors', 'coaches', 'balance', 'events'].map((key) => (
           <Skeleton key={key} className="h-32 border" />
         ))}
       </div>
@@ -84,10 +102,16 @@ function AdminCountsSection({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="Total Members" value={String(counts.totalMembers)} meta="All members" />
+      <StatCard
+        label="Total Sports"
+        value={String(counts.totalSports)}
+        meta="Active disciplines"
+      />
       <StatCard label="Total Teams" value={String(counts.totalTeams)} meta="Across all sports" />
-      <StatCard label="Directors" value={String(counts.directors)} meta="Unique directors" />
-      <StatCard label="Trainers" value={String(counts.trainers)} meta="Unique trainers" />
+      <StatCard label="Directors" value={String(counts.directors)} meta="Across all sports" />
+      <StatCard label="Coaches" value={String(counts.trainers)} meta="Across all teams" />
       <StatCard
         label="Club Balance"
         value={counts.totalBalanceFormatted}
@@ -98,6 +122,176 @@ function AdminCountsSection({
         value={String(counts.eventsThisWeek)}
         meta="Scheduled this week"
       />
+    </div>
+  )
+}
+
+function AdminOrganizationSummary({
+  organization,
+  state,
+}: {
+  organization?: DashboardAdminOrganizationSection
+  state?: DashboardSectionState
+}) {
+  return (
+    <section className="border bg-card">
+      <SectionHeader title="Organization Summary" to="/organization" />
+      {sectionBody(
+        state,
+        !organization || organization.sportDistribution.length === 0,
+        'No organization insights are available yet.',
+        organization && (
+          <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(16rem,0.9fr)] lg:gap-6">
+            <div className="min-w-0 space-y-4">
+              <div>
+                <p className="text-body-sm font-semibold text-text-primary">Members by sport</p>
+                <p className="text-caption text-text-tertiary">Members across teams</p>
+              </div>
+              <SportDistributionChart organization={organization} />
+              {organization.hiddenSports > 0 && (
+                <p className="text-caption text-text-tertiary">
+                  +{organization.hiddenSports} more sports in the organization view
+                </p>
+              )}
+            </div>
+            <div className="space-y-5 lg:border-l lg:pl-6">
+              <RoleAssignmentChart organization={organization} />
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div>
+                  <p className="text-caption uppercase tracking-[0.12em] text-text-tertiary">
+                    Average team size
+                  </p>
+                  <p className="mt-2 text-h2 font-semibold leading-none text-text-primary">
+                    {organization.averageMembersPerTeam.toFixed(1)}
+                  </p>
+                  <p className="mt-2 text-caption text-text-tertiary">members per team</p>
+                </div>
+                <div>
+                  <p className="text-caption uppercase tracking-[0.12em] text-text-tertiary">
+                    Avg teams per sport
+                  </p>
+                  <p className="mt-2 text-h2 font-semibold leading-none text-text-primary">
+                    {organization.averageTeamsPerSport.toFixed(1)}
+                  </p>
+                  <p className="mt-2 text-caption text-text-tertiary">teams per sport</p>
+                </div>
+                {organization.busiestSport && (
+                  <div className="col-span-2">
+                    <p className="text-caption uppercase tracking-[0.12em] text-text-tertiary">
+                      Busiest sport
+                    </p>
+                    <p className="mt-2 text-h3 font-semibold leading-none text-text-primary">
+                      {organization.busiestSport.sportName}
+                    </p>
+                    <p className="mt-2 text-caption text-text-tertiary">
+                      {organization.busiestSport.memberCount}{' '}
+                      {plural(organization.busiestSport.memberCount, 'member')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ),
+      )}
+    </section>
+  )
+}
+
+function SportDistributionChart({
+  organization,
+}: {
+  organization: DashboardAdminOrganizationSection
+}) {
+  const chartItems = organization.sportDistribution.map((item, index) => ({
+    id: item.id,
+    label: item.sportName,
+    value: item.memberCount,
+    percentage: item.memberSharePercentage,
+    description: `${item.teamCount} ${plural(item.teamCount, 'team')} - ${item.trainerCount} ${plural(
+      item.trainerCount,
+      'coach',
+      'coaches',
+    )} - ${item.membersPerTeam.toFixed(1)} members/team`,
+    tooltip: `${item.sportName}: ${item.memberCount} ${plural(
+      item.memberCount,
+      'member',
+    )}, ${item.memberSharePercentage}% of sport members, ${item.teamCount} ${plural(
+      item.teamCount,
+      'team',
+    )}, ${item.trainerCount} ${plural(item.trainerCount, 'coach', 'coaches')}`,
+    color: SPORT_CHART_COLORS[index % SPORT_CHART_COLORS.length],
+  }))
+  const chartDescription = chartItems
+    .map((item) => `${item.label}: ${item.value} members, ${item.percentage}%`)
+    .join('; ')
+
+  return (
+    <BarList
+      items={chartItems}
+      maxValue={organization.totalDistributedMembers}
+      valueLabel="members"
+      ariaLabel={`Members by sport. ${chartDescription}.`}
+    />
+  )
+}
+
+function RoleAssignmentChart({
+  organization,
+}: {
+  organization: DashboardAdminOrganizationSection
+}) {
+  const [directors, coaches] = organization.roleAssignments
+  const segments = organization.roleAssignments.map((item, index) => ({
+    id: item.label.toLocaleLowerCase(),
+    label: item.label,
+    value: item.value,
+    percentage: item.percentage,
+    color: ROLE_CHART_COLORS[index % ROLE_CHART_COLORS.length],
+  }))
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-body-sm font-semibold text-text-primary">Role assignments</p>
+        <p className="text-caption text-text-tertiary">
+          Directors and coaches as operational role records
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+        <DonutChart
+          className="w-36 shrink-0"
+          segments={segments}
+          centerValue={String(organization.totalRoleAssignments)}
+          centerLabel="role records"
+          ariaLabel={`Role assignments: ${directors.value} directors (${directors.percentage}%) and ${coaches.value} coaches (${coaches.percentage}%).`}
+        />
+        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-1">
+          <RoleAssignmentLegend color={ROLE_CHART_COLORS[0]} item={directors} />
+          <RoleAssignmentLegend color={ROLE_CHART_COLORS[1]} item={coaches} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RoleAssignmentLegend({
+  color,
+  item,
+}: {
+  color: string
+  item: DashboardAdminOrganizationSection['roleAssignments'][number]
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <span className="size-2 shrink-0" style={{ backgroundColor: color }} aria-hidden="true" />
+        <p className="truncate text-caption text-text-tertiary">{item.label}</p>
+      </div>
+      <p className="mt-1 text-body-sm font-semibold text-text-primary">
+        {item.value}
+        <span className="ml-1 font-normal text-text-tertiary">({item.percentage}%)</span>
+      </p>
     </div>
   )
 }
@@ -127,7 +321,7 @@ function DirectorSportCards({
       <StatCard
         label="Total Members"
         value={String(sport.totalMembers)}
-        meta="Roster members"
+        meta="Members"
       />
       <StatCard
         label="Sport Balance"
@@ -152,7 +346,7 @@ function TeamCard({
     <StatCard
       label="My Team"
       value={team.teamName}
-      meta={`${team.totalMembers} roster members`}
+      meta={`${team.totalMembers} members`}
     />
   )
 }
@@ -285,6 +479,11 @@ function DirectorTeamsSection({
               ))}
             </tbody>
           </table>
+          {sport.hiddenTeams > 0 && (
+            <div className="border-t px-4 py-3 text-caption text-text-tertiary sm:px-5">
+              Showing {sport.teams.length} of {sport.totalTeams} teams
+            </div>
+          )}
         </div>
       ))}
     </section>
@@ -363,56 +562,6 @@ function FeedbackSection({
             </li>
           ))}
         </ul>
-      ))}
-    </section>
-  )
-}
-
-function SportsSection({
-  sports,
-  state,
-}: {
-  sports: DashboardSportSection[]
-  state?: DashboardSectionState
-}) {
-  return (
-    <section className="border bg-card">
-      <SectionHeader title="Sports" to="/organization" />
-      {sectionBody(state, sports.length === 0, 'No sports are listed yet.', (
-        <div className="divide-y">
-          {sports.map((sport) => (
-            <article key={sport.name} className="px-4 py-4 sm:px-5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <h3 className="text-body-sm font-semibold text-text-primary">{sport.name}</h3>
-                  <p className="mt-1 text-caption text-text-tertiary">{sport.description}</p>
-                  <p className="mt-1 text-caption text-text-tertiary">
-                    Directors {sport.directors}
-                  </p>
-                </div>
-                <Badge tone="accent" size="sm">
-                  {sport.teams.length} teams
-                </Badge>
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
-                {sport.teams.length === 0 ? (
-                  <p className="text-body-sm text-text-tertiary">No teams in this sport yet.</p>
-                ) : (
-                  sport.teams.map((team) => (
-                    <div key={team.id} className="border bg-surface-sunken/40 px-3 py-2.5">
-                      <p className="truncate text-body-sm font-medium text-text-primary">
-                        {team.name}
-                      </p>
-                      <p className="truncate text-caption text-text-tertiary">
-                        Coach {team.trainers} - {team.members} members
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
       ))}
     </section>
   )

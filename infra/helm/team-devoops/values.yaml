@@ -354,6 +354,10 @@ services:
     dbUser: reports
     health: /health
     stripPrefix: true
+    # Flask routes here are bare (e.g. /reports/...), unlike the Spring services'
+    # generated controllers which keep their own name in the path -- needs the
+    # whole "/api/v1/helper" prefix removed, not just "/api/v1".
+    fullStrip: true
     envFromSecret: genai-env
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"

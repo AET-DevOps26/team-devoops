@@ -56,11 +56,47 @@ export interface DashboardTeamSection {
 }
 
 export interface DashboardAdminCountsSection {
+  totalMembers: number
+  totalSports: number
   totalTeams: number
   directors: number
   trainers: number
   totalBalanceFormatted: string
   eventsThisWeek: number
+}
+
+export interface DashboardSportDistributionItem {
+  id: string
+  sportName: string
+  teamCount: number
+  memberCount: number
+  trainerCount: number
+  memberSharePercentage: number
+  membersPerTeam: number
+}
+
+export interface DashboardRoleAssignmentItem {
+  label: string
+  value: number
+  percentage: number
+}
+
+export interface DashboardSportHighlight {
+  sportName: string
+  memberCount: number
+  teamCount: number
+  membersPerTeam: number
+}
+
+export interface DashboardAdminOrganizationSection {
+  sportDistribution: DashboardSportDistributionItem[]
+  hiddenSports: number
+  averageTeamsPerSport: number
+  averageMembersPerTeam: number
+  busiestSport?: DashboardSportHighlight
+  totalRoleAssignments: number
+  roleAssignments: DashboardRoleAssignmentItem[]
+  totalDistributedMembers: number
 }
 
 export interface DashboardDirectorTeam {
@@ -76,20 +112,7 @@ export interface DashboardDirectorSportSection {
   totalMembers: number
   sportBalanceFormatted: string
   teams: DashboardDirectorTeam[]
-}
-
-export interface DashboardSportTeam {
-  id: string
-  name: string
-  trainers: string
-  members: number
-}
-
-export interface DashboardSportSection {
-  name: string
-  description: string
-  directors: string
-  teams: DashboardSportTeam[]
+  hiddenTeams: number
 }
 
 export interface DashboardView {
@@ -101,7 +124,7 @@ export interface DashboardView {
   myTeam?: DashboardTeamSection
   mySport?: DashboardDirectorSportSection
   adminCounts?: DashboardAdminCountsSection
-  sports?: DashboardSportSection[]
+  adminOrganization?: DashboardAdminOrganizationSection
 }
 
 export interface DashboardSectionState {
@@ -118,12 +141,14 @@ export interface DashboardViewModel {
     mySport?: DashboardSectionState
     myFeedback?: DashboardSectionState
     adminCounts?: DashboardSectionState
-    sports?: DashboardSectionState
+    adminOrganization?: DashboardSectionState
   }
 }
 
-// "Recent" = latest N by created_at, no time window (decision 2026-06-26).
+// "Recent" = latest N by created_at, no time window.
 const RECENT_FEEDBACK_COUNT = 3
+const DIRECTOR_TEAM_PREVIEW_COUNT = 5
+const ADMIN_SPORT_PREVIEW_COUNT = 5
 
 function eventItem(event: EventSummary): DashboardEventItem {
   return {
@@ -135,8 +160,8 @@ function eventItem(event: EventSummary): DashboardEventItem {
 }
 
 // The dashboard envelope gives only a COUNT of upcoming events (+ a single next_event for
-// trainees), never an array — so the 3-event preview list is sourced separately from the
-// server-scoped events query (Option A), mirroring how the admin branch pulls /sports + /teams.
+// trainees), never an array - so the 3-event preview list is sourced separately from the
+// server-scoped events query.
 function buildEventsSection(
   upcomingCount: number,
   next: EventSummary | null,
@@ -191,57 +216,108 @@ function buildFeedbackSection(feedback: FeedbackSummary[]): DashboardFeedbackSec
   }
 }
 
-function buildDirectorSportSection(
+export function buildDirectorSportSection(
   dashboard: DirectorDashboard,
 ): DashboardDirectorSportSection {
+  const teams = dashboard.teams.slice(0, DIRECTOR_TEAM_PREVIEW_COUNT)
+
   return {
     sportName: dashboard.sport.name,
     totalTeams: dashboard.total_teams,
     totalMembers: dashboard.total_members,
     sportBalanceFormatted: formatCents(dashboard.sport_balance_cents),
-    teams: dashboard.teams.map((entry) => ({
+    teams: teams.map((entry) => ({
       id: entry.team.id,
       name: entry.team.name,
       memberCount: entry.member_count,
       balanceFormatted: formatCents(entry.balance_cents),
     })),
+    hiddenTeams: Math.max(0, dashboard.total_teams - teams.length),
   }
 }
 
-function buildSportsSections(sports: Sport[], teams: Team[]): DashboardSportSection[] {
-  const teamsBySport = new Map<string, Team[]>()
-
-  for (const team of teams) {
-    const sportId = team.sport.id
-    if (!sportId) continue
-
-    teamsBySport.set(sportId, [...(teamsBySport.get(sportId) ?? []), team])
+export function buildAdminCounts(
+  dashboard: AdminDashboard,
+): DashboardAdminCountsSection {
+  return {
+    totalMembers: dashboard.total_members,
+    totalSports: dashboard.total_sports,
+    totalTeams: dashboard.total_teams,
+    directors: dashboard.total_directors,
+    trainers: dashboard.total_trainers,
+    totalBalanceFormatted: formatCents(dashboard.total_balance_cents),
+    eventsThisWeek: dashboard.events_this_week,
   }
-
-  return sports.map((sport) => ({
-    name: sport.name,
-    description: sport.description,
-    directors: sport.directors.map(memberRefName).join(', ') || '--',
-    teams: (teamsBySport.get(sport.id) ?? []).map((team) => ({
-      id: team.id,
-      name: team.name,
-      trainers: team.trainers.map(memberRefName).join(', ') || '--',
-      members: team.trainees.length,
-    })),
-  }))
 }
 
-function buildAdminCounts(
+export function buildAdminOrganizationSection(
   dashboard: AdminDashboard,
   sports: Sport[],
   teams: Team[],
-): DashboardAdminCountsSection {
+): DashboardAdminOrganizationSection {
+  const distribution = sports
+    .map((sport) => {
+      const sportTeams = teams.filter((team) => team.sport.id === sport.id)
+      const memberIds = new Set<string>()
+      const trainerIds = new Set<string>()
+
+      sportTeams.forEach((team) => {
+        team.trainees.forEach((member) => memberIds.add(member.id))
+        team.trainers.forEach((trainer) => trainerIds.add(trainer.id))
+      })
+
+      return {
+        id: sport.id,
+        sportName: sport.name,
+        teamCount: sportTeams.length,
+        memberCount: memberIds.size,
+        trainerCount: trainerIds.size,
+        membersPerTeam: sportTeams.length === 0 ? 0 : memberIds.size / sportTeams.length,
+      }
+    })
+    .toSorted((a, b) => {
+      if (b.memberCount !== a.memberCount) return b.memberCount - a.memberCount
+      return a.sportName.localeCompare(b.sportName)
+    })
+
+  const totalDistributedMembers = Math.max(
+    1,
+    distribution.reduce((sum, item) => sum + item.memberCount, 0),
+  )
+  const sportDistribution = distribution
+    .slice(0, ADMIN_SPORT_PREVIEW_COUNT)
+    .map((item) => ({
+      ...item,
+      memberSharePercentage: Math.round((item.memberCount / totalDistributedMembers) * 100),
+    }))
+
+  const totalTeamMemberships = teams.reduce((sum, team) => sum + team.trainees.length, 0)
+  const roleTotal = dashboard.total_directors + dashboard.total_trainers
+  const roleAssignments = [
+    { label: 'Directors', value: dashboard.total_directors },
+    { label: 'Coaches', value: dashboard.total_trainers },
+  ].map((item) => ({
+    ...item,
+    percentage: roleTotal === 0 ? 0 : Math.round((item.value / roleTotal) * 100),
+  }))
+  const busiestSport = distribution[0]
+
   return {
-    totalTeams: teams.length,
-    directors: new Set(sports.flatMap((sport) => sport.directors.map((director) => director.id))).size,
-    trainers: new Set(teams.flatMap((team) => team.trainers.map((trainer) => trainer.id))).size,
-    totalBalanceFormatted: formatCents(dashboard.total_balance_cents),
-    eventsThisWeek: dashboard.events_this_week,
+    sportDistribution,
+    hiddenSports: Math.max(0, distribution.length - sportDistribution.length),
+    averageTeamsPerSport: sports.length === 0 ? 0 : teams.length / sports.length,
+    averageMembersPerTeam: teams.length === 0 ? 0 : totalTeamMemberships / teams.length,
+    busiestSport: busiestSport
+      ? {
+          sportName: busiestSport.sportName,
+          memberCount: busiestSport.memberCount,
+          teamCount: busiestSport.teamCount,
+          membersPerTeam: busiestSport.membersPerTeam,
+        }
+      : undefined,
+    totalRoleAssignments: roleTotal,
+    roleAssignments,
+    totalDistributedMembers,
   }
 }
 
@@ -250,16 +326,13 @@ export function useDashboardViewModel(): DashboardViewModel {
   const dashboardQuery = useDashboard()
   const data = dashboardQuery.data
 
-  // The admin envelope is counts-only; the sports-with-teams breakdown comes from the real
-  // organization queries (§9.3). Fetch only when the caller is an admin.
-  const isAdmin = data?.role === 'admin'
-  const sportsQuery = useSportsList(isAdmin)
-  const teamsQuery = useTeamsList(isAdmin)
-
   // The dashboard payload carries only an upcoming-events count, so the preview list for the
-  // trainee/trainer/director branches comes from the server-scoped events query (Option A).
+  // trainee/trainer/director branches comes from the server-scoped events query.
   const isNonAdmin = !!data && data.role !== 'admin'
   const eventsQuery = useEventsList(isNonAdmin)
+  const shouldLoadOrganizationInsights = data ? data.role === 'admin' : user.role === 'admin'
+  const sportsQuery = useSportsList(shouldLoadOrganizationInsights)
+  const teamsQuery = useTeamsList(shouldLoadOrganizationInsights)
 
   const role = user.role
 
@@ -275,16 +348,16 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
 
     fillSections(view, states, data, state, {
-      sports: sportsQuery.data ?? [],
-      teams: teamsQuery.data ?? [],
-      orgState: {
-        isLoading: dashboardQuery.isLoading || sportsQuery.isLoading || teamsQuery.isLoading,
-        error: dashboardQuery.error ?? sportsQuery.error ?? teamsQuery.error,
-      },
       events: eventsQuery.data ?? [],
       eventsState: {
         isLoading: dashboardQuery.isLoading || eventsQuery.isLoading,
         error: dashboardQuery.error ?? eventsQuery.error,
+      },
+      sports: sportsQuery.data ?? [],
+      teams: teamsQuery.data ?? [],
+      organizationState: {
+        isLoading: dashboardQuery.isLoading || sportsQuery.isLoading || teamsQuery.isLoading,
+        error: dashboardQuery.error ?? sportsQuery.error ?? teamsQuery.error,
       },
     })
 
@@ -293,26 +366,26 @@ export function useDashboardViewModel(): DashboardViewModel {
     data,
     dashboardQuery.error,
     dashboardQuery.isLoading,
+    eventsQuery.data,
+    eventsQuery.error,
+    eventsQuery.isLoading,
     sportsQuery.data,
     sportsQuery.error,
     sportsQuery.isLoading,
     teamsQuery.data,
     teamsQuery.error,
     teamsQuery.isLoading,
-    eventsQuery.data,
-    eventsQuery.error,
-    eventsQuery.isLoading,
     user.name,
     role,
   ])
 }
 
 interface OrgData {
-  sports: Sport[]
-  teams: Team[]
-  orgState: DashboardSectionState
   events: EventSummary[]
   eventsState: DashboardSectionState
+  sports: Sport[]
+  teams: Team[]
+  organizationState: DashboardSectionState
 }
 
 // The envelope's `role` is authoritative for which sections show — not the token role.
@@ -326,8 +399,7 @@ function fillSections(
   if (!data) {
     // Still loading/errored: wire the sections the token role expects so skeletons render.
     if (view.role === 'admin') {
-      states.adminCounts = org.orgState
-      states.sports = org.orgState
+      states.adminCounts = state
     } else {
       if (shouldShowBalance(view.role)) {
         states.myBalance = state
@@ -373,10 +445,10 @@ function fillSections(
       break
 
     case 'admin':
-      view.adminCounts = buildAdminCounts(data, org.sports, org.teams)
-      view.sports = buildSportsSections(org.sports, org.teams)
-      states.adminCounts = org.orgState
-      states.sports = org.orgState
+      view.adminCounts = buildAdminCounts(data)
+      view.adminOrganization = buildAdminOrganizationSection(data, org.sports, org.teams)
+      states.adminCounts = state
+      states.adminOrganization = org.organizationState
       break
   }
 }

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 
 import { useAuth } from '@/features/auth'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
+import { buildEventSportNamesById } from '@/lib/event-sports'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import type { AuthUser, EventListItem, Team } from '@/types'
 import type { SportEvent } from '../types'
@@ -20,11 +21,13 @@ export interface EventRow extends EventListItem {
   status: EventStatus
   formattedWhen: string
   duration: string
+  sportNames: string[]
 }
 
 export interface EventsView {
   rows: EventRow[]
   totalRows: number
+  sportOptions: { value: string; label: string }[]
   stats: {
     upcoming: number
     thisWeek: number
@@ -98,15 +101,18 @@ export function buildEventsView(
   summaries: EventListItem[],
   now: Date,
   user: EventsViewUser,
+  teams: Team[] = [],
   filters: EventsFilters = {
     search: '',
     status: 'all',
+    sport: 'all',
     fromDate: '',
     toDate: '',
     sort: 'date-asc',
   },
 ): EventsView {
   const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const sportNamesByEventId = buildEventSportNamesById(summaries, teams)
   const rows = summaries.map((event) => {
     const status = eventStatusForRole(event, user, now)
 
@@ -115,8 +121,13 @@ export function buildEventsView(
       status,
       formattedWhen: formatDateTime(event.start_time),
       duration: formatDuration(event.start_time, event.end_time),
+      sportNames: sportNamesByEventId.get(event.id) ?? [],
     }
   })
+  const sportOptions = Array.from(new Set(rows.flatMap((event) => event.sportNames)), (sport) => ({
+    value: sport,
+    label: sport,
+  })).toSorted((a, b) => a.label.localeCompare(b.label))
   const search = filters.search.trim().toLocaleLowerCase()
   const statusFilter =
     user.role === 'member' || (filters.status !== 'attended' && filters.status !== 'missed')
@@ -127,12 +138,17 @@ export function buildEventsView(
   const filteredRows = rows
     .filter((event) => {
       const eventTime = new Date(event.start_time).getTime()
-      const matchesText = search.length === 0 || event.name.toLocaleLowerCase().includes(search)
+      const matchesText =
+        search.length === 0 ||
+        event.name.toLocaleLowerCase().includes(search) ||
+        event.sportNames.some((sport) => sport.toLocaleLowerCase().includes(search))
       const matchesStatus = statusFilter === 'all' || event.status === statusFilter
+      const matchesSport = filters.sport === 'all' || event.sportNames.includes(filters.sport)
 
       return (
         matchesText &&
         matchesStatus &&
+        matchesSport &&
         (fromTime === null || eventTime >= fromTime) &&
         (toTime === null || eventTime <= toTime)
       )
@@ -156,6 +172,7 @@ export function buildEventsView(
   return {
     rows: filteredRows,
     totalRows: rows.length,
+    sportOptions,
     stats: {
       upcoming: upcoming.length,
       thisWeek: thisWeek.length,
@@ -181,6 +198,7 @@ export function useEventsViewModel(now = new Date()) {
           role: user.role,
           teamIds: userTeamIds(teamsQuery.data ?? [], user.id),
         },
+        teamsQuery.data ?? [],
         filters,
       ),
     [eventsQuery.data, nowTime, teamsQuery.data, user.id, user.role, filters],

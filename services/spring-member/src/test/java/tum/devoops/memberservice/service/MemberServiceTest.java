@@ -34,8 +34,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
-    private static final String TOKEN = "mock-token";
-
     @Mock
     private MemberRepository memberRepository;
 
@@ -178,7 +176,7 @@ class MemberServiceTest {
     void createMemberThrowsWhenEmailExists() {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(memberEntity));
 
-        assertThrows(ConflictException.class, () -> memberService.createMember(memberCreate, TOKEN));
+        assertThrows(ConflictException.class, () -> memberService.createMember(memberCreate));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
@@ -188,9 +186,9 @@ class MemberServiceTest {
     @Test
     void createMemberThrowsBadRequestWhenKeycloakThrows() throws Exception {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
-        when(keycloakService.createUser(memberCreate, TOKEN)).thenThrow(new RuntimeException("keycloak down"));
+        when(keycloakService.createUser(memberCreate)).thenThrow(new RuntimeException("keycloak down"));
 
-        assertThrows(BadRequestException.class, () -> memberService.createMember(memberCreate, TOKEN));
+        assertThrows(BadRequestException.class, () -> memberService.createMember(memberCreate));
 
         verify(memberRepository, never()).save(any());
     }
@@ -199,10 +197,10 @@ class MemberServiceTest {
     @Test
     void createMemberReturnsMemberOnSuccess() throws Exception {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
-        when(keycloakService.createUser(memberCreate, TOKEN)).thenReturn(id);
+        when(keycloakService.createUser(memberCreate)).thenReturn(id);
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Member result = memberService.createMember(memberCreate, TOKEN);
+        Member result = memberService.createMember(memberCreate);
 
         assertEquals(member, result);
         verify(memberRepository).save(any(MemberEntity.class));
@@ -215,7 +213,7 @@ class MemberServiceTest {
     void updateMemberThrowsNotFoundWhenMemberNotFound() {
         when(memberRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
+        assertThrows(NotFoundException.class, () -> memberService.updateMember(id, partialUpdate));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
@@ -231,7 +229,7 @@ class MemberServiceTest {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(otherMember));
 
-        assertThrows(ConflictException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
+        assertThrows(ConflictException.class, () -> memberService.updateMember(id, partialUpdate));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).save(any());
@@ -244,9 +242,10 @@ class MemberServiceTest {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.of(memberEntity));
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Member result = memberService.updateMember(id, partialUpdate, TOKEN);
+        Member result = memberService.updateMember(id, partialUpdate);
 
         assertEquals(member, result);
+        verify(keycloakService).updateUser(any(Member.class));
         verify(memberRepository).save(any(MemberEntity.class));
     }
 
@@ -257,9 +256,32 @@ class MemberServiceTest {
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
         when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
 
-        Member result = memberService.updateMember(id, partialUpdate, TOKEN);
+        Member result = memberService.updateMember(id, partialUpdate);
 
         assertEquals(member, result);
+        verify(keycloakService).updateUser(any(Member.class));
+        verify(memberRepository).save(any(MemberEntity.class));
+    }
+
+    // Verifies that app-owned fields do not require a Keycloak admin round-trip
+    @Test
+    void updateMemberSkipsKeycloakWhenOnlyAppOwnedFieldsChange() {
+        MemberPartialUpdate appOwnedUpdate = new MemberPartialUpdate();
+        appOwnedUpdate.setBirthday(LocalDate.of(1991, 2, 3));
+        appOwnedUpdate.setPhoneNumber("newPhoneNumber");
+        appOwnedUpdate.setAddress("newAddress");
+        appOwnedUpdate.setInformation("newInformation");
+
+        when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
+        when(memberRepository.save(any(MemberEntity.class))).thenReturn(memberEntity);
+
+        Member result = memberService.updateMember(id, appOwnedUpdate);
+
+        assertEquals(LocalDate.of(1991, 2, 3), result.getBirthday());
+        assertEquals("newPhoneNumber", result.getPhoneNumber());
+        assertEquals("newAddress", result.getAddress());
+        assertEquals("newInformation", result.getInformation());
+        verifyNoInteractions(keycloakService);
         verify(memberRepository).save(any(MemberEntity.class));
     }
 
@@ -268,9 +290,9 @@ class MemberServiceTest {
     void updateMemberThrowsBadRequestWhenKeycloakThrows() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
         when(memberRepository.findByEmail("email@email.com")).thenReturn(Optional.empty());
-        doThrow(new RuntimeException("keycloak down")).when(keycloakService).updateUser(any(), any());
+        doThrow(new RuntimeException("keycloak down")).when(keycloakService).updateUser(any());
 
-        assertThrows(BadRequestException.class, () -> memberService.updateMember(id, partialUpdate, TOKEN));
+        assertThrows(BadRequestException.class, () -> memberService.updateMember(id, partialUpdate));
 
         verify(memberRepository, never()).save(any());
     }
@@ -282,7 +304,7 @@ class MemberServiceTest {
     void deleteMemberThrowsNotFoundWhenMemberNotFound() {
         when(memberRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> memberService.deleteMember(id, TOKEN));
+        assertThrows(NotFoundException.class, () -> memberService.deleteMember(id));
 
         verifyNoInteractions(keycloakService);
         verify(memberRepository, never()).delete(any());
@@ -292,9 +314,9 @@ class MemberServiceTest {
     @Test
     void deleteMemberThrowsBadRequestWhenKeycloakThrows() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
-        doThrow(new RuntimeException("keycloak down")).when(keycloakService).deleteUser(id, TOKEN);
+        doThrow(new RuntimeException("keycloak down")).when(keycloakService).deleteUser(id);
 
-        assertThrows(BadRequestException.class, () -> memberService.deleteMember(id, TOKEN));
+        assertThrows(BadRequestException.class, () -> memberService.deleteMember(id));
 
         verify(memberRepository, never()).delete(any());
     }
@@ -304,7 +326,7 @@ class MemberServiceTest {
     void deleteMemberReturnsTrueOnSuccess() {
         when(memberRepository.findById(id)).thenReturn(Optional.of(memberEntity));
 
-        memberService.deleteMember(id, TOKEN);
+        memberService.deleteMember(id);
 
         verify(memberRepository).delete(memberEntity);
     }

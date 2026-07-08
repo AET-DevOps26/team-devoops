@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { getCurrentUser } from '@/features/auth/currentUser'
 import { memberNamesById, sportFixtures, sportsById, teamFixtures } from '@/mocks/fixtures'
-import { mockOr } from '@/mocks/mockSwitch'
+import { mockHttpError, mockOr } from '@/mocks/mockSwitch'
 import { isTeamCoach, type AuthUser, type MemberRef } from '@/types'
 import { organizationClient } from './client'
 import type {
@@ -454,14 +454,4 @@ function cloneTeam(team: Team): Team {
     trainers: team.trainers.map((trainer) => ({ ...trainer })),
     trainees: team.trainees.map((trainee) => ({ ...trainee })),
   }
-}
-
-function mockHttpError(status: number, message: string): Error {
-  return Object.assign(new Error(message), {
-    isAxiosError: true,
-    response: {
-      status,
-      data: { message },
-    },
-  })
 }

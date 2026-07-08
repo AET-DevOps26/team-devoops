@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, UserPlus } from 'lucide-react'
+import { ChevronRight, Eye, MessageSquarePlus, Pencil, Trash2, UserPlus } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
+import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -45,8 +47,9 @@ import { formatDate, formatDateShort } from '@/lib/format'
 import { serverErrorMessage } from '@/lib/server-error'
 import { useDeleteFeedback } from '../api/queries'
 import { FeedbackComposeDialog, FeedbackComposeNotice } from '../components/FeedbackComposeDialog'
-import { useFeedbackUiStore } from '../model/feedbackUiStore'
-import { useFeedbackDetailView, useFeedbackViewModel } from '../model/useFeedbackViewModel'
+import { FeedbackEditDialog } from '../components/FeedbackEditDialog'
+import { type FeedbackEditTarget, useFeedbackUiStore } from '../model/feedbackUiStore'
+import { canManageFeedback, useFeedbackDetailView, useFeedbackViewModel } from '../model/useFeedbackViewModel'
 
 const ratingOptions = [
   { value: 'all', label: 'All ratings' },
@@ -57,6 +60,8 @@ const ratingOptions = [
 
 export function FeedbackPage() {
   const { user } = useAuth()
+  const isTrainer = user.role === 'trainer'
+  const isAdmin = user.role === 'admin'
   const { view, isLoading, error } = useFeedbackViewModel()
   const deleteFeedback = useDeleteFeedback()
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -68,7 +73,7 @@ export function FeedbackPage() {
   const filters = useFeedbackUiStore((state) => state.filters)
   const setSearch = useFeedbackUiStore((state) => state.setSearch)
   const setRating = useFeedbackUiStore((state) => state.setRating)
-  const setEventId = useFeedbackUiStore((state) => state.setEventId)
+  const setSport = useFeedbackUiStore((state) => state.setSport)
   const setCoachId = useFeedbackUiStore((state) => state.setCoachId)
   const setDateRange = useFeedbackUiStore((state) => state.setDateRange)
   const setSort = useFeedbackUiStore((state) => state.setSort)
@@ -77,14 +82,14 @@ export function FeedbackPage() {
   const openFeedback = useFeedbackUiStore((state) => state.open)
   const closeFeedback = useFeedbackUiStore((state) => state.close)
   const openCompose = useFeedbackUiStore((state) => state.openCompose)
+  const openEdit = useFeedbackUiStore((state) => state.openEdit)
   const detailView = useFeedbackDetailView(openFeedbackId)
-
-  const isTrainer = user.role === 'trainer'
 
   useEffect(() => resetFilters, [resetFilters])
 
   const canDeleteFeedback = (creatorId: string | null | undefined) =>
-    user.role === 'admin' || creatorId === user.id
+    canManageFeedback(user, creatorId)
+  const canEditFeedback = canDeleteFeedback
 
   const requestDeleteFeedback = (id: string, label: string) => {
     setDeleteError(null)
@@ -105,14 +110,15 @@ export function FeedbackPage() {
     }
   }
 
-  const openTraineePicker = () => {
+  const openFeedbackPicker = () => {
     setPickerSport('')
     setPickerTeamId('')
     setPickerEventId('')
     setPickerOpen(true)
   }
 
-  const pickerSports = view.coverage?.sports ?? []
+  const pickerCoverage = isTrainer || isAdmin ? view.coverage : null
+  const pickerSports = pickerCoverage?.sports ?? []
   const pickerTeams = pickerSports.find((sport) => sport.name === pickerSport)?.teams ?? []
   const pickerEvents = pickerTeams.find((team) => team.id === pickerTeamId)?.events ?? []
   const pickerEvent = pickerEvents.find((event) => event.id === pickerEventId)
@@ -132,11 +138,13 @@ export function FeedbackPage() {
         subtitle={
           isTrainer
             ? "Feedback you've given, by event."
-            : 'Feedback coaches have given you, by event.'
+            : isAdmin
+              ? 'Feedback coaches have given, by event.'
+              : 'Feedback coaches have given you, by event.'
         }
         action={
-          isTrainer && view.coverage ? (
-            <Button onClick={openTraineePicker} disabled={view.coverage.totalCount === 0}>
+          pickerCoverage ? (
+            <Button onClick={openFeedbackPicker} disabled={pickerCoverage.totalCount === 0}>
               <UserPlus />
               New feedback
             </Button>
@@ -202,7 +210,7 @@ export function FeedbackPage() {
             searchValue={filters.search}
             onSearchChange={setSearch}
             searchLabel="Search feedback"
-            searchPlaceholder="Member, coach, or event"
+            searchPlaceholder="Member, coach, event, or sport"
           >
             <Select value={filters.rating} onValueChange={setRating}>
               <SelectTrigger aria-label="Filter feedback by rating bucket">
@@ -217,15 +225,15 @@ export function FeedbackPage() {
               </SelectContent>
             </Select>
 
-            <Select value={filters.eventId} onValueChange={setEventId}>
-              <SelectTrigger aria-label="Filter feedback by event">
-                <SelectValue placeholder="Event" />
+            <Select value={filters.sport} onValueChange={setSport}>
+              <SelectTrigger aria-label="Filter feedback by sport">
+                <SelectValue placeholder="Sport" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All events</SelectItem>
-                {view.eventOptions.map((event) => (
-                  <SelectItem key={event.value} value={event.value}>
-                    {event.label}
+                <SelectItem value="all">All sports</SelectItem>
+                {view.sportOptions.map((sport) => (
+                  <SelectItem key={sport.value} value={sport.value}>
+                    {sport.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -279,6 +287,7 @@ export function FeedbackPage() {
                 <tr>
                   <THead>Date</THead>
                   <THead>Event</THead>
+                  <THead>Sport</THead>
                   <THead>Trainee</THead>
                   {!isTrainer && <THead>From</THead>}
                   <THead>Rating</THead>
@@ -292,31 +301,48 @@ export function FeedbackPage() {
                       {formatDateShort(feedback.createdAt)}
                     </TCell>
                     <TCell className="font-medium">{feedback.eventName}</TCell>
+                    <TCell>
+                      {feedback.sportNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {feedback.sportNames.map((sportName) => (
+                            <Badge key={sportName} tone="accent" size="sm">
+                              {sportName}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-text-tertiary">&mdash;</span>
+                      )}
+                    </TCell>
                     <TCell>{feedback.memberName}</TCell>
                     {!isTrainer && <TCell>{feedback.creatorName}</TCell>}
                     <TCell>
                       <Badge size="sm">{feedback.rating}/10</Badge>
                     </TCell>
                     <TCell className="text-right">
-                      <div className="flex justify-end gap-3">
-                        <Button
-                          variant="link"
-                          className="h-auto p-0"
+                      <RowActions>
+                        <RowActionButton
+                          icon={Eye}
+                          label={`View feedback for ${feedback.memberName}`}
                           onClick={() => openFeedback(feedback.id)}
-                        >
-                          View
-                        </Button>
+                        />
+                        {canEditFeedback(feedback.creatorId) && (
+                          <RowActionButton
+                            icon={Pencil}
+                            label={`Edit feedback for ${feedback.memberName}`}
+                            onClick={() => openFeedback(feedback.id)}
+                          />
+                        )}
                         {canDeleteFeedback(feedback.creatorId) && (
-                          <Button
-                            variant="link"
-                            className="h-auto p-0 text-destructive"
+                          <RowActionButton
+                            icon={Trash2}
+                            label={`Delete feedback for ${feedback.memberName}`}
+                            destructive
                             disabled={deleteFeedback.isPending}
                             onClick={() => requestDeleteFeedback(feedback.id, feedback.memberName)}
-                          >
-                            Delete
-                          </Button>
+                          />
                         )}
-                      </div>
+                      </RowActions>
                     </TCell>
                   </TRow>
                 ))}
@@ -335,8 +361,10 @@ export function FeedbackPage() {
           <FeedbackDetailSheet
             detailView={detailView}
             canDeleteFeedback={canDeleteFeedback}
+            canEditFeedback={canEditFeedback}
             isDeleting={deleteFeedback.isPending}
             onDeleteFeedback={requestDeleteFeedback}
+            onEditFeedback={openEdit}
           />
         </SheetContent>
       </Sheet>
@@ -364,7 +392,7 @@ export function FeedbackPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {isTrainer && (
+      {pickerCoverage && (
         <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -373,7 +401,9 @@ export function FeedbackPage() {
 
             {pickerSports.length === 0 ? (
               <p className="text-body-sm text-text-secondary">
-                All your trainees already have feedback for every event.
+                {isAdmin
+                  ? 'No event attendees are available for feedback.'
+                  : 'All your trainees already have feedback for every event.'}
               </p>
             ) : (
               <div className="space-y-4">
@@ -407,7 +437,9 @@ export function FeedbackPage() {
                     items={pickerTeams.map((team) => ({
                       key: team.id,
                       label: team.name,
-                      meta: `${team.events.length} event(s) need feedback`,
+                      meta: isAdmin
+                        ? `${team.events.length} event(s)`
+                        : `${team.events.length} event(s) need feedback`,
                     }))}
                     onSelect={(key) => setPickerTeamId(key)}
                   />
@@ -417,7 +449,9 @@ export function FeedbackPage() {
                       key: event.id,
                       label: event.name,
                       meta: event.formattedWhen,
-                      badge: `${event.missing.length} missing`,
+                      badge: isAdmin
+                        ? `${event.missing.length} attendee(s)`
+                        : `${event.missing.length} missing`,
                     }))}
                     onSelect={(key) => setPickerEventId(key)}
                   />
@@ -431,13 +465,13 @@ export function FeedbackPage() {
                         <p className="text-body-sm font-medium text-text-primary">
                           {trainee.name}
                         </p>
-                        <Button
-                          variant="link"
-                          className="h-auto p-0"
-                          onClick={() => composeForMissing(trainee)}
-                        >
-                          Give feedback
-                        </Button>
+                        <RowActions>
+                          <RowActionButton
+                            icon={MessageSquarePlus}
+                            label={`Give feedback for ${trainee.name}`}
+                            onClick={() => composeForMissing(trainee)}
+                          />
+                        </RowActions>
                       </li>
                     ))}
                   </ul>
@@ -455,6 +489,7 @@ export function FeedbackPage() {
       )}
 
       <FeedbackComposeDialog />
+      <FeedbackEditDialog />
     </div>
   )
 }
@@ -462,13 +497,17 @@ export function FeedbackPage() {
 function FeedbackDetailSheet({
   detailView,
   canDeleteFeedback,
+  canEditFeedback,
   isDeleting,
   onDeleteFeedback,
+  onEditFeedback,
 }: {
   detailView: ReturnType<typeof useFeedbackDetailView>
   canDeleteFeedback: (creatorId: string | null | undefined) => boolean
+  canEditFeedback: (creatorId: string | null | undefined) => boolean
   isDeleting: boolean
   onDeleteFeedback: (id: string, label: string) => void
+  onEditFeedback: (target: FeedbackEditTarget) => void
 }) {
   const { detail, eventName, memberName, creatorName, isLoading, error } = detailView
 
@@ -510,7 +549,7 @@ function FeedbackDetailSheet({
         </SheetTitle>
       </SheetHeader>
 
-      <div className="space-y-4 px-4 py-2">
+      <div className="roost-scroll flex-1 space-y-4 overflow-y-auto px-4 py-2">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="From" value={creatorName ?? '--'} />
           <Field label="Date" value={formatDate(detail.created_at)} />
@@ -524,17 +563,39 @@ function FeedbackDetailSheet({
         </p>
 
         <Badge>About: {memberName ?? '--'}</Badge>
-
-        {canDeleteFeedback(detail.creator?.id) && (
-          <Button
-            variant="destructive"
-            onClick={() => onDeleteFeedback(detail.id, memberName ?? 'this member')}
-            disabled={isDeleting}
-          >
-            Delete Feedback
-          </Button>
-        )}
       </div>
+
+      {(canEditFeedback(detail.creator?.id) || canDeleteFeedback(detail.creator?.id)) && (
+        <SheetFooter className="flex-row justify-end gap-2 border-t">
+          {canEditFeedback(detail.creator?.id) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                onEditFeedback({
+                  id: detail.id,
+                  memberName: memberName ?? 'this member',
+                  eventName: eventName ?? 'this event',
+                  feedback: detail.feedback,
+                  rating: detail.rating,
+                })
+              }
+            >
+              Edit Feedback
+            </Button>
+          )}
+          {canDeleteFeedback(detail.creator?.id) && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => onDeleteFeedback(detail.id, memberName ?? 'this member')}
+              disabled={isDeleting}
+            >
+              Delete Feedback
+            </Button>
+          )}
+        </SheetFooter>
+      )}
     </>
   )
 }

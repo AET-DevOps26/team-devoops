@@ -7,10 +7,9 @@ import {
   feedbackDetailsById,
   feedbackSummaryFixtures,
   memberNamesById,
-  teamFixtures,
 } from '@/mocks/fixtures'
-import { mockOr } from '@/mocks/mockSwitch'
-import { scopeFeedback } from '@/mocks/scope'
+import { mockHttpError, mockOr } from '@/mocks/mockSwitch'
+import { scopeFeedback, trainerManagesMember } from '@/mocks/scope'
 import type { AuthUser, Reference } from '@/types'
 import { feedbackClient } from './client'
 import type { Feedback, FeedbackCreate, FeedbackPartialUpdate, FeedbackSummary } from '../types'
@@ -85,10 +84,6 @@ export function useFeedback(id: string) {
   })
 }
 
-function mockFeedbackError(message: string): Error {
-  return new Error(message)
-}
-
 function isFeedbackRating(rating: number): boolean {
   return Number.isInteger(rating) && rating >= 0 && rating <= 10
 }
@@ -103,16 +98,8 @@ function eventRef(eventId: string): Reference | null {
   return event ? { id: event.id, name: event.name } : null
 }
 
-function trainsMember(userId: string, memberId: string): boolean {
-  return teamFixtures.some(
-    (team) =>
-      team.trainers.some((trainer) => trainer.id === userId) &&
-      team.trainees.some((trainee) => trainee.id === memberId),
-  )
-}
-
 function canCreateFeedback(user: AuthUser, memberId: string): boolean {
-  return user.role === 'admin' || (user.role === 'trainer' && trainsMember(user.id, memberId))
+  return user.role === 'admin' || (user.role === 'trainer' && trainerManagesMember(user.id, memberId))
 }
 
 function mockFeedbackId(): string {
@@ -124,14 +111,14 @@ function mockCreateFeedback(data: FeedbackCreate): Feedback {
   const event = eventRef(data.event)
   const member = memberRef(data.member)
 
-  if (!event) throw mockFeedbackError('Event not found')
-  if (!member) throw mockFeedbackError('Member not found')
-  if (!data.feedback.trim()) throw mockFeedbackError('Feedback is required')
+  if (!event) throw mockHttpError(404, 'Event not found')
+  if (!member) throw mockHttpError(404, 'Member not found')
+  if (!data.feedback.trim()) throw mockHttpError(400, 'Feedback is required')
   if (!isFeedbackRating(data.rating)) {
-    throw mockFeedbackError('Rating must be an integer between 0 and 10')
+    throw mockHttpError(400, 'Rating must be an integer between 0 and 10')
   }
   if (!canCreateFeedback(user, data.member)) {
-    throw mockFeedbackError('You are not allowed to create feedback for this member')
+    throw mockHttpError(403, 'You are not allowed to create feedback for this member')
   }
 
   const created: Feedback = {
@@ -152,13 +139,38 @@ function mockDeleteFeedback(id: string): void {
   const user = getCurrentUser()
   const existing = mockFeedbackDetailsById[id] ?? mockFeedbackSummaryRows.find((row) => row.id === id)
 
-  if (!existing) throw mockFeedbackError('Feedback not found')
+  if (!existing) throw mockHttpError(404, 'Feedback not found')
   if (user.role !== 'admin' && existing.creator?.id !== user.id) {
-    throw mockFeedbackError('You are not allowed to delete this feedback')
+    throw mockHttpError(403, 'You are not allowed to delete this feedback')
   }
 
   delete mockFeedbackDetailsById[id]
   mockFeedbackSummaryRows = mockFeedbackSummaryRows.filter((row) => row.id !== id)
+}
+
+function mockUpdateFeedback(id: string, data: FeedbackPartialUpdate): Feedback {
+  const user = getCurrentUser()
+  const existing = mockFeedbackDetailsById[id]
+
+  if (!existing) throw mockHttpError(404, 'Feedback not found')
+  if (user.role !== 'admin' && existing.creator?.id !== user.id) {
+    throw mockHttpError(403, 'You are not allowed to update this feedback')
+  }
+  if (data.feedback !== undefined && !data.feedback.trim()) {
+    throw mockHttpError(400, 'Feedback is required')
+  }
+  if (data.rating !== undefined && !isFeedbackRating(data.rating)) {
+    throw mockHttpError(400, 'Rating must be an integer between 0 and 10')
+  }
+
+  const updated: Feedback = {
+    ...existing,
+    ...(data.feedback !== undefined ? { feedback: data.feedback } : {}),
+    ...(data.rating !== undefined ? { rating: data.rating } : {}),
+  }
+
+  upsertMockFeedback(updated)
+  return updated
 }
 
 export function useCreateFeedback() {
@@ -178,7 +190,11 @@ export function useUpdateFeedback() {
   const qc = useQueryClient()
 
   return useMutation<Feedback, Error, { id: string } & FeedbackPartialUpdate>({
-    mutationFn: ({ id, ...data }) => feedbackClient.patch<Feedback>(`/${id}`, data).then(r => r.data),
+    mutationFn: ({ id, ...data }) =>
+      mockOr(
+        () => Promise.resolve(mockUpdateFeedback(id, data)),
+        () => feedbackClient.patch<Feedback>(`/${id}`, data).then(r => r.data),
+      ),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: feedbackKeys.all })
       qc.invalidateQueries({ queryKey: feedbackKeys.detail(id) })
