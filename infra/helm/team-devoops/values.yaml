@@ -21,37 +21,37 @@ database:
   enabled: true
   name: app_db
   user: app_admin
-  # No default -- must be set at deploy time from the DB_ADMIN_PASSWORD GitHub
-  # secret (see cd.yml), same as forwardAuth.cookieSecret.
-  password: ""
+  # Placeholder only -- must be overridden at deploy time from the DB_ADMIN_PASSWORD
+  # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+  password: "CHANGE_ME_DB_ADMIN_PASSWORD"
   host: app-database
   port: 5432
-  # Per-service users. No defaults -- real passwords come from the
+  # Per-service users. Placeholders only -- real passwords come from the
   # DB_ORGANIZATION_PASSWORD / DB_MEMBER_PASSWORD / DB_EVENT_PASSWORD /
   # DB_FEEDBACK_PASSWORD / DB_FINANCE_PASSWORD / DB_LETTER_PASSWORD /
   # DB_REPORTS_PASSWORD GitHub secrets, set via --set in cd.yml.
   users:
     organization:
       username: organization_user
-      password: ""
+      password: "CHANGE_ME_DB_ORGANIZATION_PASSWORD"
     member:
       username: member_user
-      password: ""
+      password: "CHANGE_ME_DB_MEMBER_PASSWORD"
     event:
       username: event_user
-      password: ""
+      password: "CHANGE_ME_DB_EVENT_PASSWORD"
     feedback:
       username: feedback_user
-      password: ""
+      password: "CHANGE_ME_DB_FEEDBACK_PASSWORD"
     finance:
       username: finance_user
-      password: ""
+      password: "CHANGE_ME_DB_FINANCE_PASSWORD"
     letter:
       username: letter_user
-      password: ""
+      password: "CHANGE_ME_DB_LETTER_PASSWORD"
     reports:
       username: reports_user
-      password: ""
+      password: "CHANGE_ME_DB_REPORTS_PASSWORD"
   image: postgres:15.6-alpine
   storageSize: 5Gi
   resources:
@@ -180,20 +180,20 @@ keycloak:
   path: /auth
   hostname: https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth
   adminUsername: admin
-  # No default -- must be set at deploy time from the KEYCLOAK_ADMIN_PASSWORD
+  # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_ADMIN_PASSWORD
   # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
-  adminPassword: ""
+  adminPassword: "CHANGE_ME_KEYCLOAK_ADMIN_PASSWORD"
   # Passwords for the two seeded realm users (files/realm-config.json substitutes these
   # for the __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__ tokens via
   # keycloak-realm-configmap.yaml). "users" here are realm-level accounts, distinct from
   # keycloak.adminPassword above (the Keycloak server's own bootstrap console admin).
-  # No default -- must be set at deploy time from the KEYCLOAK_REALM_ADMIN_PASSWORD/
+  # Placeholders only -- must be overridden at deploy time from the KEYCLOAK_REALM_ADMIN_PASSWORD/
   # KEYCLOAK_REALM_USER_PASSWORD GitHub secrets (see cd.yml), same as forwardAuth.cookieSecret.
   users:
     admin:
-      password: ""
+      password: "CHANGE_ME_KEYCLOAK_REALM_ADMIN_PASSWORD"
     user:
-      password: ""
+      password: "CHANGE_ME_KEYCLOAK_REALM_USER_PASSWORD"
   # Constrain JVM heap so Keycloak stays within its memory limit.
   javaOptsAppend: "-Xms64m -Xmx256m"
   resources:
@@ -210,9 +210,9 @@ keycloak:
     enabled: true
     name: keycloak
     user: keycloak_user
-    # No default -- must be set at deploy time from the KEYCLOAK_DB_PASSWORD
+    # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_DB_PASSWORD
     # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
-    password: ""
+    password: "CHANGE_ME_KEYCLOAK_DB_PASSWORD"
     host: keycloak-database
     storageSize: 2Gi
     resources:
@@ -248,10 +248,10 @@ forwardAuth:
   clientId: "traefik-forward-auth"
   clientSecret: "traefik-forward-auth-secret"
   # 32+ character random string used to sign session cookies.
-  # No default -- must be set at deploy time from the FORWARD_AUTH_COOKIE_SECRET
+  # Placeholder only -- must be overridden at deploy time from the FORWARD_AUTH_COOKIE_SECRET
   # GitHub secret (see cd.yml).
   # Generate with: openssl rand -base64 32
-  cookieSecret: ""
+  cookieSecret: "CHANGE_ME_FORWARD_AUTH_COOKIE_SECRET"
 
 # Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
 # scheduling the new one, which is required to stay within the namespace CPU quota.
