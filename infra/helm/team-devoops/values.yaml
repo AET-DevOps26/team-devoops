@@ -260,6 +260,13 @@ resources:
 #   image/tag   -> optional: override the default ghcr image/tag for this service
 #   env         -> extra literal environment variables
 #   envFromSecret -> inject all keys of an existing Secret as env
+#   persistence -> optional: mount a PVC (RWO) into the container.
+#                  mountPath, size (PVC storage request), fsGroup (pod-level
+#                  securityContext.fsGroup, needed when the image runs as
+#                  non-root -- see loki/grafana/prometheus deployments for the
+#                  same reasoning). Only safe with a single replica and a
+#                  rolling strategy that fully terminates the old pod first
+#                  (see .Values.strategy below), which is the case here.
 # ---------------------------------------------------------------------------
 services:
   organization-service:
@@ -352,6 +359,14 @@ services:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
       OLLAMA_BASE_URL: "http://ollama:11434"
+    # Persists the Chroma vector store (see services/py-genai-helper/rag.py) across pod
+    # restarts/reschedules. fsGroup 1000 matches the Dockerfile's `adduser` app user
+    # (confirmed uid/gid 1000 on python:3.12.9-slim-bookworm), which the CSI-provisioned
+    # PVC would otherwise mount root-owned and unwritable to that user.
+    persistence:
+      mountPath: /code/vector-store
+      size: 1Gi
+      fsGroup: 1000
     resources:
       requests:
         cpu: 100m

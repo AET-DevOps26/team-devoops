@@ -19,6 +19,10 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 8 }}
     spec:
+      {{- if $svc.persistence }}
+      securityContext:
+        fsGroup: {{ $svc.persistence.fsGroup }}
+      {{- end }}
       {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -29,6 +33,11 @@ spec:
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ $svc.port }}
+          {{- if $svc.persistence }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $svc.persistence.mountPath }}
+          {{- end }}
           {{- $env := $svc.env | default dict }}
           {{- if $env }}
           env:
@@ -82,5 +91,11 @@ spec:
           {{- end }}
           resources:
             {{- toYaml ($svc.resources | default $root.Values.resources) | nindent 12 }}
+      {{- if $svc.persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+      {{- end }}
 ---
 {{- end }}

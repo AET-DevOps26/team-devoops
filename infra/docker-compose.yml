@@ -40,6 +40,8 @@ services:
       - SPRING_DATASOURCE_PASSWORD=reports_password
       - OLLAMA_BASE_URL=http://ollama:11434
       - FEEDBACK_SERVICE_URL=http://feedback-service:8080
+    volumes:
+      - genai_vector_store:/code/vector-store
     expose:
       - 5000
     labels:
@@ -512,6 +514,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  genai_vector_store:
 
 networks:
   proxy:
