@@ -187,6 +187,21 @@ automated; no manual VM access is required for normal deploys.
 | Secret | `GENAI_ENV_CONTENT` | Contents of `services/py-genai-helper/.env` |
 | Secret | `LETTER_ENV_CONTENT` | Contents of `services/spring-letter/.env` (mail credentials) |
 | Secret | `KUBECONFIG` | Kubeconfig for the RKE2 cluster (used by the `deploy-k8s` job) |
+| Secret | `DB_ADMIN_PASSWORD` | Shared Postgres admin password. VM: `POSTGRES_PASSWORD` in `infra/.env`. K8s: Helm `database.password` |
+| Secret | `DB_ORGANIZATION_PASSWORD` | `organization_user` DB password. VM: `ORGANIZATION_DB_PASSWORD`. K8s: Helm `database.users.organization.password` |
+| Secret | `DB_MEMBER_PASSWORD` | `member_user` DB password. VM: `MEMBER_DB_PASSWORD`. K8s: Helm `database.users.member.password` |
+| Secret | `DB_EVENT_PASSWORD` | `event_user` DB password. VM: `EVENT_DB_PASSWORD`. K8s: Helm `database.users.event.password` |
+| Secret | `DB_FEEDBACK_PASSWORD` | `feedback_user` DB password. VM: `FEEDBACK_DB_PASSWORD`. K8s: Helm `database.users.feedback.password` |
+| Secret | `DB_FINANCE_PASSWORD` | `finance_user` DB password. VM: `FINANCE_DB_PASSWORD`. K8s: Helm `database.users.finance.password` |
+| Secret | `DB_LETTER_PASSWORD` | `letter_user` DB password. VM: `LETTER_DB_PASSWORD`. K8s: Helm `database.users.letter.password` |
+| Secret | `DB_REPORTS_PASSWORD` | `reports_user` DB password. VM: `REPORTS_DB_PASSWORD`. K8s: Helm `database.users.reports.password` |
+| Secret | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak bootstrap admin console password. VM: `KEYCLOAK_ADMIN_PASSWORD`. K8s: Helm `keycloak.adminPassword` |
+| Secret | `KEYCLOAK_DB_PASSWORD` | Keycloak's own Postgres password. VM: `KEYCLOAK_DB_PASSWORD`. K8s: Helm `keycloak.db.password` |
+| Secret | `KEYCLOAK_REALM_ADMIN_PASSWORD` | Password for the seeded `admin` realm user. VM: `KEYCLOAK_REALM_ADMIN_PASSWORD`. K8s: Helm `keycloak.users.admin.password` |
+| Secret | `KEYCLOAK_REALM_USER_PASSWORD` | Password for the seeded `user` realm user. VM: `KEYCLOAK_REALM_USER_PASSWORD`. K8s: Helm `keycloak.users.user.password` |
+| Secret | `FORWARD_AUTH_COOKIE_SECRET` | 32+ char random string signing forward-auth session cookies. VM: `FORWARD_AUTH_COOKIE_SECRET`. K8s: Helm `forwardAuth.cookieSecret` |
+
+Each of these 13 secrets is the single source of truth for that value across **both** deploy targets — the `deploy` job's "Write compose .env file" step assembles `infra/.env` from them for the VM, and the `deploy-k8s` job passes them individually via `--set` for Helm. No value is duplicated across two different secrets.
 
 The OIDC service principal needs `Contributor` on the subscription (to manage
 resources in `rg-team-devoops`) and `Storage Blob Data Contributor` on the
@@ -269,8 +284,10 @@ All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/J
 
 | Realm | `devops` |
 |---|---|
-| Admin user | `admin` / `admin123` (roles: `admin`, `member`) |
-| Regular user | `user` / `user123` (role: `member`) |
+| Admin user | `admin` / `admin123` locally (roles: `admin`, `member`) |
+| Regular user | `user` / `user123` locally (role: `member`) |
+
+Passwords shown are the local-dev defaults from [`infra/.env.example`](infra/.env.example). On the VM and Kubernetes they come from the `KEYCLOAK_REALM_ADMIN_PASSWORD`/`KEYCLOAK_REALM_USER_PASSWORD` GitHub secrets instead — see [Required GitHub secrets / variables](#required-github-secrets--variables). ("Realm" distinguishes these two application-level accounts from the Keycloak server's own bootstrap console admin, `KEYCLOAK_ADMIN_PASSWORD`.) `infra/keycloak/realm-config.json` stores these as `__KEYCLOAK_REALM_ADMIN_PASSWORD__`/`__KEYCLOAK_REALM_USER_PASSWORD__` placeholders, substituted at container start (Compose) or chart render (Helm).
 
 ### Clients
 

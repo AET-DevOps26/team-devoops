@@ -21,33 +21,37 @@ database:
   enabled: true
   name: app_db
   user: app_admin
-  # Rendered into a Secret (db-credentials). Override in CI/prod via --set.
-  password: app_admin_password
+  # No default -- must be set at deploy time from the DB_ADMIN_PASSWORD GitHub
+  # secret (see cd.yml), same as forwardAuth.cookieSecret.
+  password: ""
   host: app-database
   port: 5432
-  # Per-service users. Override passwords via --set in CI/prod.
+  # Per-service users. No defaults -- real passwords come from the
+  # DB_ORGANIZATION_PASSWORD / DB_MEMBER_PASSWORD / DB_EVENT_PASSWORD /
+  # DB_FEEDBACK_PASSWORD / DB_FINANCE_PASSWORD / DB_LETTER_PASSWORD /
+  # DB_REPORTS_PASSWORD GitHub secrets, set via --set in cd.yml.
   users:
     organization:
       username: organization_user
-      password: organization_password
+      password: ""
     member:
       username: member_user
-      password: member_password
+      password: ""
     event:
       username: event_user
-      password: event_password
+      password: ""
     feedback:
       username: feedback_user
-      password: feedback_password
+      password: ""
     finance:
       username: finance_user
-      password: finance_password
+      password: ""
     letter:
       username: letter_user
-      password: letter_password
+      password: ""
     reports:
       username: reports_user
-      password: reports_password
+      password: ""
   image: postgres:15.6-alpine
   storageSize: 5Gi
   resources:
@@ -176,7 +180,20 @@ keycloak:
   path: /auth
   hostname: https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth
   adminUsername: admin
-  adminPassword: admin
+  # No default -- must be set at deploy time from the KEYCLOAK_ADMIN_PASSWORD
+  # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+  adminPassword: ""
+  # Passwords for the two seeded realm users (files/realm-config.json substitutes these
+  # for the __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__ tokens via
+  # keycloak-realm-configmap.yaml). "users" here are realm-level accounts, distinct from
+  # keycloak.adminPassword above (the Keycloak server's own bootstrap console admin).
+  # No default -- must be set at deploy time from the KEYCLOAK_REALM_ADMIN_PASSWORD/
+  # KEYCLOAK_REALM_USER_PASSWORD GitHub secrets (see cd.yml), same as forwardAuth.cookieSecret.
+  users:
+    admin:
+      password: ""
+    user:
+      password: ""
   # Constrain JVM heap so Keycloak stays within its memory limit.
   javaOptsAppend: "-Xms64m -Xmx256m"
   resources:
@@ -193,7 +210,9 @@ keycloak:
     enabled: true
     name: keycloak
     user: keycloak_user
-    password: keycloak_password
+    # No default -- must be set at deploy time from the KEYCLOAK_DB_PASSWORD
+    # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+    password: ""
     host: keycloak-database
     storageSize: 2Gi
     resources:
@@ -229,7 +248,8 @@ forwardAuth:
   clientId: "traefik-forward-auth"
   clientSecret: "traefik-forward-auth-secret"
   # 32+ character random string used to sign session cookies.
-  # Override at deploy time: --set forwardAuth.cookieSecret="$FORWARD_AUTH_COOKIE_SECRET"
+  # No default -- must be set at deploy time from the FORWARD_AUTH_COOKIE_SECRET
+  # GitHub secret (see cd.yml).
   # Generate with: openssl rand -base64 32
   cookieSecret: ""
 

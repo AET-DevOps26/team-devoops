@@ -7,5 +7,6 @@ metadata:
     {{- include "team-devoops.labels" (dict "name" "keycloak-realm-config" "root" $) | nindent 4 }}
 data:
   realm-config.json: |
-    {{ .Files.Get "files/realm-config.json" | nindent 4 | trim }}
+    {{- $rendered := .Files.Get "files/realm-config.json" | replace "__KEYCLOAK_REALM_ADMIN_PASSWORD__" .Values.keycloak.users.admin.password | replace "__KEYCLOAK_REALM_USER_PASSWORD__" .Values.keycloak.users.user.password }}
+    {{ $rendered | nindent 4 | trim }}
 {{- end }}
