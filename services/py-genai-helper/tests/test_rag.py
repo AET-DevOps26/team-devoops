@@ -10,6 +10,9 @@ import rag
 class _FakeEmbeddings(Embeddings):
     """Dependency-free stand-in for a real embedding model: fixed vector for every input."""
 
+    def __init__(self, model="fake-model"):
+        self.model = model
+
     def embed_documents(self, texts):
         return [[1.0, 0.0] for _ in texts]
 
@@ -143,6 +146,19 @@ def test_load_pdfs_rebuilds_when_file_storage_changes(monkeypatch, tmp_path):
     rag._load_pdfs(use_local=False)
 
     assert sorted(calls) == sorted(str(file_storage / name) for name in ("a.pdf", "b.pdf"))
+
+
+def test_load_pdfs_rebuilds_when_embedding_model_changes(monkeypatch, tmp_path):
+    file_storage = _set_up_file_storage(monkeypatch, tmp_path)
+    calls = []
+    _stub_pdf_loader(monkeypatch, calls)
+    rag._load_pdfs(use_local=False)
+    calls.clear()
+
+    monkeypatch.setattr(rag, "get_embeddings", lambda use_local: _FakeEmbeddings(model="other-model"))
+    rag._load_pdfs(use_local=False)
+
+    assert calls == [str(file_storage / "a.pdf")]
 
 
 def test_load_pdfs_indexes_are_kept_separate_per_provider(monkeypatch, tmp_path):

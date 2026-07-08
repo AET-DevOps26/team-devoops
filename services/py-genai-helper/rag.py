@@ -26,12 +26,16 @@ _VECTOR_STORE = Path(__file__).parent / "vector-store"
 _MANIFEST_NAME = "manifest.json"
 
 
-def _manifest(pdf_files: list[Path]) -> dict[str, int]:
-    """Fingerprint of the PDFs an index was built from, to detect a stale on-disk index."""
-    return {path.name: path.stat().st_mtime_ns for path in pdf_files}
+def _manifest(pdf_files: list[Path], model: str) -> dict[str, int | str]:
+    """Fingerprint of the PDFs and embedding model an index was built from, to detect a stale
+    on-disk index (also catches an EMBEDDING_MODEL change, not just a file-storage/ change --
+    otherwise a differently-dimensioned model would load a collection it can't query)."""
+    manifest: dict[str, int | str] = {path.name: path.stat().st_mtime_ns for path in pdf_files}
+    manifest["_model"] = model
+    return manifest
 
 
-def _load_persisted(provider: str, manifest: dict[str, int], embeddings: Embeddings) -> Chroma | None:
+def _load_persisted(provider: str, manifest: dict[str, int | str], embeddings: Embeddings) -> Chroma | None:
     """Load the on-disk collection for `provider`, or None if missing/stale/unreadable."""
     store_dir = _VECTOR_STORE / provider
     manifest_file = store_dir / _MANIFEST_NAME
@@ -48,7 +52,7 @@ def _load_persisted(provider: str, manifest: dict[str, int], embeddings: Embeddi
         return None
 
 
-def _persist(provider: str, manifest: dict[str, int], docs: list[Document], embeddings: Embeddings) -> Chroma:
+def _persist(provider: str, manifest: dict[str, int | str], docs: list[Document], embeddings: Embeddings) -> Chroma:
     store_dir = _VECTOR_STORE / provider
     store_dir.mkdir(parents=True, exist_ok=True)
     # chromadb caches one PersistentClient per path in-process, so deleting/recreating store_dir
@@ -71,8 +75,8 @@ def _load_pdfs(use_local: bool) -> Chroma | None:
         return None
 
     provider = "ollama" if use_local else "openai"
-    manifest = _manifest(pdf_files)
     embeddings = get_embeddings(use_local)
+    manifest = _manifest(pdf_files, embeddings.model)
 
     vector_store = _load_persisted(provider, manifest, embeddings)
     if vector_store is not None:
