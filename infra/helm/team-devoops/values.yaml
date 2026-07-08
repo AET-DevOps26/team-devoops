@@ -100,11 +100,14 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~166Mi in practice (higher than first estimated) -- the earlier
-      # 200Mi trim left almost no headroom, so it's bumped back up here.
+      # Documented peak usage is ~166Mi (the earlier 200Mi trim against that left "almost no
+      # headroom" and had to be reverted -- see history). Live `kubectl top` right now shows only
+      # ~70Mi, but that's an idle snapshot, not the peak. Trimmed from 280Mi to 240Mi: still ~74Mi
+      # above the documented 166Mi peak, clearly more headroom than the rejected 200Mi/34Mi attempt,
+      # while freeing some of the namespace's shared 6Gi quota for py-genai-helper.
       limits:
         cpu: 100m
-        memory: 280Mi
+        memory: 240Mi
   # Same out-of-band ConfigMap treatment as prometheus above (infra/loki/loki-config.yaml
   # is the same file docker-compose uses).
   loki:
@@ -115,10 +118,13 @@ monitoring:
       requests:
         cpu: 50m
         memory: 128Mi
-      # Actual usage is ~153Mi; trimmed to make room for ollama (see prometheus above).
+      # Documented peak usage is ~153Mi (previously trimmed to make room for ollama, see prometheus
+      # above). Live `kubectl top` right now shows only ~65Mi, but that's an idle snapshot, not the
+      # peak. Trimmed from 220Mi to 200Mi: keeps ~47Mi above the documented peak -- more than
+      # grafana's rejected 34Mi-headroom attempt above, so deliberately not pushed any lower.
       limits:
         cpu: 150m
-        memory: 220Mi
+        memory: 200Mi
   # Unlike loki/prometheus, alloy-config.alloy is Kubernetes-specific (loki.source.kubernetes,
   # not loki.source.docker) so it isn't shared with docker-compose -- it lives in this
   # chart's files/ and is embedded via .Files.Get like the Keycloak realm config, not
