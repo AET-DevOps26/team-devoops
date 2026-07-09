@@ -8,7 +8,7 @@ import {
   sportFixtures,
   teamFixtures,
 } from '@/mocks/fixtures'
-import { mockOr } from '@/mocks/mockSwitch'
+import { mockHttpError, mockOr } from '@/mocks/mockSwitch'
 import { scopeEvents } from '@/mocks/scope'
 import { sportEventsClient } from './client'
 import type { AuthUser, EventListItem, Reference } from '@/types'
@@ -87,8 +87,23 @@ function canManageEvent(user: AuthUser, event: SportEvent): boolean {
   return user.role === 'admin' || event.creator?.id === user.id
 }
 
-function canCreateMockEvent(user: AuthUser): boolean {
-  return user.role === 'trainer' || user.role === 'director' || user.role === 'admin'
+// Mirrors EventService.canCreateEvent: admins bypass; otherwise the requester must be a
+// trainer of a linked team, or a director of a linked sport (linked directly via
+// sports_linked, or derived from a linked team's sport). No links => 403, like the server.
+function canCreateMockEvent(user: AuthUser, data: EventCreate): boolean {
+  if (user.role === 'admin') return true
+
+  const teamIds = uniqueIds(data.teams_linked)
+  const linkedTeams = teamFixtures.filter((team) => teamIds.includes(team.id))
+  if (linkedTeams.some((team) => team.trainers.some((trainer) => trainer.id === user.id))) {
+    return true
+  }
+
+  const sportIds = new Set(uniqueIds(data.sports_linked))
+  for (const team of linkedTeams) sportIds.add(team.sport.id)
+  return sportFixtures.some(
+    (sport) => sportIds.has(sport.id) && sport.directors.some((director) => director.id === user.id),
+  )
 }
 
 function upsertMockEvent(event: SportEvent): void {
@@ -109,13 +124,13 @@ function upsertMockEvent(event: SportEvent): void {
 
 function mockCreateEvent(data: EventCreate): SportEvent {
   const user = getCurrentUser()
-  if (!canCreateMockEvent(user)) {
-    throw mockEventError('You are not allowed to create events')
-  }
   const name = data.name.trim()
 
   if (!name) throw mockEventError('Name is required')
   validateEventTimes(data.start_time, data.end_time)
+  if (!canCreateMockEvent(user, data)) {
+    throw mockHttpError(403, 'Access denied')
+  }
 
   const event: SportEvent = {
     id: mockEventId(),
