@@ -19,6 +19,10 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -27,6 +31,8 @@ spec:
         - name: {{ $name }}
           image: {{ include "team-devoops.image" (dict "name" $name "svc" $svc "root" $root) }}
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" (ne $svc.runAsNonRoot false)) | nindent 12 }}
           ports:
             - containerPort: {{ $svc.port }}
           {{- $env := $svc.env | default dict }}

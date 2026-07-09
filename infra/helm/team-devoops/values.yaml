@@ -405,6 +405,7 @@ services:
     db: false
     stripPrefix: false
     open: true
+    runAsNonRoot: false
     resources:
       requests:
         cpu: 50m
