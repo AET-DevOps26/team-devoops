@@ -35,7 +35,12 @@ spec:
           image: {{ .Values.monitoring.prometheus.image }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           securityContext:
-            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" true) | nindent 12 }}
+            # prom/prometheus:v2.55.1's image USER is the name "nobody", not a numeric UID --
+            # the kubelet can't verify runAsNonRoot against a non-numeric image user and
+            # refuses to start the container ("cannot verify user is non-root") rather than
+            # resolving the name itself. Same tradeoff as ollama/postgres/alloy above: the
+            # image already runs as non-root by default, we just can't assert it here.
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" false) | nindent 12 }}
           ports:
             - containerPort: 9090
           volumeMounts:

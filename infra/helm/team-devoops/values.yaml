@@ -328,6 +328,13 @@ services:
     dbUser: organization
     health: /actuator/health
     stripPrefix: true
+    # This service's Dockerfile creates a named "user" account (adduser -D user), not a
+    # numeric UID -- the kubelet can't verify runAsNonRoot against a non-numeric image user
+    # and hard-fails container creation ("cannot verify user is non-root") rather than
+    # resolving the name itself. Same reasoning applies to every other -service below and
+    # to py-genai-helper. The image already runs as non-root by default; we just can't
+    # assert it to the kubelet without either this or pinning an explicit numeric runAsUser.
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -354,6 +361,7 @@ services:
     dbUser: member
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -378,6 +386,7 @@ services:
     dbUser: event
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -394,6 +403,7 @@ services:
     dbUser: feedback
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -410,6 +420,7 @@ services:
     dbUser: finance
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -426,6 +437,7 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -443,6 +455,7 @@ services:
     dbUser: reports
     health: /health
     stripPrefix: true
+    runAsNonRoot: false
     # Flask routes here are bare (e.g. /reports/...), unlike the Spring services'
     # generated controllers which keep their own name in the path -- needs the
     # whole "/api/v1/helper" prefix removed, not just "/api/v1".
