@@ -413,6 +413,7 @@ services:
     path: /docs
     port: 8080
     db: false
+    health: /
     stripPrefix: false
     open: true
     resources:
