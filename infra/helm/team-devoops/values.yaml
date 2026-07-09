@@ -282,6 +282,11 @@ services:
     dbUser: organization
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -301,6 +306,11 @@ services:
     dbUser: member
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -315,6 +325,11 @@ services:
     dbUser: event
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -326,6 +341,11 @@ services:
     dbUser: feedback
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -337,6 +357,11 @@ services:
     dbUser: finance
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -348,6 +373,11 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     envFromSecret: letter-env
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
@@ -364,6 +394,11 @@ services:
     # generated controllers which keep their own name in the path -- needs the
     # whole "/api/v1/helper" prefix removed, not just "/api/v1".
     fullStrip: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     envFromSecret: genai-env
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
@@ -401,6 +436,11 @@ services:
     db: false
     health: /
     stripPrefix: false
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     resources:
       requests:
         cpu: 50m
@@ -416,6 +456,11 @@ services:
     health: /
     stripPrefix: false
     open: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     resources:
       requests:
         cpu: 50m

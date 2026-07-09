@@ -7,7 +7,11 @@ metadata:
   labels:
     {{- include "team-devoops.labels" (dict "name" $name "root" $root) | nindent 4 }}
 spec:
+  {{- /* Omitted when HPA-managed: setting it here would make every `helm upgrade`
+        reset replicas back to the default and fight the HPA's scaling decisions. */}}
+  {{- if not (and $svc.autoscaling $svc.autoscaling.enabled) }}
   replicas: {{ $svc.replicas | default 1 }}
+  {{- end }}
   progressDeadlineSeconds: {{ $svc.progressDeadlineSeconds | default 600 }}
   strategy:
     {{- toYaml $root.Values.strategy | nindent 4 }}
