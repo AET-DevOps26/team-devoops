@@ -23,10 +23,9 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
-      {{- if $svc.persistence }}
-      securityContext:
+        {{- if $svc.persistence }}
         fsGroup: {{ $svc.persistence.fsGroup }}
-      {{- end }}
+        {{- end }}
       {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
