@@ -72,6 +72,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=organization_user
       - SPRING_DATASOURCE_PASSWORD=${ORGANIZATION_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=websecure"
@@ -99,6 +100,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=member_user
       - SPRING_DATASOURCE_PASSWORD=${MEMBER_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=websecure"
@@ -299,7 +301,7 @@ services:
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
       - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${GRAFANA_OAUTH_CLIENT_SECRET:-grafana-oauth-secret}
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${GRAFANA_OAUTH_CLIENT_SECRET}
       - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
       - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops/protocol/openid-connect/auth
       - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token
@@ -401,7 +403,7 @@ services:
       - DEFAULT_PROVIDER=oidc
       - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
       - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
-      - PROVIDERS_OIDC_CLIENT_SECRET=${FORWARD_AUTH_CLIENT_SECRET:-traefik-forward-auth-secret}
+      - PROVIDERS_OIDC_CLIENT_SECRET=${FORWARD_AUTH_CLIENT_SECRET}
       - SECRET=${FORWARD_AUTH_COOKIE_SECRET}
       - INSECURE_COOKIE=false
       - LOG_LEVEL=debug
@@ -420,8 +422,9 @@ services:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak
     # realm-config.json is mounted as a template (see volumes below) with
-    # __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__ placeholders.
-    # Render it into the real import path from the container's own env (note the `$$` --
+    # __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__/
+    # __KEYCLOAK_ADMIN_CLIENT_SECRET__/__FORWARD_AUTH_CLIENT_SECRET__/__GRAFANA_OAUTH_CLIENT_SECRET__
+    # placeholders. Render it into the real import path from the container's own env (note the `$$` --
     # a single `$` would be interpolated by Compose itself using the host/.env value,
     # which happens to be correct today but would silently freeze the substitution at
     # `docker compose config` time instead of at container start) before starting Keycloak.
@@ -435,6 +438,9 @@ services:
         # escape the delimiter mid-pattern here).
         sed -e "s|__KEYCLOAK_REALM_ADMIN_PASSWORD__|$$KEYCLOAK_REALM_ADMIN_PASSWORD|" \
             -e "s|__KEYCLOAK_REALM_USER_PASSWORD__|$$KEYCLOAK_REALM_USER_PASSWORD|" \
+            -e "s|__KEYCLOAK_ADMIN_CLIENT_SECRET__|$$KEYCLOAK_ADMIN_CLIENT_SECRET|" \
+            -e "s|__FORWARD_AUTH_CLIENT_SECRET__|$$FORWARD_AUTH_CLIENT_SECRET|" \
+            -e "s|__GRAFANA_OAUTH_CLIENT_SECRET__|$$GRAFANA_OAUTH_CLIENT_SECRET|" \
             /opt/keycloak/realm-config.template.json > /opt/keycloak/data/import/realm-config.json
         exec /opt/keycloak/bin/kc.sh start-dev --import-realm
     depends_on:
@@ -449,6 +455,9 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KEYCLOAK_REALM_ADMIN_PASSWORD: ${KEYCLOAK_REALM_ADMIN_PASSWORD}
       KEYCLOAK_REALM_USER_PASSWORD: ${KEYCLOAK_REALM_USER_PASSWORD}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      FORWARD_AUTH_CLIENT_SECRET: ${FORWARD_AUTH_CLIENT_SECRET}
+      GRAFANA_OAUTH_CLIENT_SECRET: ${GRAFANA_OAUTH_CLIENT_SECRET}
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth

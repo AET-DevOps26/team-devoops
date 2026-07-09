@@ -114,7 +114,7 @@
       "clientId": "org-role-sync",
       "enabled": true,
       "publicClient": false,
-      "secret": "org-role-sync-secret",
+      "secret": "__KEYCLOAK_ADMIN_CLIENT_SECRET__",
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true
@@ -123,7 +123,7 @@
       "clientId": "traefik-forward-auth",
       "enabled": true,
       "publicClient": false,
-      "secret": "traefik-forward-auth-secret",
+      "secret": "__FORWARD_AUTH_CLIENT_SECRET__",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "redirectUris": [
@@ -141,7 +141,7 @@
       "clientId": "grafana",
       "enabled": true,
       "publicClient": false,
-      "secret": "grafana-oauth-secret",
+      "secret": "__GRAFANA_OAUTH_CLIENT_SECRET__",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "redirectUris": [

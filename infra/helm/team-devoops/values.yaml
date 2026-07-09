@@ -97,9 +97,11 @@ monitoring:
     dashboardsConfigMapName: grafana-dashboards
     alertingConfigMapName: grafana-alerting
     oauthClientId: grafana
-    # Matches the existing forwardAuth.clientSecret pattern: a hardcoded default
-    # for an internal-only confidential client, not treated as a rotated secret.
-    oauthClientSecret: grafana-oauth-secret
+    # Placeholder only -- must be overridden at deploy time from the GRAFANA_OAUTH_CLIENT_SECRET
+    # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret. Also substituted into the
+    # Keycloak realm import for the "grafana" client (see keycloak-realm-configmap.yaml) --
+    # this is the single source of truth for that secret, not duplicated elsewhere.
+    oauthClientSecret: "CHANGE_ME_GRAFANA_OAUTH_CLIENT_SECRET"
     resources:
       requests:
         cpu: 50m
@@ -252,7 +254,11 @@ forwardAuth:
   enabled: true
   oidcIssuerUrl: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
   clientId: "traefik-forward-auth"
-  clientSecret: "traefik-forward-auth-secret"
+  # Placeholder only -- must be overridden at deploy time from the FORWARD_AUTH_CLIENT_SECRET
+  # GitHub secret (see cd.yml). Also substituted into the Keycloak realm import for the
+  # "traefik-forward-auth" client (see keycloak-realm-configmap.yaml) -- this is the single
+  # source of truth for that secret, not duplicated elsewhere.
+  clientSecret: "CHANGE_ME_FORWARD_AUTH_CLIENT_SECRET"
   # 32+ character random string used to sign session cookies.
   # Placeholder only -- must be overridden at deploy time from the FORWARD_AUTH_COOKIE_SECRET
   # GitHub secret (see cd.yml).
@@ -308,11 +314,13 @@ services:
       JAVA_TOOL_OPTIONS: "-Xmx300m -Xms64m"
       # Keycloak Admin REST API for syncing membership client-roles (KeycloakRoleService).
       # The org-role-sync service-account client is defined in files/realm-config.json.
-      # Override KEYCLOAK_ADMIN_CLIENT_SECRET via --set in CI/prod.
+      # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_ADMIN_CLIENT_SECRET
+      # GitHub secret (see cd.yml). Also the single source of truth substituted into the Keycloak
+      # realm import (keycloak-realm-configmap.yaml) and into member-service's matching env below.
       KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
       KEYCLOAK_REALM: "devops"
       KEYCLOAK_ADMIN_CLIENT_ID: "org-role-sync"
-      KEYCLOAK_ADMIN_CLIENT_SECRET: "org-role-sync-secret"
+      KEYCLOAK_ADMIN_CLIENT_SECRET: "CHANGE_ME_KEYCLOAK_ADMIN_CLIENT_SECRET"
       KEYCLOAK_ROLES_CLIENT: "devops-client"
   member-service:
     path: /api/v1/members
@@ -325,9 +333,14 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
       JAVA_TOOL_OPTIONS: "-Xmx300m -Xms64m"
-      # Keycloak Admin REST API for user provisioning (KeycloakService).
+      # Keycloak Admin REST API for user provisioning (KeycloakService). Same org-role-sync
+      # service-account client/secret as organization-service above (see that entry's comment) --
+      # was previously not wired here at all, so this silently ran on application.properties'
+      # hardcoded fallback in every deploy target.
       KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
       KEYCLOAK_REALM: "devops"
+      KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID: "org-role-sync"
+      KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET: "CHANGE_ME_KEYCLOAK_ADMIN_CLIENT_SECRET"
   event-service:
     path: /api/v1/events
     port: 8080

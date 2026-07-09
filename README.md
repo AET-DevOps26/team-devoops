@@ -200,8 +200,11 @@ automated; no manual VM access is required for normal deploys.
 | Secret | `KEYCLOAK_REALM_ADMIN_PASSWORD` | Password for the seeded `admin` realm user. VM: `KEYCLOAK_REALM_ADMIN_PASSWORD`. K8s: Helm `keycloak.users.admin.password` |
 | Secret | `KEYCLOAK_REALM_USER_PASSWORD` | Password for the seeded `user` realm user. VM: `KEYCLOAK_REALM_USER_PASSWORD`. K8s: Helm `keycloak.users.user.password` |
 | Secret | `FORWARD_AUTH_COOKIE_SECRET` | 32+ char random string signing forward-auth session cookies. VM: `FORWARD_AUTH_COOKIE_SECRET`. K8s: Helm `forwardAuth.cookieSecret` |
+| Secret | `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret for the `org-role-sync` Keycloak service-account client (`manage-users`/`view-clients` — used by organization-service and member-service to call the Keycloak Admin REST API). VM: `KEYCLOAK_ADMIN_CLIENT_SECRET`. K8s: Helm `services.organization-service.env.KEYCLOAK_ADMIN_CLIENT_SECRET` and `services.member-service.env.KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET` (same value, two consumers) |
+| Secret | `FORWARD_AUTH_CLIENT_SECRET` | Secret for the `traefik-forward-auth` Keycloak client (Traefik/oauth2-proxy's OIDC client, gates every proxied route). VM: `FORWARD_AUTH_CLIENT_SECRET`. K8s: Helm `forwardAuth.clientSecret` |
+| Secret | `GRAFANA_OAUTH_CLIENT_SECRET` | Secret for the `grafana` Keycloak client (Grafana's own generic-OAuth login). VM: `GRAFANA_OAUTH_CLIENT_SECRET`. K8s: Helm `monitoring.grafana.oauthClientSecret` |
 
-Each of these 13 secrets is the single source of truth for that value across **both** deploy targets — the `deploy` job's "Write compose .env file" step assembles `infra/.env` from them for the VM, and the `deploy-k8s` job passes them individually via `--set` for Helm. No value is duplicated across two different secrets.
+Each of these 16 secrets is the single source of truth for that value across **both** deploy targets — the `deploy` job's "Write compose .env file" step assembles `infra/.env` from them for the VM, and the `deploy-k8s` job passes them individually via `--set` for Helm. No GitHub secret's value is duplicated by a *different* GitHub secret (`KEYCLOAK_ADMIN_CLIENT_SECRET` is intentionally passed to two `--set` targets, since organization-service and member-service both authenticate to Keycloak as the same `org-role-sync` client).
 
 The OIDC service principal needs `Contributor` on the subscription (to manage
 resources in `rg-team-devoops`) and `Storage Blob Data Contributor` on the
@@ -296,6 +299,9 @@ Passwords shown are the local-dev defaults from [`infra/.env.example`](infra/.en
 | `devops-client` | public, PKCE S256 | React frontend |
 | `traefik-forward-auth` | confidential | Traefik forward-auth middleware |
 | `grafana` | confidential | Grafana's own generic-OAuth login (admin-only, see [Monitoring](#monitoring)) |
+| `org-role-sync` | confidential, service account (`manage-users`/`view-clients`) | organization-service and member-service, to call the Keycloak Admin REST API |
+
+The three confidential clients' secrets are local-dev defaults from `infra/.env.example` (matching what's committed in `infra/keycloak/realm-config.json`'s `__KEYCLOAK_ADMIN_CLIENT_SECRET__`/`__FORWARD_AUTH_CLIENT_SECRET__`/`__GRAFANA_OAUTH_CLIENT_SECRET__` placeholders); on the VM and Kubernetes they come from the `KEYCLOAK_ADMIN_CLIENT_SECRET`/`FORWARD_AUTH_CLIENT_SECRET`/`GRAFANA_OAUTH_CLIENT_SECRET` GitHub secrets — see [Required GitHub secrets / variables](#required-github-secrets--variables).
 
 ### Local login
 

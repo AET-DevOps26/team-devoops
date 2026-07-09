@@ -45,6 +45,9 @@ jobs:
           KEYCLOAK_REALM_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_REALM_ADMIN_PASSWORD }}
           KEYCLOAK_REALM_USER_PASSWORD: ${{ secrets.KEYCLOAK_REALM_USER_PASSWORD }}
           FORWARD_AUTH_COOKIE_SECRET: ${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}
+          KEYCLOAK_ADMIN_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
+          FORWARD_AUTH_CLIENT_SECRET: ${{ secrets.FORWARD_AUTH_CLIENT_SECRET }}
+          GRAFANA_OAUTH_CLIENT_SECRET: ${{ secrets.GRAFANA_OAUTH_CLIENT_SECRET }}
         run: |
           cat > /tmp/compose.env << ENVFILE
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
@@ -60,6 +63,9 @@ jobs:
           KEYCLOAK_REALM_ADMIN_PASSWORD=$KEYCLOAK_REALM_ADMIN_PASSWORD
           KEYCLOAK_REALM_USER_PASSWORD=$KEYCLOAK_REALM_USER_PASSWORD
           FORWARD_AUTH_COOKIE_SECRET=$FORWARD_AUTH_COOKIE_SECRET
+          KEYCLOAK_ADMIN_CLIENT_SECRET=$KEYCLOAK_ADMIN_CLIENT_SECRET
+          FORWARD_AUTH_CLIENT_SECRET=$FORWARD_AUTH_CLIENT_SECRET
+          GRAFANA_OAUTH_CLIENT_SECRET=$GRAFANA_OAUTH_CLIENT_SECRET
           ENVFILE
 
       - name: Write genai .env file
@@ -299,4 +305,8 @@ jobs:
             --set keycloak.users.admin.password="${{ secrets.KEYCLOAK_REALM_ADMIN_PASSWORD }}" \
             --set keycloak.users.user.password="${{ secrets.KEYCLOAK_REALM_USER_PASSWORD }}" \
             --set forwardAuth.cookieSecret="${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}" \
+            --set forwardAuth.clientSecret="${{ secrets.FORWARD_AUTH_CLIENT_SECRET }}" \
+            --set monitoring.grafana.oauthClientSecret="${{ secrets.GRAFANA_OAUTH_CLIENT_SECRET }}" \
+            --set services.organization-service.env.KEYCLOAK_ADMIN_CLIENT_SECRET="${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}" \
+            --set services.member-service.env.KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET="${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}" \
             --rollback-on-failure --timeout 15m
