@@ -430,8 +430,11 @@ services:
       - |
         set -e
         mkdir -p /opt/keycloak/data/import
-        sed -e "s/__KEYCLOAK_REALM_ADMIN_PASSWORD__/$$KEYCLOAK_REALM_ADMIN_PASSWORD/" \
-            -e "s/__KEYCLOAK_REALM_USER_PASSWORD__/$$KEYCLOAK_REALM_USER_PASSWORD/" \
+        # `|` delimiter, not `/` -- these are openssl-rand-base64 secrets, which routinely
+        # contain `/` and would otherwise break a `/`-delimited s/// (sed has no way to
+        # escape the delimiter mid-pattern here).
+        sed -e "s|__KEYCLOAK_REALM_ADMIN_PASSWORD__|$$KEYCLOAK_REALM_ADMIN_PASSWORD|" \
+            -e "s|__KEYCLOAK_REALM_USER_PASSWORD__|$$KEYCLOAK_REALM_USER_PASSWORD|" \
             /opt/keycloak/realm-config.template.json > /opt/keycloak/data/import/realm-config.json
         exec /opt/keycloak/bin/kc.sh start-dev --import-realm
     depends_on:
