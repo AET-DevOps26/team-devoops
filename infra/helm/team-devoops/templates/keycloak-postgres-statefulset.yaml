@@ -16,10 +16,16 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" .Values.keycloak.db.host) | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: {{ .Values.database.image }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" false) | nindent 12 }}
           ports:
             - containerPort: 5432
           env:

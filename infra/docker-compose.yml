@@ -37,7 +37,7 @@ services:
       - KEYCLOAK_JWKS_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=reports_user
-      - SPRING_DATASOURCE_PASSWORD=reports_password
+      - SPRING_DATASOURCE_PASSWORD=${REPORTS_DB_PASSWORD}
       - OLLAMA_BASE_URL=http://ollama:11434
       - FEEDBACK_SERVICE_URL=http://feedback-service:8080
     volumes:
@@ -70,8 +70,9 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=organization_user
-      - SPRING_DATASOURCE_PASSWORD=organization_password
+      - SPRING_DATASOURCE_PASSWORD=${ORGANIZATION_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.organization-service.entrypoints=websecure"
@@ -97,8 +98,9 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=member_user
-      - SPRING_DATASOURCE_PASSWORD=member_password
+      - SPRING_DATASOURCE_PASSWORD=${MEMBER_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
+      - KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.member-service.entrypoints=websecure"
@@ -124,7 +126,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=event_user
-      - SPRING_DATASOURCE_PASSWORD=event_password
+      - SPRING_DATASOURCE_PASSWORD=${EVENT_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -151,7 +153,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=feedback_user
-      - SPRING_DATASOURCE_PASSWORD=feedback_password
+      - SPRING_DATASOURCE_PASSWORD=${FEEDBACK_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -178,7 +180,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=finance_user
-      - SPRING_DATASOURCE_PASSWORD=finance_password
+      - SPRING_DATASOURCE_PASSWORD=${FINANCE_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -207,7 +209,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://app-database:5432/app_db
       - SPRING_DATASOURCE_USERNAME=letter_user
-      - SPRING_DATASOURCE_PASSWORD=letter_password
+      - SPRING_DATASOURCE_PASSWORD=${LETTER_DB_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
     labels:
       - "traefik.enable=true"
@@ -299,7 +301,7 @@ services:
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
       - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-oauth-secret
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${GRAFANA_OAUTH_CLIENT_SECRET}
       - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
       - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops/protocol/openid-connect/auth
       - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/devops/protocol/openid-connect/token
@@ -401,8 +403,8 @@ services:
       - DEFAULT_PROVIDER=oidc
       - PROVIDERS_OIDC_ISSUER_URL=https://team-devoops.polandcentral.cloudapp.azure.com/auth/realms/devops
       - PROVIDERS_OIDC_CLIENT_ID=traefik-forward-auth
-      - PROVIDERS_OIDC_CLIENT_SECRET=traefik-forward-auth-secret
-      - SECRET=a-random-32-char-secret-changeme!
+      - PROVIDERS_OIDC_CLIENT_SECRET=${FORWARD_AUTH_CLIENT_SECRET}
+      - SECRET=${FORWARD_AUTH_COOKIE_SECRET}
       - INSECURE_COOKIE=false
       - LOG_LEVEL=debug
     extra_hosts:
@@ -419,7 +421,28 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak
-    command: ["start-dev", "--import-realm"]
+    # realm-config.json is mounted as a template (see volumes below) with
+    # __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__/
+    # __KEYCLOAK_ADMIN_CLIENT_SECRET__/__FORWARD_AUTH_CLIENT_SECRET__/__GRAFANA_OAUTH_CLIENT_SECRET__
+    # placeholders. Render it into the real import path from the container's own env (note the `$$` --
+    # a single `$` would be interpolated by Compose itself using the host/.env value,
+    # which happens to be correct today but would silently freeze the substitution at
+    # `docker compose config` time instead of at container start) before starting Keycloak.
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        mkdir -p /opt/keycloak/data/import
+        # `|` delimiter, not `/` -- these are openssl-rand-base64 secrets, which routinely
+        # contain `/` and would otherwise break a `/`-delimited s/// (sed has no way to
+        # escape the delimiter mid-pattern here).
+        sed -e "s|__KEYCLOAK_REALM_ADMIN_PASSWORD__|$$KEYCLOAK_REALM_ADMIN_PASSWORD|" \
+            -e "s|__KEYCLOAK_REALM_USER_PASSWORD__|$$KEYCLOAK_REALM_USER_PASSWORD|" \
+            -e "s|__KEYCLOAK_ADMIN_CLIENT_SECRET__|$$KEYCLOAK_ADMIN_CLIENT_SECRET|" \
+            -e "s|__FORWARD_AUTH_CLIENT_SECRET__|$$FORWARD_AUTH_CLIENT_SECRET|" \
+            -e "s|__GRAFANA_OAUTH_CLIENT_SECRET__|$$GRAFANA_OAUTH_CLIENT_SECRET|" \
+            /opt/keycloak/realm-config.template.json > /opt/keycloak/data/import/realm-config.json
+        exec /opt/keycloak/bin/kc.sh start-dev --import-realm
     depends_on:
       keycloak-database:
         condition: service_healthy
@@ -427,9 +450,14 @@ services:
       KC_DB: postgres
       KC_DB_URL_HOST: keycloak-database
       KC_DB_USERNAME: keycloak_user
-      KC_DB_PASSWORD: keycloak_password
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_REALM_ADMIN_PASSWORD: ${KEYCLOAK_REALM_ADMIN_PASSWORD}
+      KEYCLOAK_REALM_USER_PASSWORD: ${KEYCLOAK_REALM_USER_PASSWORD}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      FORWARD_AUTH_CLIENT_SECRET: ${FORWARD_AUTH_CLIENT_SECRET}
+      GRAFANA_OAUTH_CLIENT_SECRET: ${GRAFANA_OAUTH_CLIENT_SECRET}
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
@@ -452,7 +480,7 @@ services:
       retries: 20
       start_period: 30s
     volumes:
-      - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json
+      - ./keycloak/realm-config.json:/opt/keycloak/realm-config.template.json:ro
       - ./keycloak/themes:/opt/keycloak/themes
     ports:
       - "8081:8080"
@@ -468,7 +496,7 @@ services:
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak_user
-      POSTGRES_PASSWORD: keycloak_password
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U keycloak_user -d keycloak"]
       interval: 10s
@@ -485,15 +513,15 @@ services:
       - 5432
     environment:
       POSTGRES_USER: app_admin
-      POSTGRES_PASSWORD: app_admin_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: app_db
-      ORGANIZATION_USER_PASSWORD: organization_password
-      MEMBER_USER_PASSWORD: member_password
-      EVENT_USER_PASSWORD: event_password
-      FEEDBACK_USER_PASSWORD: feedback_password
-      FINANCE_USER_PASSWORD: finance_password
-      LETTER_USER_PASSWORD: letter_password
-      REPORTS_USER_PASSWORD: reports_password
+      ORGANIZATION_USER_PASSWORD: ${ORGANIZATION_DB_PASSWORD}
+      MEMBER_USER_PASSWORD: ${MEMBER_DB_PASSWORD}
+      EVENT_USER_PASSWORD: ${EVENT_DB_PASSWORD}
+      FEEDBACK_USER_PASSWORD: ${FEEDBACK_DB_PASSWORD}
+      FINANCE_USER_PASSWORD: ${FINANCE_DB_PASSWORD}
+      LETTER_USER_PASSWORD: ${LETTER_DB_PASSWORD}
+      REPORTS_USER_PASSWORD: ${REPORTS_DB_PASSWORD}
     volumes:
       - app_db_data:/var/lib/postgresql/data
       - ./postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro

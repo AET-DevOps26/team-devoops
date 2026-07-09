@@ -83,6 +83,14 @@
         group: "{{ ansible_user }}"
         recurse: true
 
+    - name: Write compose .env file
+      copy:
+        src: "{{ compose_env_file }}"
+        dest: "{{ app_dir }}/infra/.env"
+        mode: "0600"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
     - name: Write py-genai-helper .env file
       copy:
         src: "{{ genai_env_file }}"

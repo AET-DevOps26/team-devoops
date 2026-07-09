@@ -21,42 +21,51 @@ database:
   enabled: true
   name: app_db
   user: app_admin
-  # Rendered into a Secret (db-credentials). Override in CI/prod via --set.
-  password: app_admin_password
+  # Placeholder only -- must be overridden at deploy time from the DB_ADMIN_PASSWORD
+  # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+  password: "CHANGE_ME_DB_ADMIN_PASSWORD"
   host: app-database
   port: 5432
-  # Per-service users. Override passwords via --set in CI/prod.
+  # Per-service users. Placeholders only -- real passwords come from the
+  # DB_ORGANIZATION_PASSWORD / DB_MEMBER_PASSWORD / DB_EVENT_PASSWORD /
+  # DB_FEEDBACK_PASSWORD / DB_FINANCE_PASSWORD / DB_LETTER_PASSWORD /
+  # DB_REPORTS_PASSWORD GitHub secrets, set via --set in cd.yml.
   users:
     organization:
       username: organization_user
-      password: organization_password
+      password: "CHANGE_ME_DB_ORGANIZATION_PASSWORD"
     member:
       username: member_user
-      password: member_password
+      password: "CHANGE_ME_DB_MEMBER_PASSWORD"
     event:
       username: event_user
-      password: event_password
+      password: "CHANGE_ME_DB_EVENT_PASSWORD"
     feedback:
       username: feedback_user
-      password: feedback_password
+      password: "CHANGE_ME_DB_FEEDBACK_PASSWORD"
     finance:
       username: finance_user
-      password: finance_password
+      password: "CHANGE_ME_DB_FINANCE_PASSWORD"
     letter:
       username: letter_user
-      password: letter_password
+      password: "CHANGE_ME_DB_LETTER_PASSWORD"
     reports:
       username: reports_user
-      password: reports_password
+      password: "CHANGE_ME_DB_REPORTS_PASSWORD"
   image: postgres:15.6-alpine
   storageSize: 5Gi
   resources:
     requests:
       cpu: 50m
       memory: 128Mi
+    # Live `kubectl top` shows ~110Mi/4m against this limit -- 146Mi/146m of margin even
+    # though this instance serves 7 services' connection pools concurrently. Trimmed to
+    # free a bit more of the namespace's tight 6Gi/4-CPU quota (see the top-level
+    # `resources:` comment above for the incident this is responding to); still leaves
+    # 114Mi/116m over the observed figure.
     limits:
-      cpu: 150m
-      memory: 256Mi
+      cpu: 120m
+      memory: 224Mi
 
 # py-genai-helper reads its configuration from a Secret created out-of-band by the
 # pipeline (kubectl create secret --from-env-file). Helm only references it by name.
@@ -93,9 +102,11 @@ monitoring:
     dashboardsConfigMapName: grafana-dashboards
     alertingConfigMapName: grafana-alerting
     oauthClientId: grafana
-    # Matches the existing forwardAuth.clientSecret pattern: a hardcoded default
-    # for an internal-only confidential client, not treated as a rotated secret.
-    oauthClientSecret: grafana-oauth-secret
+    # Placeholder only -- must be overridden at deploy time from the GRAFANA_OAUTH_CLIENT_SECRET
+    # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret. Also substituted into the
+    # Keycloak realm import for the "grafana" client (see keycloak-realm-configmap.yaml) --
+    # this is the single source of truth for that secret, not duplicated elsewhere.
+    oauthClientSecret: "CHANGE_ME_GRAFANA_OAUTH_CLIENT_SECRET"
     resources:
       requests:
         cpu: 50m
@@ -182,7 +193,20 @@ keycloak:
   path: /auth
   hostname: https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth
   adminUsername: admin
-  adminPassword: admin
+  # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_ADMIN_PASSWORD
+  # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+  adminPassword: "CHANGE_ME_KEYCLOAK_ADMIN_PASSWORD"
+  # Passwords for the two seeded realm users (files/realm-config.json substitutes these
+  # for the __KEYCLOAK_REALM_ADMIN_PASSWORD__/__KEYCLOAK_REALM_USER_PASSWORD__ tokens via
+  # keycloak-realm-configmap.yaml). "users" here are realm-level accounts, distinct from
+  # keycloak.adminPassword above (the Keycloak server's own bootstrap console admin).
+  # Placeholders only -- must be overridden at deploy time from the KEYCLOAK_REALM_ADMIN_PASSWORD/
+  # KEYCLOAK_REALM_USER_PASSWORD GitHub secrets (see cd.yml), same as forwardAuth.cookieSecret.
+  users:
+    admin:
+      password: "CHANGE_ME_KEYCLOAK_REALM_ADMIN_PASSWORD"
+    user:
+      password: "CHANGE_ME_KEYCLOAK_REALM_USER_PASSWORD"
   # Constrain JVM heap so Keycloak stays within its memory limit.
   javaOptsAppend: "-Xms64m -Xmx256m"
   resources:
@@ -199,7 +223,9 @@ keycloak:
     enabled: true
     name: keycloak
     user: keycloak_user
-    password: keycloak_password
+    # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_DB_PASSWORD
+    # GitHub secret (see cd.yml), same as forwardAuth.cookieSecret.
+    password: "CHANGE_ME_KEYCLOAK_DB_PASSWORD"
     host: keycloak-database
     storageSize: 2Gi
     resources:
@@ -233,11 +259,16 @@ forwardAuth:
   enabled: true
   oidcIssuerUrl: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
   clientId: "traefik-forward-auth"
-  clientSecret: "traefik-forward-auth-secret"
+  # Placeholder only -- must be overridden at deploy time from the FORWARD_AUTH_CLIENT_SECRET
+  # GitHub secret (see cd.yml). Also substituted into the Keycloak realm import for the
+  # "traefik-forward-auth" client (see keycloak-realm-configmap.yaml) -- this is the single
+  # source of truth for that secret, not duplicated elsewhere.
+  clientSecret: "CHANGE_ME_FORWARD_AUTH_CLIENT_SECRET"
   # 32+ character random string used to sign session cookies.
-  # Override at deploy time: --set forwardAuth.cookieSecret="$FORWARD_AUTH_COOKIE_SECRET"
+  # Placeholder only -- must be overridden at deploy time from the FORWARD_AUTH_COOKIE_SECRET
+  # GitHub secret (see cd.yml).
   # Generate with: openssl rand -base64 32
-  cookieSecret: ""
+  cookieSecret: "CHANGE_ME_FORWARD_AUTH_COOKIE_SECRET"
 
 # Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
 # scheduling the new one, which is required to stay within the namespace CPU quota.
@@ -250,13 +281,26 @@ strategy:
     maxUnavailable: 1
 
 # Default compute resources applied to every app container (overridable per service).
+# Used as-is by the six Spring services below with no per-service override (organization/
+# member/event/feedback/finance/letter-service) -- every other service in this chart has
+# already been trimmed to just above its observed peak (see prometheus/loki/grafana/alloy/
+# ollama/py-genai-helper comments); this was the one category still on an untuned default.
+# Live `kubectl top` shows ~271-286Mi steady-state per service (not an idle snapshot -- these
+# had been running normally for 19+ minutes). JAVA_TOOL_OPTIONS caps JVM heap at -Xmx300m
+# already, so 350Mi limit leaves ~50Mi for metaspace/threads/native overhead above that hard
+# cap -- deliberately not cut closer to the observed 286Mi the way idle-only numbers would
+# tempt (see grafana's rejected 200Mi/34Mi-headroom attempt for why that's the wrong move).
+# CPU is cut harder (200m -> 150m) since it's compressible (throttles, doesn't OOM-kill) and
+# live usage is ~2-3m -- still >50x headroom. Frees ~204Mi/300m off the namespace's tight 6Gi/
+# 4-CPU quota (was at 6040Mi/3560m used at rest, no room for a multi-service rolling deploy's
+# old+new pod overlap -- see the 2026-07-09 ollama FailedCreate/exceeded-quota incident).
 resources:
   requests:
     cpu: 100m
     memory: 128Mi
   limits:
-    cpu: 200m
-    memory: 384Mi
+    cpu: 150m
+    memory: 350Mi
 
 # ---------------------------------------------------------------------------
 # Service catalogue. Keys are the Kubernetes object names.
@@ -284,6 +328,13 @@ services:
     dbUser: organization
     health: /actuator/health
     stripPrefix: true
+    # This service's Dockerfile creates a named "user" account (adduser -D user), not a
+    # numeric UID -- the kubelet can't verify runAsNonRoot against a non-numeric image user
+    # and hard-fails container creation ("cannot verify user is non-root") rather than
+    # resolving the name itself. Same reasoning applies to every other -service below and
+    # to py-genai-helper. The image already runs as non-root by default; we just can't
+    # assert it to the kubelet without either this or pinning an explicit numeric runAsUser.
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -295,11 +346,13 @@ services:
       JAVA_TOOL_OPTIONS: "-Xmx300m -Xms64m"
       # Keycloak Admin REST API for syncing membership client-roles (KeycloakRoleService).
       # The org-role-sync service-account client is defined in files/realm-config.json.
-      # Override KEYCLOAK_ADMIN_CLIENT_SECRET via --set in CI/prod.
+      # Placeholder only -- must be overridden at deploy time from the KEYCLOAK_ADMIN_CLIENT_SECRET
+      # GitHub secret (see cd.yml). Also the single source of truth substituted into the Keycloak
+      # realm import (keycloak-realm-configmap.yaml) and into member-service's matching env below.
       KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
       KEYCLOAK_REALM: "devops"
       KEYCLOAK_ADMIN_CLIENT_ID: "org-role-sync"
-      KEYCLOAK_ADMIN_CLIENT_SECRET: "org-role-sync-secret"
+      KEYCLOAK_ADMIN_CLIENT_SECRET: "CHANGE_ME_KEYCLOAK_ADMIN_CLIENT_SECRET"
       KEYCLOAK_ROLES_CLIENT: "devops-client"
   member-service:
     path: /api/v1/members
@@ -308,6 +361,7 @@ services:
     dbUser: member
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -317,9 +371,14 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
       JAVA_TOOL_OPTIONS: "-Xmx300m -Xms64m"
-      # Keycloak Admin REST API for user provisioning (KeycloakService).
+      # Keycloak Admin REST API for user provisioning (KeycloakService). Same org-role-sync
+      # service-account client/secret as organization-service above (see that entry's comment) --
+      # was previously not wired here at all, so this silently ran on application.properties'
+      # hardcoded fallback in every deploy target.
       KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
       KEYCLOAK_REALM: "devops"
+      KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID: "org-role-sync"
+      KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET: "CHANGE_ME_KEYCLOAK_ADMIN_CLIENT_SECRET"
   event-service:
     path: /api/v1/events
     port: 8080
@@ -327,6 +386,7 @@ services:
     dbUser: event
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -343,6 +403,7 @@ services:
     dbUser: feedback
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -359,6 +420,7 @@ services:
     dbUser: finance
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -375,6 +437,7 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
@@ -392,6 +455,7 @@ services:
     dbUser: reports
     health: /health
     stripPrefix: true
+    runAsNonRoot: false
     # Flask routes here are bare (e.g. /reports/...), unlike the Spring services'
     # generated controllers which keep their own name in the path -- needs the
     # whole "/api/v1/helper" prefix removed, not just "/api/v1".
@@ -467,6 +531,7 @@ services:
     health: /docs/
     stripPrefix: false
     open: true
+    runAsNonRoot: false
     autoscaling:
       enabled: true
       minReplicas: 1
