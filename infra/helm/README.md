@@ -14,6 +14,8 @@ infra/helm/team-devoops/
     _helpers.tpl              # naming/label/image helpers
     deployment.yaml           # generic Deployment rendered per service
     service.yaml              # generic ClusterIP Service rendered per service
+    hpa.yaml                  # generic HorizontalPodAutoscaler, one per service
+                               #  with autoscaling.enabled -- see "Autoscaling" below
     ingress.yaml              # nginx ingress (prefix-strip + plain rules)
     configmap-db.yaml         # SPRING_DATASOURCE_URL/USERNAME
     secret-db.yaml            # SPRING_DATASOURCE_PASSWORD / POSTGRES_PASSWORD
@@ -224,6 +226,40 @@ Validate:
 kubectl -n ge83mom-devops26 get pods | grep ollama
 kubectl -n ge83mom-devops26 exec deploy/ollama -- ollama list
 ```
+
+## Autoscaling & self-healing
+
+Every app service (the 6 Spring services, `py-genai-helper`, `web-client`,
+`api-docs`) gets a `HorizontalPodAutoscaler` (`templates/hpa.yaml`), driven by
+CPU utilization against each service's `resources.requests.cpu` — the
+in-cluster metrics-server (`v1beta1.metrics.k8s.io`) is already installed and
+working on this cluster. Config lives per-service under `autoscaling:` in
+`values.yaml` (`enabled`, `minReplicas`, `maxReplicas`,
+`targetCPUUtilizationPercentage`); Postgres, Keycloak, Ollama and the
+monitoring stack are rendered from their own templates and intentionally have
+no HPA — they're stateful or singleton and shouldn't scale out.
+
+When a service has `autoscaling.enabled: true`, `templates/deployment.yaml`
+omits `spec.replicas` entirely instead of pinning it to `1` — pinning it would
+make every `helm upgrade` (which runs on every push to `main`) reset the
+replica count and fight the HPA's own scaling decisions.
+
+**Quota caveat:** the namespace's `ResourceQuota` (`limits.cpu: 4`,
+`limits.memory: 6Gi`) is committed almost in full just running one replica of
+everything (`kubectl get resourcequota -n ge83mom-devops26` typically shows
+~90%+ used on both). An HPA scale-up that the quota can't fit simply leaves
+the extra pod `Pending` — it does not affect the already-running replica or
+any other service. `kubectl get hpa -n ge83mom-devops26` shows current
+`TARGETS`/replica counts; `<unknown>` in the `TARGETS` column means
+metrics-server isn't being reached for that resource, not that it's idle.
+
+Self-healing beyond autoscaling is native to Kubernetes and needs no extra
+component here: every service with a `health:` path gets startup, readiness,
+and liveness probes (`templates/deployment.yaml`), so the kubelet restarts a
+container that stops responding, and the ReplicaSet controller replaces any
+pod that's deleted or evicted. `helm upgrade --rollback-on-failure` (used by
+the `deploy-k8s` pipeline job) adds deployment-level self-healing on top —
+a rollout that never becomes healthy is rolled back automatically.
 
 ## Manual deploy
 

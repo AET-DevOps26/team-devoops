@@ -28,13 +28,13 @@ The global theme lives in `src/index.css`. Light and dark mode are driven by sem
 ## Prerequisites
 
 - **Node.js 20+** and **pnpm** (`npm install -g pnpm`)
-- **Keycloak running locally** on port 8081 — start it with `docker compose up -d keycloak` from `infra/` (see root README)
+- **Keycloak running locally** on port 8081 — start it (and the rest of the backend, see "Mock data" below) with `docker compose up -d --build` from `infra/` (see root README)
 
 ## Local development
 
 ```bash
 pnpm install
-pnpm dev        # Vite dev server at http://localhost:5173
+pnpm dev        # Vite dev server at http://localhost:3000
 ```
 
 The app requires Keycloak to be reachable at `VITE_KEYCLOAK_URL` (default `http://localhost:8081`) before it renders. On first load it redirects to the Keycloak login page.
@@ -44,6 +44,12 @@ To override the Keycloak URL:
 ```bash
 VITE_KEYCLOAK_URL=http://localhost:8081 pnpm dev
 ```
+
+### Mock data
+
+By default `pnpm dev` calls the real backend services (proxied to `http://localhost` — see `vite.config.ts`), same as every deployed environment (docker-compose, VM, Kubernetes all already run live — none of them ever set `VITE_USE_MOCKS`). To work on the UI without the backend running, copy `.env.development.example` to `.env.development` and set `VITE_USE_MOCKS=true`; every feature then serves fixtures from `src/mocks/fixtures/` instead, scoped to a demo persona selected via `VITE_MOCK_PERSONA` (`member | coach | director | admin`). `.env.development` is gitignored, so this choice is per-developer and never committed.
+
+**Known limitation:** every backend route is also gated by Traefik's `forward-auth` middleware, which needs its own session cookie — established by a full-page login through Traefik, then sent automatically on same-origin requests. `pnpm dev` serves the SPA itself from Vite (port 3000), so that cookie never gets set, and live-mode API calls will fail. This doesn't affect the actual deployment: browsing the docker-compose stack directly at `http://localhost/` (rather than `pnpm dev`) goes through Traefik end-to-end and works correctly. For local UI iteration against real look-and-feel without touching this, use `VITE_USE_MOCKS=true`.
 
 ## Authentication
 
