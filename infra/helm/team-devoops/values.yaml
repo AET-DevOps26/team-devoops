@@ -267,6 +267,8 @@ forwardAuth:
 
 # Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
 # scheduling the new one, which is required to stay within the namespace CPU quota.
+# Overridable per service via services.<name>.strategy (see web-client/api-docs below
+# for the two services cheap enough to afford a real maxSurge: 1 zero-downtime deploy).
 strategy:
   type: RollingUpdate
   rollingUpdate:
@@ -308,6 +310,11 @@ services:
     dbUser: organization
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -329,6 +336,11 @@ services:
     dbUser: member
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -348,6 +360,11 @@ services:
     dbUser: event
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -359,6 +376,11 @@ services:
     dbUser: feedback
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -370,6 +392,11 @@ services:
     dbUser: finance
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: "http://keycloak:8080/auth/realms/devops/protocol/openid-connect/certs"
@@ -381,6 +408,11 @@ services:
     dbUser: letter
     health: /actuator/health
     stripPrefix: true
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
     envFromSecret: letter-env
     env:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
@@ -397,6 +429,8 @@ services:
     # generated controllers which keep their own name in the path -- needs the
     # whole "/api/v1/helper" prefix removed, not just "/api/v1".
     fullStrip: true
+    # No autoscaling: its RWO PVC below can only mount to one node at a time, so a second
+    # replica would never schedule (stuck on a Multi-Attach error) rather than fail cleanly.
     envFromSecret: genai-env
     env:
       KEYCLOAK_ISSUER_URL: "https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth/realms/devops"
@@ -434,6 +468,20 @@ services:
     db: false
     health: /
     stripPrefix: false
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
+    # Overrides the quota-driven global maxSurge: 0 (see .Values.strategy below) -- at
+    # 80Mi/80m limits this is cheap enough to actually surge an extra pod within the
+    # namespace's remaining quota slack, giving this service a genuine zero-downtime
+    # rolling deploy instead of the brief every-other-service gap maxSurge: 0 causes.
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
     resources:
       requests:
         cpu: 50m
@@ -446,9 +494,24 @@ services:
     path: /docs
     port: 8080
     db: false
+    # Not "/" -- BASE_URL=/docs is baked into api/Dockerfile (swagger-ui serves its
+    # UI under that path, not root), so a bare "/" 404s. Verified live: GET / -> 404,
+    # GET /docs/ -> 200.
+    health: /docs/
     stripPrefix: false
     open: true
     runAsNonRoot: false
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 75
+    # See web-client above -- same reasoning, same headroom.
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
     resources:
       requests:
         cpu: 50m
