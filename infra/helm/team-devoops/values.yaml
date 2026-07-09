@@ -58,9 +58,14 @@ database:
     requests:
       cpu: 50m
       memory: 128Mi
+    # Live `kubectl top` shows ~110Mi/4m against this limit -- 146Mi/146m of margin even
+    # though this instance serves 7 services' connection pools concurrently. Trimmed to
+    # free a bit more of the namespace's tight 6Gi/4-CPU quota (see the top-level
+    # `resources:` comment above for the incident this is responding to); still leaves
+    # 114Mi/116m over the observed figure.
     limits:
-      cpu: 150m
-      memory: 256Mi
+      cpu: 120m
+      memory: 224Mi
 
 # py-genai-helper reads its configuration from a Secret created out-of-band by the
 # pipeline (kubectl create secret --from-env-file). Helm only references it by name.
@@ -276,13 +281,26 @@ strategy:
     maxUnavailable: 1
 
 # Default compute resources applied to every app container (overridable per service).
+# Used as-is by the six Spring services below with no per-service override (organization/
+# member/event/feedback/finance/letter-service) -- every other service in this chart has
+# already been trimmed to just above its observed peak (see prometheus/loki/grafana/alloy/
+# ollama/py-genai-helper comments); this was the one category still on an untuned default.
+# Live `kubectl top` shows ~271-286Mi steady-state per service (not an idle snapshot -- these
+# had been running normally for 19+ minutes). JAVA_TOOL_OPTIONS caps JVM heap at -Xmx300m
+# already, so 350Mi limit leaves ~50Mi for metaspace/threads/native overhead above that hard
+# cap -- deliberately not cut closer to the observed 286Mi the way idle-only numbers would
+# tempt (see grafana's rejected 200Mi/34Mi-headroom attempt for why that's the wrong move).
+# CPU is cut harder (200m -> 150m) since it's compressible (throttles, doesn't OOM-kill) and
+# live usage is ~2-3m -- still >50x headroom. Frees ~204Mi/300m off the namespace's tight 6Gi/
+# 4-CPU quota (was at 6040Mi/3560m used at rest, no room for a multi-service rolling deploy's
+# old+new pod overlap -- see the 2026-07-09 ollama FailedCreate/exceeded-quota incident).
 resources:
   requests:
     cpu: 100m
     memory: 128Mi
   limits:
-    cpu: 200m
-    memory: 384Mi
+    cpu: 150m
+    memory: 350Mi
 
 # ---------------------------------------------------------------------------
 # Service catalogue. Keys are the Kubernetes object names.
