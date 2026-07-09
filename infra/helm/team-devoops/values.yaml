@@ -461,7 +461,10 @@ services:
     path: /docs
     port: 8080
     db: false
-    health: /
+    # Not "/" -- BASE_URL=/docs is baked into api/Dockerfile (swagger-ui serves its
+    # UI under that path, not root), so a bare "/" 404s. Verified live: GET / -> 404,
+    # GET /docs/ -> 200.
+    health: /docs/
     stripPrefix: false
     open: true
     autoscaling:
