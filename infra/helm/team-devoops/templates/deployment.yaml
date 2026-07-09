@@ -23,6 +23,10 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      {{- if $svc.persistence }}
+      securityContext:
+        fsGroup: {{ $svc.persistence.fsGroup }}
+      {{- end }}
       {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -35,6 +39,11 @@ spec:
             {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" (ne $svc.runAsNonRoot false)) | nindent 12 }}
           ports:
             - containerPort: {{ $svc.port }}
+          {{- if $svc.persistence }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $svc.persistence.mountPath }}
+          {{- end }}
           {{- $env := $svc.env | default dict }}
           {{- if $env }}
           env:
@@ -88,5 +97,11 @@ spec:
           {{- end }}
           resources:
             {{- toYaml ($svc.resources | default $root.Values.resources) | nindent 12 }}
+      {{- if $svc.persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+      {{- end }}
 ---
 {{- end }}
