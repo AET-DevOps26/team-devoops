@@ -241,6 +241,8 @@ forwardAuth:
 
 # Rolling update strategy — maxSurge: 0 ensures the old pod is terminated before
 # scheduling the new one, which is required to stay within the namespace CPU quota.
+# Overridable per service via services.<name>.strategy (see web-client/api-docs below
+# for the two services cheap enough to afford a real maxSurge: 1 zero-downtime deploy).
 strategy:
   type: RollingUpdate
   rollingUpdate:
@@ -441,6 +443,15 @@ services:
       minReplicas: 1
       maxReplicas: 2
       targetCPUUtilizationPercentage: 75
+    # Overrides the quota-driven global maxSurge: 0 (see .Values.strategy below) -- at
+    # 80Mi/80m limits this is cheap enough to actually surge an extra pod within the
+    # namespace's remaining quota slack, giving this service a genuine zero-downtime
+    # rolling deploy instead of the brief every-other-service gap maxSurge: 0 causes.
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
     resources:
       requests:
         cpu: 50m
@@ -461,6 +472,12 @@ services:
       minReplicas: 1
       maxReplicas: 2
       targetCPUUtilizationPercentage: 75
+    # See web-client above -- same reasoning, same headroom.
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
     resources:
       requests:
         cpu: 50m
