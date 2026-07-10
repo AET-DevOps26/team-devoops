@@ -31,6 +31,7 @@ class KeycloakServiceTest {
     private static final String SERVICE_ACCOUNT_TOKEN = "service-account-token";
     private static final String TOKEN_URI = BASE_URL + "/realms/" + REALM + "/protocol/openid-connect/token";
     private static final String USERS_URI = BASE_URL + "/admin/realms/" + REALM + "/users";
+    private static final String MEMBER_ROLE_ID = "member-role-id";
 
     private MockRestServiceServer server;
     private KeycloakService keycloakService;
@@ -68,6 +69,7 @@ class KeycloakServiceTest {
     }
 
     // Verifies that a successful creation returns the id parsed from the Location header
+    // and assigns the "member" realm role so the account isn't stuck at 403 on first login
     @Test
     void createUserReturnsIdFromLocationHeader() throws Exception {
         expectServiceAccountTokenRequest();
@@ -75,6 +77,7 @@ class KeycloakServiceTest {
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
+        expectMemberRoleAssignment(id);
 
         UUID result = keycloakService.createUser(memberCreate);
 
@@ -91,10 +94,43 @@ class KeycloakServiceTest {
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
+        expectMemberRoleAssignment(id);
 
         UUID result = keycloakService.createUser(memberCreate);
 
         assertEquals(id, result);
+    }
+
+    // Verifies that a 403 while assigning the member realm role is translated into a SecurityException
+    @Test
+    void createUserThrowsOnForbiddenRoleAssignment() {
+        expectServiceAccountTokenRequest();
+        server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andRespond(withStatus(HttpStatus.CREATED)
+                        .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
+        server.expect(requestTo(USERS_URI + "/" + id + "/role-mappings/realm/available"))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andRespond(withStatus(HttpStatus.FORBIDDEN));
+
+        assertThrows(SecurityException.class, () -> keycloakService.createUser(memberCreate));
+    }
+
+    // Verifies that a missing "member" realm role fails loudly instead of silently leaving the user unassigned
+    @Test
+    void createUserThrowsWhenMemberRoleNotFound() {
+        expectServiceAccountTokenRequest();
+        server.expect(requestTo(USERS_URI))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andRespond(withStatus(HttpStatus.CREATED)
+                        .header(HttpHeaders.LOCATION, USERS_URI + "/" + id));
+        server.expect(requestTo(USERS_URI + "/" + id + "/role-mappings/realm/available"))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("[]"));
+
+        assertThrows(IllegalStateException.class, () -> keycloakService.createUser(memberCreate));
     }
 
     // Verifies that a 409 conflict is translated into an IllegalAccessException
@@ -194,6 +230,19 @@ class KeycloakServiceTest {
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         assertThrows(SecurityException.class, () -> keycloakService.deleteUser(id));
+    }
+
+    private void expectMemberRoleAssignment(UUID userId) {
+        server.expect(requestTo(USERS_URI + "/" + userId + "/role-mappings/realm/available"))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andRespond(withStatus(HttpStatus.OK)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("[{\"id\":\"" + MEMBER_ROLE_ID + "\",\"name\":\"member\"}]"));
+
+        server.expect(requestTo(USERS_URI + "/" + userId + "/role-mappings/realm"))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + SERVICE_ACCOUNT_TOKEN))
+                .andExpect(content().json("[{\"id\":\"" + MEMBER_ROLE_ID + "\",\"name\":\"member\"}]"))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
     }
 
     private void expectServiceAccountTokenRequest() {
