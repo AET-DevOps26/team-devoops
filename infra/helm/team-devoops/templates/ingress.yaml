@@ -135,6 +135,13 @@ metadata:
     {{- if $fa.enabled }}
     nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.{{ $.Release.Namespace }}.svc.cluster.local/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://{{ $host }}/oauth2/start?rd=$escaped_request_uri"
+    # Same header-size constraint as team-devoops-open's /oauth2/callback: this
+    # ingress's auth_request subrequest hits oauth2-proxy's /oauth2/auth, which
+    # re-issues the same chunked session Set-Cookie on every periodic token
+    # refresh, not just at initial login. Without matching headroom here, an
+    # already-logged-in session can still hit the same "upstream sent too big
+    # header" 502 later, on a refresh rather than the callback.
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -172,10 +179,25 @@ metadata:
   name: team-devoops-open
   labels:
     {{- include "team-devoops.labels" (dict "name" "ingress-open" "root" $) | nindent 4 }}
-  {{- if and $tls.enabled $tls.clusterIssuer }}
   annotations:
+    {{- if and $tls.enabled $tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ $tls.clusterIssuer | quote }}
-  {{- end }}
+    {{- end }}
+    {{- if $fa.enabled }}
+    # oauth2-proxy's default session store keeps the whole token set (access + id +
+    # refresh) client-side, base64 in one or more chunked Set-Cookie headers -- for
+    # a realm user carrying several client-role claims this response header block
+    # can exceed nginx's default proxy_buffer_size. When that happens nginx can't
+    # read the /oauth2/callback response at all and aborts with "upstream sent too
+    # big header", which surfaces to the browser as a 502 right after login even
+    # though oauth2-proxy's own access log shows the callback succeeded -- and
+    # nginx's automatic upstream retry then replays the request with the
+    # already-redeemed one-time code, so every retry fails Keycloak's token
+    # exchange too. Only affects logins whose token set is large enough to cross
+    # the buffer; an existing valid session cookie is unaffected, which is why this
+    # was only reproducible for some users/browsers and not others.
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   {{- if $tls.enabled }}

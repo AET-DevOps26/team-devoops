@@ -6,6 +6,13 @@ metadata:
   labels:
     {{- include "team-devoops.labels" (dict "name" "keycloak-realm-config" "root" $) | nindent 4 }}
 data:
+  # The three client secrets below have no other canonical home in values.yaml except
+  # forwardAuth.clientSecret and monitoring.grafana.oauthClientSecret, which already drive
+  # oauth2-proxy/Grafana's own OIDC config elsewhere -- reused here rather than duplicated.
+  # org-role-sync's secret has no such existing single source, so it's read from
+  # services.organization-service.env (the same value organization-service itself consumes).
   realm-config.json: |
-    {{ .Files.Get "files/realm-config.json" | nindent 4 | trim }}
+    {{- $orgRoleSyncSecret := index .Values.services "organization-service" "env" "KEYCLOAK_ADMIN_CLIENT_SECRET" }}
+    {{- $rendered := .Files.Get "files/realm-config.json" | replace "__KEYCLOAK_REALM_ADMIN_PASSWORD__" .Values.keycloak.users.admin.password | replace "__KEYCLOAK_REALM_USER_PASSWORD__" .Values.keycloak.users.user.password | replace "__KEYCLOAK_ADMIN_CLIENT_SECRET__" $orgRoleSyncSecret | replace "__FORWARD_AUTH_CLIENT_SECRET__" .Values.forwardAuth.clientSecret | replace "__GRAFANA_OAUTH_CLIENT_SECRET__" .Values.monitoring.grafana.oauthClientSecret }}
+    {{ $rendered | nindent 4 | trim }}
 {{- end }}

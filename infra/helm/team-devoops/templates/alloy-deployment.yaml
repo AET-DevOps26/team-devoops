@@ -18,6 +18,9 @@ spec:
         {{- include "team-devoops.selectorLabels" (dict "name" "alloy") | nindent 8 }}
     spec:
       serviceAccountName: alloy
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -26,6 +29,8 @@ spec:
         - name: alloy
           image: {{ .Values.monitoring.alloy.image }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" false) | nindent 12 }}
           args:
             - "run"
             - "--server.http.listen-addr=0.0.0.0:12345"
