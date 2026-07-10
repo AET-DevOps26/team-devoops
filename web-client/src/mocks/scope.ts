@@ -96,10 +96,14 @@ function eventInDirectorScope(row: EventRow, user: AuthUser): boolean {
   return eventHasSport(row, sports) || eventHasTeam(row, sportTeamIds(sports))
 }
 
+// Admin branches copy the array: the live API returns a fresh array per response,
+// and TanStack Query's structural sharing keeps the previous `data` identity when a
+// refetch yields the same reference — which would hide in-place fixture mutations
+// (mock create/update/delete) from memoized view-models until a reload.
 export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':
-      return rows
+      return [...rows]
     case 'trainer':
       return rows.filter((row) => row.creator?.id === user.id)
     case 'member':
@@ -112,7 +116,7 @@ export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUs
 export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':
-      return rows
+      return [...rows]
     case 'member':
       return rows.filter((row) => row.member.id === user.id || row.creator?.id === user.id)
     case 'director': {
@@ -130,7 +134,7 @@ export function scopeTransactions<T extends Transaction>(rows: T[], user: AuthUs
 export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':
-      return rows
+      return [...rows]
     case 'member':
       return rows.filter((row) => row.member.id === user.id)
     case 'director': {
@@ -145,7 +149,7 @@ export function scopeBalances<T extends Balance>(rows: T[], user: AuthUser): T[]
 export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':
-      return rows
+      return [...rows]
     case 'member':
       return rows.filter((row) => eventInMemberScope(row, user))
     case 'trainer':
@@ -158,7 +162,7 @@ export function scopeEvents<T extends EventRow>(rows: T[], user: AuthUser): T[] 
 export function scopeMembers<T extends MemberRow>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':
-      return rows
+      return [...rows]
     case 'member':
       return rows.filter((row) => row.id === user.id)
     case 'trainer': {
