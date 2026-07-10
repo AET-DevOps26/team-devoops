@@ -97,10 +97,10 @@ All services are protected by [Keycloak 26](https://www.keycloak.org) via OIDC/J
 
 | Realm | `devops` |
 |---|---|
-| Admin user | `admin` / `admin123` (roles: `admin`, `member`) |
-| Regular user | `user` / `user123` (role: `member`) |
+| Admin user | `admin` / `admin123` locally (roles: `admin`, `member`) |
+| Regular user | `user` / `user123` locally (role: `member`) |
 
-The web client (`devops-client`, public/PKCE S256) redirects to Keycloak automatically (`login-required`). Traefik's forward-auth middleware and Grafana's own OAuth login each use their own confidential client. Locally, Keycloak's admin console is at <http://localhost:8081/auth/admin>; in production it's behind the proxy at `/auth/admin`. Full JWT-validation and per-environment issuer-URI details: [docs/architecture.md](docs/architecture.md).
+Passwords shown are the local-dev defaults from [`infra/.env.example`](infra/.env.example); on the VM and Kubernetes they come from GitHub Secrets instead — nothing is hardcoded in `docker-compose.yml`, `infra/keycloak/realm-config.json`, or the Helm chart. The web client (`devops-client`, public/PKCE S256) redirects to Keycloak automatically (`login-required`). Traefik's forward-auth middleware, Grafana's own OAuth login, and the organization/member services' Keycloak Admin API client (`org-role-sync`) each use their own confidential client. Locally, Keycloak's admin console is at <http://localhost:8081/auth/admin>; in production it's behind the proxy at `/auth/admin`. Full JWT-validation, client, and per-environment issuer-URI details: [docs/architecture.md](docs/architecture.md).
 
 ## Developer Setup
 
@@ -118,6 +118,7 @@ Auto-fixing hooks modify files and abort the commit so you can re-stage. Bypass 
 
 ```bash
 cd infra
+cp .env.example .env   # first time only — local-dev secrets, gitignored
 docker compose up -d --build
 ```
 

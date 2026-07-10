@@ -39,7 +39,7 @@ Runs after Terraform, targeting the VM's public IP:
 
 1. Install Docker (apt repo + `docker-ce`, `docker-compose-plugin`).
 2. Clone/update the repo at the deployed commit (`git` module, `force: true` so the working tree always matches `main`).
-3. Write `services/py-genai-helper/.env` and `services/spring-letter/.env` from content passed in as extra-vars (sourced from GitHub Secrets — never committed).
+3. Write `infra/.env` (Postgres and Keycloak passwords, OIDC client secrets), `services/py-genai-helper/.env`, and `services/spring-letter/.env` from content passed in as extra-vars (sourced from GitHub Secrets — never committed). Nothing in `docker-compose.yml` is hardcoded; every credential is a `${VAR}` resolved from `infra/.env` at container start.
 4. `docker compose -f infra/docker-compose.yml up -d --build --remove-orphans`.
 
 Triggered automatically by the **`cd` workflow** on every push to `main` — see [docs/cicd.md](cicd.md) for the exact secrets involved.

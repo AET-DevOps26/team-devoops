@@ -23,6 +23,8 @@ Auth: `keycloak-js` (PKCE S256) obtains a JWT from Keycloak; an Axios request in
 
 Each service is a stateless OAuth2 resource server: it validates the incoming Bearer JWT against Keycloak's JWK set and maps `realm_access.roles` claims to Spring `ROLE_*` authorities. None of the six call each other directly — the only cross-service traffic on the server side is organization/member → Keycloak (role sync) and GenAI → feedback (below).
 
+Organization-service and member-service both authenticate to the Keycloak Admin REST API as the same confidential client, `org-role-sync` (service-account/client-credentials grant — see [Proxy & Auth](#proxy--auth-traefik--nginx-ingress--keycloak) below). Neither hardcodes its secret; both read it from an env var (`KEYCLOAK_ADMIN_CLIENT_SECRET` / `KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET` respectively) sourced from the same GitHub secret in every deploy target — see [docs/cicd.md](cicd.md).
+
 ### GenAI — `py-genai-helper`
 
 A Python 3.12 / Flask service using LangChain. Unlike the Spring services, it is a REST **client** as well as a server:
@@ -39,7 +41,7 @@ Single instance, schema-per-service, documented in the [README's Database sectio
 
 - **Docker Compose / Azure VM**: Traefik terminates TLS (Let's Encrypt on the VM), applies a `forward-auth` middleware backed by its own confidential Keycloak client (session-cookie based, separate from the app-level Bearer tokens below), and strips path prefixes before forwarding to each service.
 - **Kubernetes**: the cluster's own nginx ingress does the prefix-stripping and routing instead of Traefik; TLS is handled at the cluster edge.
-- **Keycloak** (realm `devops`) is the single OIDC provider in every environment. Three confidential/public clients exist: `devops-client` (public, PKCE — the React app), `traefik-forward-auth` (confidential — gates the browser session at the proxy), and `grafana` (confidential — Grafana's own admin-only OAuth login).
+- **Keycloak** (realm `devops`) is the single OIDC provider in every environment. Four confidential/public clients exist: `devops-client` (public, PKCE — the React app), `traefik-forward-auth` (confidential — gates the browser session at the proxy), `grafana` (confidential — Grafana's own admin-only OAuth login), and `org-role-sync` (confidential, service account only, no browser flow — organization-service and member-service's Admin REST API client, see above). None of the three confidential clients' secrets is hardcoded: each is templated as a `__PLACEHOLDER__` in `infra/keycloak/realm-config.json`, substituted at container start (Compose/VM) or chart render (Helm) from the matching GitHub secret — see [docs/cicd.md](cicd.md).
 
 ## Request lifecycle (example: loading the members page)
 
