@@ -12,23 +12,23 @@ const mockState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/sport-events/api/queries', async () => {
-  const { eventSummaryFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeEvents } = await import('@/mocks/scope')
+  const { eventSummaryFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeEvents } = await import('@/testing/scope')
 
   return {
     useEventsList: () => ({
       data: mockState.eventsLoading
         ? undefined
-        : scopeEvents(eventSummaryFixtures, MOCK_PERSONAS[mockState.persona]),
+        : scopeEvents(eventSummaryFixtures, TEST_PERSONAS[mockState.persona]),
       isLoading: mockState.eventsLoading,
       error: mockState.eventsError,
     }),
@@ -40,7 +40,7 @@ vi.mock('@/features/sport-events/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: () => ({ data: sportFixtures, isLoading: false, error: null }),
@@ -49,9 +49,9 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { SportEventsPage } = await import('./SportEventsPage')
-const { eventSummaryFixtures } = await import('@/mocks/fixtures')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
-const { scopeEvents } = await import('@/mocks/scope')
+const { eventSummaryFixtures } = await import('@/testing/fixtures')
+const { TEST_PERSONAS } = await import('@/testing/personas')
+const { scopeEvents } = await import('@/testing/scope')
 
 describe('SportEventsPage', () => {
   let container: HTMLDivElement
@@ -107,7 +107,7 @@ describe('SportEventsPage', () => {
 
   it('scopes rows to the member persona team events and hides the create button', async () => {
     mockState.persona = 'member'
-    const scoped = scopeEvents(eventSummaryFixtures, MOCK_PERSONAS.member)
+    const scoped = scopeEvents(eventSummaryFixtures, TEST_PERSONAS.member)
 
     await render()
 
@@ -119,7 +119,7 @@ describe('SportEventsPage', () => {
 
   it('shows the coach persona their scoped events with a create button', async () => {
     mockState.persona = 'coach'
-    const scoped = scopeEvents(eventSummaryFixtures, MOCK_PERSONAS.coach)
+    const scoped = scopeEvents(eventSummaryFixtures, TEST_PERSONAS.coach)
 
     await render()
 

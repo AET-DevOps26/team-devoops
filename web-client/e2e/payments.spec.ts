@@ -54,8 +54,10 @@ test('rejects a malformed amount with a form error', async ({ page }) => {
 test('deletes a transaction from the managed table', async ({ page }) => {
   await gotoApp(page, '/payments')
 
-  // Admin-created fixture transactions expose a delete action.
+  // Admin-created fixture transactions expose a delete action. Wait for the first row's
+  // delete button so the count below isn't read before the table has loaded.
   const deleteButtons = page.getByRole('button', { name: /^Delete / })
+  await expect(deleteButtons.first()).toBeVisible()
   const countBefore = await deleteButtons.count()
   expect(countBefore).toBeGreaterThan(0)
 

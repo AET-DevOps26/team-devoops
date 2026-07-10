@@ -1,10 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// E2E runs against the Vite dev server in mock mode: every queryFn serves fixtures
-// (VITE_USE_MOCKS=true), so no backend is needed. Keycloak is not needed either —
-// e2e/support/auth.ts intercepts the OIDC endpoints per test context so
-// keycloak.init({ onLoad: 'check-sso' }) resolves as an authenticated session.
-// The app runs as ONE identity, the admin persona (see e2e/README.md for why).
+// E2E runs against the Vite dev server. The app's /api/v1/* calls are intercepted per test
+// context by e2e/support/api.ts and served in-memory, so no real services are needed.
+// Keycloak is not needed either — e2e/support/auth.ts intercepts the OIDC endpoints so
+// keycloak.init() resolves as an authenticated session. The app runs as ONE identity, the
+// seeded admin (see e2e/README.md for why).
 const PORT = 5199
 
 export default defineConfig({
@@ -27,10 +27,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     env: {
-      // Process env beats .env.development, so a developer's local env file
-      // cannot leak into the E2E run.
-      VITE_USE_MOCKS: 'true',
-      VITE_MOCK_PERSONA: 'admin',
       VITE_KEYCLOAK_URL: 'http://localhost:8081/auth',
     },
   },

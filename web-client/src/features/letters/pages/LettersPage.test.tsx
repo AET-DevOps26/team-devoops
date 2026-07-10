@@ -15,10 +15,10 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
@@ -28,7 +28,7 @@ vi.mock('@/features/letters/api', () => ({
 }))
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: (enabled = true) => ({
@@ -45,8 +45,8 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { LettersPage } = await import('./LettersPage')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
-const { teamFixtures } = await import('@/mocks/fixtures/organization')
+const { TEST_PERSONAS } = await import('@/testing/personas')
+const { teamFixtures } = await import('@/testing/fixtures/organization')
 
 describe('LettersPage', () => {
   let container: HTMLDivElement
@@ -112,7 +112,7 @@ describe('LettersPage', () => {
   it('describes the coach audience as their coached teams', async () => {
     mockState.persona = 'coach'
     const coachedTeams = teamFixtures.filter((team) =>
-      team.trainers.some((trainer) => trainer.id === MOCK_PERSONAS.coach.id),
+      team.trainers.some((trainer) => trainer.id === TEST_PERSONAS.coach.id),
     )
 
     await render()

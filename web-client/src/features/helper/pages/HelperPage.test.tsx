@@ -15,16 +15,16 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/helper/api/queries', async () => {
-  const { memberReportSummariesById, teamReportSummariesById } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { memberReportSummariesById, teamReportSummariesById } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
     helperKeys: {
@@ -34,7 +34,7 @@ vi.mock('@/features/helper/api/queries', async () => {
     },
     useMemberReports: (memberId: string, enabled = true) => ({
       data:
-        enabled && memberId === MOCK_PERSONAS[mockState.persona].id
+        enabled && memberId === TEST_PERSONAS[mockState.persona].id
           ? (memberReportSummariesById[memberId] ?? [])
           : undefined,
       isLoading: false,
@@ -61,7 +61,7 @@ vi.mock('@/features/helper/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useTeamsList: (enabled = true) => ({
@@ -73,8 +73,8 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { HelperPage } = await import('./HelperPage')
-const { teamFixtures } = await import('@/mocks/fixtures/organization')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
+const { teamFixtures } = await import('@/testing/fixtures/organization')
+const { TEST_PERSONAS } = await import('@/testing/personas')
 
 describe('HelperPage', () => {
   let container: HTMLDivElement
@@ -115,7 +115,7 @@ describe('HelperPage', () => {
   it('scopes the coach persona to their coached team', async () => {
     mockState.persona = 'coach'
     const coachedTeam = teamFixtures.find((team) =>
-      team.trainers.some((trainer) => trainer.id === MOCK_PERSONAS.coach.id),
+      team.trainers.some((trainer) => trainer.id === TEST_PERSONAS.coach.id),
     )
 
     await render()

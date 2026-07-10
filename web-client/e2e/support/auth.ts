@@ -4,8 +4,8 @@ import type { BrowserContext, Route } from '@playwright/test'
 const KEYCLOAK_URL = 'http://localhost:8081/auth'
 const REALM_URL = `${KEYCLOAK_URL}/realms/devops`
 
-// Token identity mirrors the `admin` entry in src/mocks/personas.ts so that the
-// stubbed Keycloak session and the mock-mode persona describe the same person.
+// Token identity mirrors the `admin` entry in src/testing/personas.ts so the stubbed
+// Keycloak session and the in-memory server describe the same person.
 export const E2E_USER = {
   sub: '99999999-0004-0000-78dd-0000000278dc',
   name: 'Admin Devoops',

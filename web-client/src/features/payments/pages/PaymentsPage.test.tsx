@@ -16,30 +16,30 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/payments/api/queries', async () => {
-  const { balanceFixtures, transactionFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeBalances, scopeTransactions } = await import('@/mocks/scope')
+  const { balanceFixtures, transactionFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeBalances, scopeTransactions } = await import('@/testing/scope')
 
   return {
     useTransactions: (enabled = true) => ({
       data: enabled
-        ? scopeTransactions(transactionFixtures, MOCK_PERSONAS[mockState.persona])
+        ? scopeTransactions(transactionFixtures, TEST_PERSONAS[mockState.persona])
         : undefined,
       isLoading: false,
       error: mockState.transactionsError,
     }),
     useBalances: (enabled = true) => ({
       data:
-        enabled && MOCK_PERSONAS[mockState.persona].role !== 'member'
-          ? scopeBalances(balanceFixtures, MOCK_PERSONAS[mockState.persona])
+        enabled && TEST_PERSONAS[mockState.persona].role !== 'member'
+          ? scopeBalances(balanceFixtures, TEST_PERSONAS[mockState.persona])
           : undefined,
       isLoading: false,
       error: null,
@@ -56,7 +56,7 @@ vi.mock('@/features/payments/api/queries', async () => {
 })
 
 vi.mock('@/features/members/api/queries', async () => {
-  const { memberSummaryFixtures } = await import('@/mocks/fixtures')
+  const { memberSummaryFixtures } = await import('@/testing/fixtures')
 
   return {
     useMembers: () => ({ data: memberSummaryFixtures, isLoading: false, error: null }),
@@ -64,7 +64,7 @@ vi.mock('@/features/members/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: () => ({ data: sportFixtures, isLoading: false, error: null }),
@@ -74,10 +74,10 @@ vi.mock('@/features/organization/api/queries', async () => {
 
 const { PaymentsPage } = await import('./PaymentsPage')
 const { usePaymentsUiStore } = await import('../model/paymentsUiStore')
-const { balanceFixtures, transactionFixtures } = await import('@/mocks/fixtures')
-const { mockHttpError } = await import('@/mocks/mockSwitch')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
-const { scopeBalances, scopeTransactions } = await import('@/mocks/scope')
+const { balanceFixtures, transactionFixtures } = await import('@/testing/fixtures')
+const { httpError } = await import('@/testing/httpError')
+const { TEST_PERSONAS } = await import('@/testing/personas')
+const { scopeBalances, scopeTransactions } = await import('@/testing/scope')
 
 describe('PaymentsPage', () => {
   let container: HTMLDivElement
@@ -118,7 +118,7 @@ describe('PaymentsPage', () => {
   it('renders the managed lens with balances for the admin', async () => {
     await render()
 
-    const scopedBalances = scopeBalances(balanceFixtures, MOCK_PERSONAS.admin)
+    const scopedBalances = scopeBalances(balanceFixtures, TEST_PERSONAS.admin)
 
     expect(container.textContent).toContain('Member balances and transaction history.')
     expect(container.textContent).toContain('Balances')
@@ -128,7 +128,7 @@ describe('PaymentsPage', () => {
 
   it('renders the managed lens scoped to the director sports', async () => {
     mockState.persona = 'director'
-    const scopedBalances = scopeBalances(balanceFixtures, MOCK_PERSONAS.director)
+    const scopedBalances = scopeBalances(balanceFixtures, TEST_PERSONAS.director)
 
     await render()
 
@@ -139,7 +139,7 @@ describe('PaymentsPage', () => {
 
   it('renders the self view for the member persona', async () => {
     mockState.persona = 'member'
-    const scoped = scopeTransactions(transactionFixtures, MOCK_PERSONAS.member)
+    const scoped = scopeTransactions(transactionFixtures, TEST_PERSONAS.member)
 
     await render()
 
@@ -245,7 +245,7 @@ describe('PaymentsPage', () => {
 
     it('maps server field errors onto the form', async () => {
       mutationMocks.createTransaction.mockRejectedValue(
-        mockHttpError(400, 'Validation failed', [{ message: 'title: must not be blank' }]),
+        httpError(400, 'Validation failed', [{ message: 'title: must not be blank' }]),
       )
 
       await openDialog()

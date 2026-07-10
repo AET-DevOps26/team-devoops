@@ -19,24 +19,24 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/members/api/queries', async () => {
-  const { memberSummaryFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeMembers } = await import('@/mocks/scope')
+  const { memberSummaryFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeMembers } = await import('@/testing/scope')
 
   return {
     useMembers: () => ({
       data: mockState.membersLoading
         ? undefined
         : (mockState.membersOverride ??
-          scopeMembers(memberSummaryFixtures, MOCK_PERSONAS[mockState.persona])),
+          scopeMembers(memberSummaryFixtures, TEST_PERSONAS[mockState.persona])),
       isLoading: mockState.membersLoading,
       error: mockState.membersError,
     }),
@@ -48,7 +48,7 @@ vi.mock('@/features/members/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: () => ({ data: sportFixtures, isLoading: false, error: null }),
@@ -57,9 +57,9 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { MembersPage } = await import('./MembersPage')
-const { memberSummaryFixtures } = await import('@/mocks/fixtures')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
-const { scopeMembers } = await import('@/mocks/scope')
+const { memberSummaryFixtures } = await import('@/testing/fixtures')
+const { TEST_PERSONAS } = await import('@/testing/personas')
+const { scopeMembers } = await import('@/testing/scope')
 
 describe('MembersPage', () => {
   let container: HTMLDivElement
@@ -114,7 +114,7 @@ describe('MembersPage', () => {
 
   it('renders only the coach-scoped members without admin actions', async () => {
     mockState.persona = 'coach'
-    const scoped = scopeMembers(memberSummaryFixtures, MOCK_PERSONAS.coach)
+    const scoped = scopeMembers(memberSummaryFixtures, TEST_PERSONAS.coach)
     const outsideScope = memberSummaryFixtures.find(
       (member) => !scoped.some((row) => row.id === member.id),
     )

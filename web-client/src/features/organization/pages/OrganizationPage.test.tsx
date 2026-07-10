@@ -12,15 +12,15 @@ const mockState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   const mutation = () => ({ mutateAsync: vi.fn(), isPending: false })
 
@@ -43,7 +43,7 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 vi.mock('@/features/members/api/queries', async () => {
-  const { memberSummaryFixtures } = await import('@/mocks/fixtures')
+  const { memberSummaryFixtures } = await import('@/testing/fixtures')
 
   return {
     useMembers: () => ({ data: memberSummaryFixtures, isLoading: false, error: null }),
@@ -51,7 +51,7 @@ vi.mock('@/features/members/api/queries', async () => {
 })
 
 const { OrganizationPage } = await import('./OrganizationPage')
-const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
 describe('OrganizationPage', () => {
   let container: HTMLDivElement

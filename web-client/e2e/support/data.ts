@@ -1,17 +1,15 @@
-// Node-side imports of the SAME fixture modules the app serves under
-// VITE_USE_MOCKS=true, so E2E assertions are derived from data, never
-// hard-coded. Only runtime-safe modules are imported (their '@/types'
-// imports are type-only, and all runtime imports are relative).
-export { MOCK_PERSONAS } from '../../src/mocks/personas'
+// Node-side re-exports of the shared test data the stub server serves, so E2E
+// assertions derive from the same fixtures rather than hard-coded strings.
+export { TEST_PERSONAS } from '../../src/testing/personas'
 export { ALL_ROLES, NAV_ITEMS } from '../../src/app/navPolicy'
-export { memberFixtures, memberSummaryFixtures } from '../../src/mocks/fixtures/members'
-export { eventSummaryFixtures } from '../../src/mocks/fixtures/events'
-export { feedbackSummaryFixtures } from '../../src/mocks/fixtures/feedback'
-export { balanceFixtures, transactionFixtures } from '../../src/mocks/fixtures/finance'
-export { sportFixtures, teamFixtures } from '../../src/mocks/fixtures/organization'
-export { dashboardFixtures } from '../../src/mocks/fixtures/dashboard'
+export { memberFixtures, memberSummaryFixtures } from '../../src/testing/fixtures/members'
+export { eventSummaryFixtures } from '../../src/testing/fixtures/events'
+export { feedbackSummaryFixtures } from '../../src/testing/fixtures/feedback'
+export { balanceFixtures, transactionFixtures } from '../../src/testing/fixtures/finance'
+export { sportFixtures, teamFixtures } from '../../src/testing/fixtures/organization'
+export { dashboardFixtures } from '../../src/testing/fixtures/dashboard'
 
-import { MOCK_PERSONAS } from '../../src/mocks/personas'
+import { TEST_PERSONAS } from '../../src/testing/personas'
 
-// The E2E suite runs as the admin persona (see playwright.config.ts webServer env).
-export const ADMIN = MOCK_PERSONAS.admin
+// The suite runs as the admin identity (see auth.ts).
+export const ADMIN = TEST_PERSONAS.admin

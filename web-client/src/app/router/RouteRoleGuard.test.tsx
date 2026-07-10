@@ -9,7 +9,7 @@ const mockState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
   const personaByRole = {
     member: 'member',
     trainer: 'coach',
@@ -18,7 +18,7 @@ vi.mock('@/features/auth', async () => {
   } as const
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[personaByRole[mockState.role]] }),
+    useAuth: () => ({ user: TEST_PERSONAS[personaByRole[mockState.role]] }),
   }
 })
 

@@ -11,10 +11,10 @@ const mockState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona], logout: mockState.logout }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona], logout: mockState.logout }),
   }
 })
 
@@ -25,7 +25,7 @@ vi.mock('@tanstack/react-query-devtools', () => ({
 const { AppShell } = await import('@/app/layout/AppShell')
 const { ThemeProvider } = await import('@/app/theme/ThemeProvider')
 const { NAV_ITEMS } = await import('@/app/navPolicy')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
+const { TEST_PERSONAS } = await import('@/testing/personas')
 
 describe('AppShell', () => {
   let container: HTMLDivElement
@@ -82,7 +82,7 @@ describe('AppShell', () => {
   for (const persona of personas) {
     it(`shows exactly the ${persona} persona's allowed nav items`, async () => {
       mockState.persona = persona
-      const user = MOCK_PERSONAS[persona]
+      const user = TEST_PERSONAS[persona]
       const expected = NAV_ITEMS.filter((item) => item.roles.includes(user.role)).map(
         (item) => item.label,
       )
@@ -95,7 +95,7 @@ describe('AppShell', () => {
 
   it('shows the signed-in user name and email in the sidebar footer', async () => {
     mockState.persona = 'coach'
-    const user = MOCK_PERSONAS.coach
+    const user = TEST_PERSONAS.coach
 
     await render()
 

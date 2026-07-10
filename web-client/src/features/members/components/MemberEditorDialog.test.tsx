@@ -14,10 +14,10 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
@@ -41,7 +41,7 @@ vi.mock('@/components/ui/date-picker', () => ({
 
 const { MemberEditorDialog } = await import('./MemberEditorDialog')
 const { useMembersUiStore } = await import('../model/membersUiStore')
-const { mockHttpError } = await import('@/mocks/mockSwitch')
+const { httpError } = await import('@/testing/httpError')
 
 describe('MemberEditorDialog', () => {
   let container: HTMLDivElement
@@ -151,7 +151,7 @@ describe('MemberEditorDialog', () => {
 
   it('surfaces a server 409 as the dialog form error', async () => {
     mutationMocks.createMember.mockRejectedValue(
-      mockHttpError(409, 'Email already in use: nina.neu@club.de'),
+      httpError(409, 'Email already in use: nina.neu@club.de'),
     )
 
     await renderOpenCreate()
@@ -169,7 +169,7 @@ describe('MemberEditorDialog', () => {
 
   it('maps bean-validation field errors onto the form', async () => {
     mutationMocks.createMember.mockRejectedValue(
-      mockHttpError(400, 'Validation failed', [{ message: 'first_name: must not be blank' }]),
+      httpError(400, 'Validation failed', [{ message: 'first_name: must not be blank' }]),
     )
 
     await renderOpenCreate()

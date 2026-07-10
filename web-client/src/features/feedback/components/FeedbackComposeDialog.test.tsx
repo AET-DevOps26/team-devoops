@@ -11,7 +11,7 @@ vi.mock('@/features/feedback/api/queries', () => ({
 }))
 
 vi.mock('@/features/sport-events', async () => {
-  const { eventSummaryFixtures } = await import('@/mocks/fixtures')
+  const { eventSummaryFixtures } = await import('@/testing/fixtures')
 
   return {
     useEventsList: () => ({ data: eventSummaryFixtures, isLoading: false, error: null }),
@@ -20,8 +20,8 @@ vi.mock('@/features/sport-events', async () => {
 
 const { FeedbackComposeDialog } = await import('./FeedbackComposeDialog')
 const { useFeedbackUiStore } = await import('../model/feedbackUiStore')
-const { eventSummaryFixtures } = await import('@/mocks/fixtures')
-const { mockHttpError } = await import('@/mocks/mockSwitch')
+const { eventSummaryFixtures } = await import('@/testing/fixtures')
+const { httpError } = await import('@/testing/httpError')
 
 const TARGET = { id: 'member-1', name: 'Lena Roth', eventId: eventSummaryFixtures[0].id }
 
@@ -124,7 +124,7 @@ describe('FeedbackComposeDialog', () => {
 
   it('surfaces a server 403 as the form error and stays open', async () => {
     mutationMocks.createFeedback.mockRejectedValue(
-      mockHttpError(403, 'You are not allowed to create feedback for this member'),
+      httpError(403, 'You are not allowed to create feedback for this member'),
     )
 
     await renderOpen()

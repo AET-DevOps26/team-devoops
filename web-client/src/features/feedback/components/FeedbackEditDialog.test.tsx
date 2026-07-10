@@ -12,7 +12,7 @@ vi.mock('@/features/feedback/api/queries', () => ({
 
 const { FeedbackEditDialog } = await import('./FeedbackEditDialog')
 const { useFeedbackUiStore } = await import('../model/feedbackUiStore')
-const { mockHttpError } = await import('@/mocks/mockSwitch')
+const { httpError } = await import('@/testing/httpError')
 
 const TARGET = {
   id: 'feedback-1',
@@ -118,7 +118,7 @@ describe('FeedbackEditDialog', () => {
 
   it('surfaces a server 403 and stays open', async () => {
     mutationMocks.updateFeedback.mockRejectedValue(
-      mockHttpError(403, 'You are not allowed to update this feedback'),
+      httpError(403, 'You are not allowed to update this feedback'),
     )
 
     await renderOpen()

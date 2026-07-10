@@ -14,10 +14,10 @@ const mutationMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
@@ -28,7 +28,7 @@ vi.mock('@/features/sport-events/api/queries', () => ({
 }))
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: () => ({ data: sportFixtures, isLoading: false, error: null }),
@@ -160,10 +160,10 @@ describe('SportEventEditorDialog', () => {
 
   it('pre-links the coach persona teams and roster on create', async () => {
     mockState.persona = 'coach'
-    const { MOCK_PERSONAS } = await import('@/mocks/personas')
-    const { teamFixtures } = await import('@/mocks/fixtures/organization')
+    const { TEST_PERSONAS } = await import('@/testing/personas')
+    const { teamFixtures } = await import('@/testing/fixtures/organization')
     const coachTeamIds = teamFixtures
-      .filter((team) => team.trainers.some((trainer) => trainer.id === MOCK_PERSONAS.coach.id))
+      .filter((team) => team.trainers.some((trainer) => trainer.id === TEST_PERSONAS.coach.id))
       .map((team) => team.id)
     mutationMocks.createEvent.mockResolvedValue({ id: 'new-event' })
 

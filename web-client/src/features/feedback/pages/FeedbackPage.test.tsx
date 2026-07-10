@@ -12,23 +12,23 @@ const mockState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/features/feedback/api/queries', async () => {
-  const { feedbackSummaryFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeFeedback } = await import('@/mocks/scope')
+  const { feedbackSummaryFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeFeedback } = await import('@/testing/scope')
 
   return {
     useFeedbackList: () => ({
       data: mockState.feedbackLoading
         ? undefined
-        : scopeFeedback(feedbackSummaryFixtures, MOCK_PERSONAS[mockState.persona]),
+        : scopeFeedback(feedbackSummaryFixtures, TEST_PERSONAS[mockState.persona]),
       isLoading: mockState.feedbackLoading,
       error: mockState.feedbackError,
     }),
@@ -40,7 +40,7 @@ vi.mock('@/features/feedback/api/queries', async () => {
 })
 
 vi.mock('@/features/members/api/queries', async () => {
-  const { memberSummaryFixtures } = await import('@/mocks/fixtures')
+  const { memberSummaryFixtures } = await import('@/testing/fixtures')
 
   return {
     useMembers: () => ({ data: memberSummaryFixtures, isLoading: false, error: null }),
@@ -48,13 +48,13 @@ vi.mock('@/features/members/api/queries', async () => {
 })
 
 vi.mock('@/features/sport-events/api/queries', async () => {
-  const { eventSummaryFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeEvents } = await import('@/mocks/scope')
+  const { eventSummaryFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeEvents } = await import('@/testing/scope')
 
   return {
     useEventsList: () => ({
-      data: scopeEvents(eventSummaryFixtures, MOCK_PERSONAS[mockState.persona]),
+      data: scopeEvents(eventSummaryFixtures, TEST_PERSONAS[mockState.persona]),
       isLoading: false,
       error: null,
     }),
@@ -62,7 +62,7 @@ vi.mock('@/features/sport-events/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   return {
     useSportsList: () => ({ data: sportFixtures, isLoading: false, error: null }),
@@ -71,9 +71,9 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { FeedbackPage } = await import('./FeedbackPage')
-const { feedbackSummaryFixtures } = await import('@/mocks/fixtures')
-const { MOCK_PERSONAS } = await import('@/mocks/personas')
-const { scopeFeedback } = await import('@/mocks/scope')
+const { feedbackSummaryFixtures } = await import('@/testing/fixtures')
+const { TEST_PERSONAS } = await import('@/testing/personas')
+const { scopeFeedback } = await import('@/testing/scope')
 
 describe('FeedbackPage', () => {
   let container: HTMLDivElement
@@ -126,7 +126,7 @@ describe('FeedbackPage', () => {
 
   it('scopes rows to the coach and shows the coverage stat', async () => {
     mockState.persona = 'coach'
-    const scoped = scopeFeedback(feedbackSummaryFixtures, MOCK_PERSONAS.coach)
+    const scoped = scopeFeedback(feedbackSummaryFixtures, TEST_PERSONAS.coach)
 
     await render()
 
@@ -140,7 +140,7 @@ describe('FeedbackPage', () => {
 
   it('shows the member persona only their own feedback', async () => {
     mockState.persona = 'member'
-    const scoped = scopeFeedback(feedbackSummaryFixtures, MOCK_PERSONAS.member)
+    const scoped = scopeFeedback(feedbackSummaryFixtures, TEST_PERSONAS.member)
 
     await render()
 

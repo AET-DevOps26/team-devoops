@@ -1,9 +1,8 @@
 import { memberSummaryFixtures } from './support/data'
 import { expect, gotoApp, test } from './support/fixtures'
 
-// Admin members CRUD against the in-memory mock layer. Every test starts with a
-// fresh page load, which resets the fixture arrays (state lives in the browser
-// bundle), so the specs are order-independent.
+// Admin members CRUD. Each test gets a pristine server copy (stubApi resets it),
+// so the specs are order-independent.
 
 test('lists every member for the admin', async ({ page }) => {
   await gotoApp(page, '/members')
@@ -38,7 +37,7 @@ test('surfaces the 409 duplicate-email error inside the dialog', async ({ page }
   const dialog = page.getByRole('dialog', { name: 'New Member' })
   await dialog.getByLabel('First name').fill('Duplicate')
   await dialog.getByLabel('Last name').fill('Email')
-  // lena.roth@club.de belongs to an existing fixture member -> mock 409.
+  // lena.roth@club.de belongs to an existing fixture member -> 409.
   await dialog.getByLabel('Email').fill('lena.roth@club.de')
   await dialog.getByLabel('Initial password').fill('changeme-e2e')
   await dialog.getByRole('button', { name: 'Next' }).click()

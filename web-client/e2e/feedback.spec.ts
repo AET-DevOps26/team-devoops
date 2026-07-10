@@ -52,6 +52,8 @@ test('deletes feedback after confirmation', async ({ page }) => {
   const deleteButtons = page.getByRole('button', {
     name: `Delete feedback for ${target.member.name}`,
   })
+  // Wait for the row to render before counting, so the count isn't read early.
+  await expect(deleteButtons.first()).toBeVisible()
   const countBefore = await deleteButtons.count()
 
   await deleteButtons.first().click()
