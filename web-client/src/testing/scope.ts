@@ -99,7 +99,7 @@ function eventInDirectorScope(row: EventRow, user: AuthUser): boolean {
 // Admin branches copy the array: the live API returns a fresh array per response,
 // and TanStack Query's structural sharing keeps the previous `data` identity when a
 // refetch yields the same reference — which would hide in-place fixture mutations
-// (mock create/update/delete) from memoized view-models until a reload.
+// (create/update/delete) from memoized view-models until a reload.
 export function scopeFeedback<T extends FeedbackSummary>(rows: T[], user: AuthUser): T[] {
   switch (user.role) {
     case 'admin':

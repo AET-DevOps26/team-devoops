@@ -53,7 +53,7 @@ export function createApiClient(baseURL: string): AxiosInstance {
     try {
       await refreshTokenIfNeeded(TOKEN_REFRESH_MIN_VALIDITY_SECONDS)
     } catch {
-      // Let the backend's 401 decide when we need a full re-auth redirect.
+      // Let the server's 401 decide when we need a full re-auth redirect.
     }
     if (keycloak.token) {
       config.headers.Authorization = `Bearer ${keycloak.token}`

@@ -1,9 +1,9 @@
 import type { AuthUser } from '@/types'
 
 // Persona ids are real members in the fixtures. `coach` maps to auth role `trainer`.
-export type MockPersona = AuthUser
+export type TestPersona = AuthUser
 
-export const MOCK_PERSONAS = {
+export const TEST_PERSONAS = {
   "member": {
     "id": "11111111-1111-1111-1111-111111111111",
     "role": "member",
@@ -28,6 +28,6 @@ export const MOCK_PERSONAS = {
     "name": "Admin Devoops",
     "email": "admin.devoops@club.de"
   }
-} as const satisfies Record<string, MockPersona>
+} as const satisfies Record<string, TestPersona>
 
-export type MockPersonaKey = keyof typeof MOCK_PERSONAS
+export type TestPersonaKey = keyof typeof TEST_PERSONAS
