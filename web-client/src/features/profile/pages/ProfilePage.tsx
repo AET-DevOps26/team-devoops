@@ -12,8 +12,9 @@ import { getCurrentUser } from '@/features/auth/currentUser'
 import { useMember, useUpdateMember } from '@/features/members/api/queries'
 import {
   buildMemberEditorInitialState,
-  buildMemberProfileUpdatePayload,
+  buildMemberUpdatePayload,
   type MemberEditorFormState,
+  validateMemberEditorForm,
 } from '@/features/members/model/memberEditor'
 import { serverErrorFieldMessages, serverErrorMessage } from '@/lib/server-error'
 import type { Member } from '@/types'
@@ -80,7 +81,7 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
-  const payload = useMemo(() => buildMemberProfileUpdatePayload(member, form), [form, member])
+  const payload = useMemo(() => buildMemberUpdatePayload(member, form), [form, member])
   const hasChanges = Object.keys(payload).length > 0
   const isPending = updateMember.isPending
 
@@ -93,6 +94,14 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    const validationError = validateMemberEditorForm(form)
+    if (validationError) {
+      setFormError(validationError)
+      setFieldErrors(null)
+      setNotice(null)
+      return
+    }
 
     if (!hasChanges) {
       setNotice('No profile changes to save.')
@@ -131,13 +140,39 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
           <div className="mb-4">
             <h2 className="text-h3 font-semibold text-text-primary">Identity</h2>
             <p className="mt-1 text-body-sm text-text-tertiary">
-              Name and email are managed by your account identity.
+              Update your name below. Email is managed by your account and can&apos;t be changed here.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ReadOnlyField id="profile-first-name" label="First name" value={form.firstName} />
-            <ReadOnlyField id="profile-last-name" label="Last name" value={form.lastName} />
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-first-name">First name</Label>
+              <Input
+                id="profile-first-name"
+                value={form.firstName}
+                onChange={(event) => setForm({ ...form, firstName: event.target.value })}
+                disabled={isPending}
+                aria-invalid={fieldErrors?.first_name !== undefined}
+              />
+              {fieldErrors?.first_name && (
+                <p className="text-caption text-destructive">{fieldErrors.first_name}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-last-name">Last name</Label>
+              <Input
+                id="profile-last-name"
+                value={form.lastName}
+                onChange={(event) => setForm({ ...form, lastName: event.target.value })}
+                disabled={isPending}
+                aria-invalid={fieldErrors?.last_name !== undefined}
+              />
+              {fieldErrors?.last_name && (
+                <p className="text-caption text-destructive">{fieldErrors.last_name}</p>
+              )}
+            </div>
+
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="profile-email">Email</Label>
               <Input
@@ -242,21 +277,6 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
         </div>
       </form>
     </>
-  )
-}
-
-function ReadOnlyField({ id, label, value }: { id: string; label: string; value: string }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        readOnly
-        aria-readonly="true"
-        className="bg-muted/30 text-text-secondary"
-      />
-    </div>
   )
 }
 

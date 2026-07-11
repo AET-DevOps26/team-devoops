@@ -1,6 +1,6 @@
 import type { Member, MemberSummary } from '@/types'
 
-// Signed-in member (`sub`) for the default mock persona.
+// Signed-in member (`sub`) for the default test persona.
 export const CURRENT_MEMBER_ID = '11111111-1111-1111-1111-111111111111'
 
 export const memberFixtures: Member[] = [

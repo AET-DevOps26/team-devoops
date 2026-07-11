@@ -159,16 +159,33 @@ describe('ProfilePage', () => {
     })
   })
 
-  it('keeps identity and admin-only fields out of the self-service form', async () => {
+  it('lets the member edit their name but not their email', async () => {
     await render()
 
-    expect((field('profile-first-name') as HTMLInputElement).readOnly).toBe(true)
-    expect((field('profile-last-name') as HTMLInputElement).readOnly).toBe(true)
+    expect((field('profile-first-name') as HTMLInputElement).readOnly).toBe(false)
+    expect((field('profile-last-name') as HTMLInputElement).readOnly).toBe(false)
     expect((field('profile-email') as HTMLInputElement).readOnly).toBe(true)
-    expect(container.textContent).toContain('Managed in your account.')
     expect(container.textContent).not.toContain('Password')
     expect(container.textContent).not.toContain('Role')
     expect(container.textContent).not.toContain('Team')
+
+    await changeField('profile-first-name', 'Magda')
+    await submitProfileForm()
+
+    expect(memberQueryMocks.mutateAsync).toHaveBeenCalledWith({
+      id: currentUserMock.user.id,
+      first_name: 'Magda',
+    })
+  })
+
+  it('blocks submit with a validation message when identity fields are blanked', async () => {
+    await render()
+
+    await changeField('profile-first-name', '')
+    await submitProfileForm()
+
+    expect(memberQueryMocks.mutateAsync).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('First name is required.')
   })
 
   it('resets unsaved app-owned edits on cancel', async () => {

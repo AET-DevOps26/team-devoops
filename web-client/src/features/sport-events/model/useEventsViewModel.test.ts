@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { eventDetailsById, eventSummaryFixtures, teamFixtures } from '@/mocks/fixtures'
-import { MOCK_PERSONAS } from '@/mocks/personas'
-import { scopeEvents } from '@/mocks/scope'
+import { eventDetailsById, eventSummaryFixtures, teamFixtures } from '@/testing/fixtures'
+import { TEST_PERSONAS } from '@/testing/personas'
+import { scopeEvents } from '@/testing/scope'
 import type { EventListItem, Team } from '@/types'
 import { buildEventsView, eventAttendanceStatus, userTeamIds } from './useEventsViewModel'
 
@@ -98,7 +98,7 @@ describe('eventAttendanceStatus', () => {
   })
 
   it('derives missed, attended and upcoming rows for the member persona fixtures', () => {
-    const member = MOCK_PERSONAS.member
+    const member = TEST_PERSONAS.member
     const view = buildEventsView(
       scopeEvents(eventSummaryFixtures, member),
       now,
@@ -116,7 +116,7 @@ describe('eventAttendanceStatus', () => {
   })
 
   it("collapses a coach's own past event to a role-agnostic past status", () => {
-    const coach = MOCK_PERSONAS.coach
+    const coach = TEST_PERSONAS.coach
     const coachOwnedPastEvent = Object.values(eventDetailsById).find(
       (eventDetail) =>
         eventDetail.creator?.id === coach.id && new Date(eventDetail.start_time) < now,

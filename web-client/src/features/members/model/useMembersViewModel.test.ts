@@ -80,7 +80,7 @@ describe('buildMembersView', () => {
       trainees: [otherTrainee],
     })
 
-    // mock scoping (scopeMembers) already narrows this to the trainer's own trainees before
+    // scopeMembers already narrows this to the trainer's own trainees before
     // buildMembersView ever sees it — mirror that here rather than passing the whole club.
     const scopedMembers = [member(trainee.id, 'Trainee', 'One')]
 
@@ -120,7 +120,7 @@ describe('buildMembersView', () => {
       trainees: [basketballTrainee],
     })
 
-    // director's sport scope (mock scopeMembers) limits rows to members of their sport's teams.
+    // director's sport scope (scopeMembers) limits rows to members of their sport's teams.
     const scopedMembers = [
       member(footballTrainee.id, 'Trainee', 'One'),
       member(otherFootballTrainee.id, 'Trainee', 'Two'),
