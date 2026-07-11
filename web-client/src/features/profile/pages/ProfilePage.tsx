@@ -140,7 +140,7 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
           <div className="mb-4">
             <h2 className="text-h3 font-semibold text-text-primary">Identity</h2>
             <p className="mt-1 text-body-sm text-text-tertiary">
-              Your name and sign-in email.
+              Update your name below. Email is managed by your account and can&apos;t be changed here.
             </p>
           </div>
 
@@ -179,13 +179,11 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 id="profile-email"
                 type="email"
                 value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                disabled={isPending}
-                aria-invalid={fieldErrors?.email !== undefined}
+                readOnly
+                aria-readonly="true"
+                className="bg-muted/30 text-text-secondary"
               />
-              {fieldErrors?.email && (
-                <p className="text-caption text-destructive">{fieldErrors.email}</p>
-              )}
+              <p className="text-caption text-text-tertiary">Managed in your account.</p>
             </div>
           </div>
         </section>
