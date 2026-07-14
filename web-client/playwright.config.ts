@@ -11,8 +11,12 @@ export default defineConfig({
   testDir: './e2e',
   outputDir: './test-results',
   fullyParallel: true,
+  // Eight Chromium contexts saturate this machine and starve the preview server,
+  // causing auth/app hydration to miss the existing 30s test budget. Four keeps
+  // tests fully parallel while leaving capacity for the browser and web server.
+  workers: 4,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   timeout: 30_000,
   expect: { timeout: 10_000 },
@@ -22,7 +26,9 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: `pnpm exec vite --port ${PORT} --strictPort`,
+    // Preview serves the already-built bundle without Vite's per-worker transform
+    // contention. Run `pnpm build` before E2E (the e2e script does this).
+    command: `pnpm exec vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
