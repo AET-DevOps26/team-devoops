@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import { Separator } from '@/components/ui/separator'
@@ -23,6 +24,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { serverErrorMessage } from '@/lib/server-error'
 import { useHelperUiStore } from '../model/helperUiStore'
 import {
@@ -54,10 +56,11 @@ export function HelperPage() {
   const [generated, setGenerated] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [useLocalLlm, setUseLocalLlm] = useState(false)
 
   const onGenerate = () => {
     setGenerated(false)
-    generate()
+    generate(useLocalLlm)
     // The result is async (the POST returns 202 with no body); confirm we kicked it off.
     setGenerated(true)
   }
@@ -116,9 +119,22 @@ export function HelperPage() {
                 <p className="text-body-sm text-destructive">{generateError.message}</p>
               )}
             </div>
-            <Button onClick={onGenerate} disabled={isGenerating}>
-              {isGenerating ? 'Starting…' : 'Generate report'}
-            </Button>
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="use-local-llm"
+                  checked={useLocalLlm}
+                  onCheckedChange={setUseLocalLlm}
+                  disabled={isGenerating}
+                />
+                <Label htmlFor="use-local-llm" className="text-body-sm text-text-secondary">
+                  Use local LLM
+                </Label>
+              </div>
+              <Button onClick={onGenerate} disabled={isGenerating}>
+                {isGenerating ? 'Starting…' : 'Generate report'}
+              </Button>
+            </div>
           </div>
 
           <Separator />
