@@ -1,3 +1,14 @@
+/**
+ * A test-only mirror of the server's role scoping.
+ *
+ * This is NOT the app's access control: the real API decides which rows a caller may see, and the
+ * client never filters live responses. These helpers exist so tests and the E2E in-memory server
+ * can answer "what would the server have returned for this persona?" against the static fixtures —
+ * a trainer sees their teams' members, a director their sports', a member only themselves.
+ *
+ * Keep it faithful to the server's rules: a test that passes against a wrong mirror proves nothing.
+ */
+
 import type {
   AuthUser,
   Balance,
