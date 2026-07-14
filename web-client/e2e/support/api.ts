@@ -13,7 +13,9 @@ import * as dashboard from './server/dashboard'
 
 // Intercepts the app's axios calls at the network layer (context.route on **/api/v1/**)
 // and answers them from an in-memory server, so no real services run. The server keeps
-// module-level state (deep clones of the fixtures); stubApi() resets it per test.
+// module-level state; stubApi() resets it per test. Playwright workers are separate
+// processes and execute tests serially within a worker, so this state is never used by
+// two live tests at once. Resets use structuredClone in every resource module.
 
 const USER: AuthUser = {
   id: E2E_USER.sub,
@@ -56,6 +58,66 @@ function parse(route: Route): Parsed {
   return { method: request.method(), segments, body }
 }
 
+function updateMember(id: string, body: never) {
+  const updated = server.members.updateMember(id, body, USER)
+  const name = `${updated.first_name} ${updated.last_name}`
+  server.organization.renameMemberInOrganization(id, name)
+  server.feedback.renameMemberInFeedback(id, name)
+  server.events.renameMemberInEvents(id, name)
+  server.payments.renameMemberInPayments(id, name)
+  server.helper.renameMemberInReports(id, name)
+  return updated
+}
+
+function deleteMember(id: string): void {
+  server.members.deleteMember(id, USER)
+  server.organization.removeMemberFromOrganization(id)
+  server.feedback.removeMemberFromFeedback(id)
+  server.events.removeMemberFromEvents(id)
+  server.payments.removeMemberFromPayments(id)
+  server.helper.removeMemberFromReports(id)
+}
+
+function updateEvent(id: string, body: never) {
+  const updated = server.events.updateEvent(id, body, USER)
+  server.feedback.renameEventInFeedback(id, updated.name)
+  return updated
+}
+
+function deleteEvent(id: string): void {
+  server.events.deleteEvent(id, USER)
+  server.feedback.removeEventFromFeedback(id)
+}
+
+function updateSport(id: string, body: never) {
+  const updated = server.organization.updateSport(id, body, USER)
+  server.events.renameSportInEvents(id, updated.name)
+  return updated
+}
+
+function deleteSport(id: string): void {
+  const teamIds = server.organization.teamIdsForSport(id)
+  server.organization.deleteSport(id, USER)
+  server.events.removeSportFromEvents(id)
+  for (const teamId of teamIds) {
+    server.events.removeTeamFromEvents(teamId)
+    server.helper.removeTeamFromReports(teamId)
+  }
+}
+
+async function updateTeam(id: string, body: never) {
+  const updated = await server.organization.updateTeam(id, body, USER)
+  server.events.renameTeamInEvents(id, updated.name)
+  server.helper.renameTeamInReports(id, updated.name)
+  return updated
+}
+
+function deleteTeam(id: string): void {
+  server.organization.deleteTeam(id, USER)
+  server.events.removeTeamFromEvents(id)
+  server.helper.removeTeamFromReports(id)
+}
+
 async function run(route: Route, produce: () => unknown | Promise<unknown>): Promise<void> {
   try {
     const result = await produce()
@@ -92,8 +154,8 @@ function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown
       if (method === 'GET' && !a) return server.members.listMembers(USER)
       if (method === 'GET') return server.members.getMember(a, USER)
       if (method === 'POST') return server.members.createMember(body as never, USER)
-      if (method === 'PATCH') return server.members.updateMember(a, body as never, USER)
-      if (method === 'DELETE') return server.members.deleteMember(a, USER)
+      if (method === 'PATCH') return updateMember(a, body as never)
+      if (method === 'DELETE') return deleteMember(a)
       break
     }
     case 'events': {
@@ -101,8 +163,8 @@ function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown
       if (method === 'GET' && !a) return server.events.listEvents(USER)
       if (method === 'GET') return server.events.getEvent(a, USER)
       if (method === 'POST') return server.events.createEvent(body as never, USER)
-      if (method === 'PATCH') return server.events.updateEvent(a, body as never, USER)
-      if (method === 'DELETE') return server.events.deleteEvent(a, USER)
+      if (method === 'PATCH') return updateEvent(a, body as never)
+      if (method === 'DELETE') return deleteEvent(a)
       break
     }
     case 'feedback': {
@@ -130,13 +192,13 @@ function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown
       if (a === 'sports' && method === 'GET' && !b) return server.organization.listSports()
       if (a === 'sports' && method === 'GET') return server.organization.getSport(b)
       if (a === 'sports' && method === 'POST') return server.organization.createSport(body as never, USER)
-      if (a === 'sports' && method === 'PATCH') return server.organization.updateSport(b, body as never, USER)
-      if (a === 'sports' && method === 'DELETE') return server.organization.deleteSport(b, USER)
+      if (a === 'sports' && method === 'PATCH') return updateSport(b, body as never)
+      if (a === 'sports' && method === 'DELETE') return deleteSport(b)
       if (a === 'teams' && method === 'GET' && !b) return server.organization.listTeams()
       if (a === 'teams' && method === 'GET') return server.organization.getTeam(b)
       if (a === 'teams' && method === 'POST') return server.organization.createTeam(body as never, USER)
-      if (a === 'teams' && method === 'PATCH') return server.organization.updateTeam(b, body as never, USER)
-      if (a === 'teams' && method === 'DELETE') return server.organization.deleteTeam(b, USER)
+      if (a === 'teams' && method === 'PATCH') return updateTeam(b, body as never)
+      if (a === 'teams' && method === 'DELETE') return deleteTeam(b)
       break
     }
     case 'helper': {

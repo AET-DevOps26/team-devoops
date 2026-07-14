@@ -60,8 +60,8 @@ test('payments page shows the managed lens with fixture balances', async ({ page
   await gotoApp(page, '/payments')
 
   await expect(page.getByText('Member balances and transaction history.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Balances' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Balances', selected: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Transactions' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New Transaction' })).toBeVisible()
 })
 

@@ -1,11 +1,14 @@
 import { feedbackSummaryFixtures } from './support/data'
-import { expect, gotoApp, test } from './support/fixtures'
+import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
 test('composes feedback via the sport → team → event picker', async ({ page }) => {
   await gotoApp(page, '/feedback')
 
   await page.getByRole('button', { name: 'New feedback' }).click()
   const picker = page.getByRole('dialog', { name: 'New feedback' })
+
+  // The picker opens on the "By member" tab; switch to the coverage tree.
+  await picker.getByRole('tab', { name: 'By event' }).click()
 
   // Drill down the coverage tree: first sport → first team → first event.
   for (let level = 0; level < 3; level += 1) {
@@ -23,10 +26,22 @@ test('composes feedback via the sport → team → event picker', async ({ page 
   await compose.getByLabel('Rating').fill('9')
   await compose.getByRole('button', { name: 'Save Feedback' }).click()
 
-  await expect(page.getByRole('status')).toContainText(`Feedback added for ${traineeName}.`)
+  await expect(toastRegion(page)).toContainText(`Feedback added for ${traineeName}.`)
   await expect(
     page.getByRole('button', { name: `View feedback for ${traineeName}` }).first(),
   ).toBeVisible()
+})
+
+test('both feedback picker tabs are real tabs and reach compose', async ({ page }) => {
+  await gotoApp(page, '/feedback')
+  await page.getByRole('button', { name: 'New feedback' }).click()
+  const picker = page.getByRole('dialog', { name: 'New feedback' })
+  await expect(picker.getByRole('tab', { name: 'By member' })).toBeVisible()
+  await expect(picker.getByRole('tab', { name: 'By event' })).toBeVisible()
+
+  await picker.getByRole('tab', { name: 'By member' }).click()
+  await picker.locator('ul > li').first().getByRole('button').click()
+  await expect(page.getByRole('dialog', { name: 'Give Feedback' })).toBeVisible()
 })
 
 test('edits existing feedback from the detail sheet', async ({ page }) => {

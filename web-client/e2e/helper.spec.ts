@@ -6,8 +6,9 @@ test('generates a report', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Generate report' }).click()
 
-  await expect(page.getByText('Report generation started')).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Generating your report')
   await expect(page.getByRole('button', { name: `Read report for ${ADMIN.name}` })).toBeVisible()
+  await expect(page.getByRole('status')).toHaveCount(0)
 })
 
 test('views a report', async ({ page }) => {

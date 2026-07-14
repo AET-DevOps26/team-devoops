@@ -124,6 +124,10 @@ export function deleteSport(id: string, user: AuthUser): void {
   }
 }
 
+export function teamIdsForSport(sportId: string): string[] {
+  return teamFixtures.filter((team) => team.sport.id === sportId).map((team) => team.id)
+}
+
 export function createTeam(data: TeamCreate, user: AuthUser): Team {
   const name = data.name.trim()
 
@@ -200,6 +204,35 @@ export function updateTeam(
   } catch (error) {
     pendingTeamUpdates.delete(id)
     throw error
+  }
+}
+
+/**
+ * Mirrors the server-side rename propagation: each service keeps its own member replica, so a
+ * renamed member shows their new name in every roster and director list that embeds a ref to them.
+ */
+export function renameMemberInOrganization(memberId: string, name: string): void {
+  const rename = (ref: MemberRef) => (ref.id === memberId ? { ...ref, name } : ref)
+
+  for (const team of teamFixtures) {
+    team.trainers = team.trainers.map(rename)
+    team.trainees = team.trainees.map(rename)
+  }
+
+  for (const sport of sportFixtures) {
+    sport.directors = sport.directors.map(rename)
+  }
+}
+
+/** Removes a deleted member from every roster and director list that embeds them. */
+export function removeMemberFromOrganization(memberId: string): void {
+  for (const team of teamFixtures) {
+    team.trainers = team.trainers.filter((trainer) => trainer.id !== memberId)
+    team.trainees = team.trainees.filter((trainee) => trainee.id !== memberId)
+  }
+
+  for (const sport of sportFixtures) {
+    sport.directors = sport.directors.filter((director) => director.id !== memberId)
   }
 }
 

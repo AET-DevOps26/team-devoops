@@ -1,5 +1,5 @@
 import { ADMIN, memberFixtures } from './support/data'
-import { expect, gotoApp, test } from './support/fixtures'
+import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
 test('edits and saves the own record', async ({ page }) => {
   await gotoApp(page, '/profile')
@@ -16,7 +16,7 @@ test('edits and saves the own record', async ({ page }) => {
   await expect(save).toBeEnabled()
   await save.click()
 
-  await expect(page.getByRole('status')).toContainText('Profile updated.')
+  await expect(toastRegion(page)).toContainText('Profile updated.')
   await expect(phone).toHaveValue('+49 170 000000')
   await expect(save).toBeDisabled()
 })

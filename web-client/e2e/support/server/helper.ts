@@ -16,13 +16,9 @@ let memberReportSummariesState: Record<string, MemberReportSummary[]> = {}
 let teamReportSummariesState: Record<string, TeamReportSummary[]> = {}
 
 export function reset(): void {
-  reportState = { ...reportByIdFixture }
-  memberReportSummariesState = Object.fromEntries(
-    Object.entries(memberReportSummariesById).map(([memberId, rows]) => [memberId, [...rows]]),
-  )
-  teamReportSummariesState = Object.fromEntries(
-    Object.entries(teamReportSummariesById).map(([teamId, rows]) => [teamId, [...rows]]),
-  )
+  reportState = structuredClone(reportByIdFixture)
+  memberReportSummariesState = structuredClone(memberReportSummariesById)
+  teamReportSummariesState = structuredClone(teamReportSummariesById)
 }
 
 reset()
@@ -109,5 +105,43 @@ export function deleteReport(reportId: string): void {
     teamReportSummariesState[teamId] = (teamReportSummariesState[teamId] ?? []).filter(
       (row) => row.id !== reportId,
     )
+  }
+}
+
+export function renameMemberInReports(memberId: string, name: string): void {
+  memberReportSummariesState[memberId] = (memberReportSummariesState[memberId] ?? []).map((row) => ({
+    ...row,
+    member: { ...row.member, name },
+  }))
+  for (const [id, report] of Object.entries(reportState)) {
+    if (report.member?.id === memberId) {
+      reportState[id] = { ...report, member: { ...report.member, name } }
+    }
+  }
+}
+
+export function removeMemberFromReports(memberId: string): void {
+  delete memberReportSummariesState[memberId]
+  for (const [id, report] of Object.entries(reportState)) {
+    if (report.member?.id === memberId) delete reportState[id]
+  }
+}
+
+export function renameTeamInReports(teamId: string, name: string): void {
+  teamReportSummariesState[teamId] = (teamReportSummariesState[teamId] ?? []).map((row) => ({
+    ...row,
+    team: { ...row.team, name },
+  }))
+  for (const [id, report] of Object.entries(reportState)) {
+    if (report.team?.id === teamId) {
+      reportState[id] = { ...report, team: { ...report.team, name } }
+    }
+  }
+}
+
+export function removeTeamFromReports(teamId: string): void {
+  delete teamReportSummariesState[teamId]
+  for (const [id, report] of Object.entries(reportState)) {
+    if (report.team?.id === teamId) delete reportState[id]
   }
 }

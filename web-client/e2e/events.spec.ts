@@ -1,5 +1,5 @@
 import { eventSummaryFixtures } from './support/data'
-import { expect, gotoApp, test } from './support/fixtures'
+import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
 test('creates an event through the four-step dialog', async ({ page }) => {
   await gotoApp(page, '/sport-events')
@@ -21,7 +21,7 @@ test('creates an event through the four-step dialog', async ({ page }) => {
   await expect(sheet).toBeVisible()
   await sheet.getByRole('button', { name: 'Close' }).click()
 
-  await expect(page.getByRole('status')).toContainText('Event created.')
+  await expect(toastRegion(page)).toContainText('Event created.')
   await expect(page.getByRole('button', { name: 'View E2E Friendly Match' })).toBeVisible()
 })
 
@@ -51,7 +51,7 @@ test('edits an event name from the list', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: 'Save Event' }).click()
 
-  await expect(page.getByRole('status')).toContainText('Event updated.')
+  await expect(toastRegion(page)).toContainText('Event updated.')
   await expect(page.getByRole('button', { name: 'View Renamed E2E Session' })).toBeVisible()
 })
 
@@ -64,5 +64,5 @@ test('deletes an event after confirmation', async ({ page }) => {
   const confirm = page.getByRole('alertdialog')
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
 
-  await expect(page.getByRole('status')).toContainText('Event deleted.')
+  await expect(toastRegion(page)).toContainText('Event deleted.')
 })

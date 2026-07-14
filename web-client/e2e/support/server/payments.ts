@@ -23,8 +23,8 @@ let transactionFixtures: Transaction[] = []
 let balanceFixtures: Balance[] = []
 
 export function reset(): void {
-  transactionFixtures = transactionFixturesSource.map(cloneTransaction)
-  balanceFixtures = balanceFixturesSource.map((b) => ({ ...b, member: { ...b.member } }))
+  transactionFixtures = structuredClone(transactionFixturesSource)
+  balanceFixtures = structuredClone(balanceFixturesSource)
 }
 
 reset()
@@ -127,6 +127,28 @@ export function deleteTransaction(id: string, user: AuthUser): void {
 
   transactionFixtures.splice(index, 1)
   syncMockBalance(transaction.member)
+}
+
+export function renameMemberInPayments(memberId: string, name: string): void {
+  transactionFixtures = transactionFixtures.map((transaction) => ({
+    ...transaction,
+    member: transaction.member.id === memberId ? { ...transaction.member, name } : transaction.member,
+    creator: transaction.creator?.id === memberId ? { ...transaction.creator, name } : transaction.creator,
+  }))
+  balanceFixtures = balanceFixtures.map((balance) =>
+    balance.member.id === memberId
+      ? { ...balance, member: { ...balance.member, name } }
+      : balance,
+  )
+}
+
+export function removeMemberFromPayments(memberId: string): void {
+  transactionFixtures = transactionFixtures
+    .filter((transaction) => transaction.member.id !== memberId)
+    .map((transaction) =>
+      transaction.creator?.id === memberId ? { ...transaction, creator: null } : transaction,
+    )
+  balanceFixtures = balanceFixtures.filter((balance) => balance.member.id !== memberId)
 }
 
 function memberRef(memberId: string): Reference {

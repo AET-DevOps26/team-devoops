@@ -16,13 +16,8 @@ let eventDetailsState: Record<string, SportEvent> = {}
 let eventSummaryState: EventListItem[] = []
 
 export function reset(): void {
-  eventDetailsState = { ...eventDetailsById }
-  eventSummaryState = eventSummaryFixtures.map((event) => ({
-    ...event,
-    attendees: event.attendees?.map((attendee) => ({ ...attendee })),
-    sports_linked: event.sports_linked?.map((sport) => ({ ...sport })),
-    teams_linked: event.teams_linked?.map((team) => ({ ...team })),
-  }))
+  eventDetailsState = structuredClone(eventDetailsById)
+  eventSummaryState = structuredClone(eventSummaryFixtures)
 }
 
 reset()
@@ -205,4 +200,75 @@ export function deleteEvent(id: string, user: AuthUser): void {
 
   delete eventDetailsState[id]
   eventSummaryState = eventSummaryState.filter((row) => row.id !== id)
+}
+
+export function renameMemberInEvents(memberId: string, name: string): void {
+  const rename = (ref: Reference) => (ref.id === memberId ? { ...ref, name } : ref)
+  for (const event of Object.values(eventDetailsState)) {
+    event.attendees = event.attendees?.map(rename)
+    event.creator = event.creator ? rename(event.creator) : null
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    attendees: event.attendees?.map(rename),
+  }))
+}
+
+export function removeMemberFromEvents(memberId: string): void {
+  for (const event of Object.values(eventDetailsState)) {
+    event.attendees = event.attendees?.filter((attendee) => attendee.id !== memberId)
+    if (event.creator?.id === memberId) event.creator = null
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    attendees: event.attendees?.filter((attendee) => attendee.id !== memberId),
+  }))
+}
+
+export function renameSportInEvents(sportId: string, name: string): void {
+  for (const event of Object.values(eventDetailsState)) {
+    event.sports_linked = event.sports_linked?.map((sport) =>
+      sport.id === sportId ? { ...sport, name } : sport,
+    )
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    sports_linked: event.sports_linked?.map((sport) =>
+      sport.id === sportId ? { ...sport, name } : sport,
+    ),
+  }))
+}
+
+export function removeSportFromEvents(sportId: string): void {
+  for (const event of Object.values(eventDetailsState)) {
+    event.sports_linked = event.sports_linked?.filter((sport) => sport.id !== sportId)
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    sports_linked: event.sports_linked?.filter((sport) => sport.id !== sportId),
+  }))
+}
+
+export function renameTeamInEvents(teamId: string, name: string): void {
+  for (const event of Object.values(eventDetailsState)) {
+    event.teams_linked = event.teams_linked?.map((team) =>
+      team.id === teamId ? { ...team, name } : team,
+    )
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    teams_linked: event.teams_linked?.map((team) =>
+      team.id === teamId ? { ...team, name } : team,
+    ),
+  }))
+}
+
+export function removeTeamFromEvents(teamId: string): void {
+  for (const event of Object.values(eventDetailsState)) {
+    event.teams_linked = event.teams_linked?.filter((team) => team.id !== teamId)
+  }
+  eventSummaryState = eventSummaryState.map((event) => ({
+    ...event,
+    teams_linked: event.teams_linked?.filter((team) => team.id !== teamId),
+  }))
 }

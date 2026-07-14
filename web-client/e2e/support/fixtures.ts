@@ -24,3 +24,10 @@ export async function gotoApp(page: Page, path = '/'): Promise<void> {
   await page.goto(path)
   await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 })
 }
+
+// Sonner renders its toasts inside a single labelled aria-live region (see ui/sonner.tsx).
+// Assert toast copy through this rather than a bare role, so we don't need a second live
+// region wrapped around it just to be queryable.
+export function toastRegion(page: Page) {
+  return page.getByRole('region', { name: /Notifications/ })
+}

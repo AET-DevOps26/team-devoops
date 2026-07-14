@@ -11,8 +11,8 @@ let memberFixtures: Member[] = []
 let memberSummaryFixtures: MemberSummary[] = []
 
 export function reset(): void {
-  memberFixtures = memberFixturesSource.map((m) => ({ ...m }))
-  memberSummaryFixtures = memberSummaryFixturesSource.map((m) => ({ ...m }))
+  memberFixtures = structuredClone(memberFixturesSource)
+  memberSummaryFixtures = structuredClone(memberSummaryFixturesSource)
 }
 
 reset()
@@ -105,6 +105,7 @@ export function updateMember(
       email: updated.email,
     }
   }
+
   return { ...updated }
 }
 

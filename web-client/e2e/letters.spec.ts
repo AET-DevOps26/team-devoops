@@ -1,4 +1,4 @@
-import { expect, gotoApp, test } from './support/fixtures'
+import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
 test('renders a live preview with sample recipient data', async ({ page }) => {
   await gotoApp(page, '/letters')
@@ -20,7 +20,7 @@ test('sends a mail letter to the admin audience', async ({ page }) => {
   await page.getByLabel('Template').fill('<h1>Hello {{first_name}}</h1><p>See you at training.</p>')
   await page.getByRole('button', { name: 'Send Mail' }).click()
 
-  await expect(page.getByRole('status')).toContainText('Mail sent to all members.')
+  await expect(toastRegion(page)).toContainText('Mail sent to all members.')
 })
 
 test('switches to PDF mode and hides the subject field', async ({ page }) => {
