@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { Check, ChevronsUpDown, MinusCircle, Plus, PlusCircle, Trash2, X } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -27,13 +28,16 @@ import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButton, PendingButtonContent } from '@/components/ui/pending-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
@@ -46,11 +50,19 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { serverErrorFieldMessages, serverErrorMessage } from '@/lib/server-error'
+import { formMutationErrorFields, notifyMutationError } from '@/lib/mutation-feedback'
+import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
+import { fieldError } from '@/lib/validation'
 import { cn } from '@/lib/utils'
 import { useCreateTransaction, useDeleteTransaction } from '../api/queries'
 import { usePaymentsUiStore } from '../model/paymentsUiStore'
+import {
+  parseEuroAmountCents,
+  validateTransactionCreateForm,
+} from '../model/transactionEditor'
 import {
   type BalanceFilters,
   type ManagedPaymentsView,
@@ -72,7 +84,7 @@ const DEFAULT_BALANCE_FILTERS: BalanceFilters = {
 }
 
 export function PaymentsPage() {
-  const { view, isLoading, error } = usePaymentsViewModel()
+  const { view, isLoading, error, refetch } = usePaymentsViewModel()
   const filters = usePaymentsUiStore((state) => state.filters)
   const setSearch = usePaymentsUiStore((state) => state.setSearch)
   const setKind = usePaymentsUiStore((state) => state.setKind)
@@ -89,6 +101,7 @@ export function PaymentsPage() {
         filters={filters}
         isLoading={isLoading}
         error={error}
+        onRetry={refetch}
         setSearch={setSearch}
         setKind={setKind}
         setDateRange={setDateRange}
@@ -103,6 +116,7 @@ export function PaymentsPage() {
       filters={filters}
       isLoading={isLoading}
       error={error}
+      onRetry={refetch}
       setSearch={setSearch}
       setKind={setKind}
       setDateRange={setDateRange}
@@ -116,6 +130,7 @@ function SelfPaymentsContent({
   filters,
   isLoading,
   error,
+  onRetry,
   setSearch,
   setKind,
   setDateRange,
@@ -125,6 +140,7 @@ function SelfPaymentsContent({
   filters: ReturnType<typeof usePaymentsUiStore.getState>['filters']
   isLoading: boolean
   error: Error | null
+  onRetry: () => void
   setSearch: (search: string) => void
   setKind: (kind: typeof filters.kind) => void
   setDateRange: (range: Pick<typeof filters, 'fromDate' | 'toDate'>) => void
@@ -164,9 +180,7 @@ function SelfPaymentsContent({
       {isLoading ? (
         <PaymentsTableSkeleton />
       ) : error ? (
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {serverErrorMessage(error)}
-        </p>
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={onRetry} />
       ) : view.totalRows === 0 ? (
         <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
           No transactions are listed yet.
@@ -200,6 +214,7 @@ function ManagedPaymentsContent({
   filters,
   isLoading,
   error,
+  onRetry,
   setSearch,
   setKind,
   setDateRange,
@@ -209,6 +224,7 @@ function ManagedPaymentsContent({
   filters: ReturnType<typeof usePaymentsUiStore.getState>['filters']
   isLoading: boolean
   error: Error | null
+  onRetry: () => void
   setSearch: (search: string) => void
   setKind: (kind: typeof filters.kind) => void
   setDateRange: (range: Pick<typeof filters, 'fromDate' | 'toDate'>) => void
@@ -219,26 +235,30 @@ function ManagedPaymentsContent({
   const openDeleteConfirm = usePaymentsUiStore((state) => state.openDeleteConfirm)
   const closeDeleteConfirm = usePaymentsUiStore((state) => state.closeDeleteConfirm)
   const deleteTargetId = usePaymentsUiStore((state) => state.deleteTargetId)
-  const mutationNotice = usePaymentsUiStore((state) => state.mutationNotice)
-  const setMutationNotice = usePaymentsUiStore((state) => state.setMutationNotice)
+  const activeTab = usePaymentsUiStore((state) => state.activeTab)
+  const setActiveTab = usePaymentsUiStore((state) => state.setActiveTab)
   const deleteTransaction = useDeleteTransaction()
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const deleteTarget = useMemo(
     () => view.rows.find((row) => row.id === deleteTargetId) ?? null,
     [deleteTargetId, view.rows],
   )
 
+  const handleSelectMemberFromBalances = (memberId: string | null) => {
+    selectMember(memberId)
+    if (memberId) {
+      setActiveTab('transactions')
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteTarget) return
 
-    setDeleteError(null)
-
     try {
       await deleteTransaction.mutateAsync(deleteTarget.id)
-      setMutationNotice('Transaction deleted.')
+      toast.success('Transaction deleted.')
       closeDeleteConfirm()
     } catch (deleteFailure) {
-      setDeleteError(serverErrorMessage(deleteFailure))
+      notifyMutationError(deleteFailure, mutationFeedbackCopy.transaction.delete)
     }
   }
 
@@ -260,15 +280,6 @@ function ManagedPaymentsContent({
         }
       />
 
-      {mutationNotice && (
-        <p
-          role="status"
-          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-        >
-          {mutationNotice}
-        </p>
-      )}
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <StatCard
           label="Total Balance"
@@ -286,67 +297,77 @@ function ManagedPaymentsContent({
         />
       </div>
 
-      {isLoading ? (
-        <PaymentsTableSkeleton />
-      ) : error ? (
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {serverErrorMessage(error)}
-        </p>
-      ) : (
-        <>
-          <BalanceTable view={view} onSelectMember={selectMember} />
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+      >
+        <TabsList>
+          <TabsTrigger value="balances">Balances</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+        </TabsList>
 
-          <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-h3 font-semibold tracking-tight text-text-primary">
-                Transactions
-              </h2>
+        <TabsContent value="balances">
+          {isLoading ? (
+            <PaymentsTableSkeleton />
+          ) : error ? (
+            <ErrorNotice message={serverErrorMessage(error)} onRetry={onRetry} />
+          ) : (
+            <BalanceTable view={view} onSelectMember={handleSelectMemberFromBalances} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="transactions">
+          {isLoading ? (
+            <PaymentsTableSkeleton />
+          ) : error ? (
+            <ErrorNotice message={serverErrorMessage(error)} onRetry={onRetry} />
+          ) : (
+            <div className="space-y-3">
               {view.selectedMemberId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectMember(null)}
-                >
-                  <X data-icon="inline-start" />
-                  Clear Member
-                </Button>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectMember(null)}
+                  >
+                    <X data-icon="inline-start" />
+                    Clear Member
+                  </Button>
+                </div>
+              )}
+
+              <PaymentsToolbar
+                filters={filters}
+                setSearch={setSearch}
+                setKind={setKind}
+                setDateRange={setDateRange}
+                setSort={setSort}
+                searchPlaceholder="Title, member, or description"
+              />
+
+              {view.totalRows === 0 ? (
+                <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
+                  No transactions are listed yet.
+                </p>
+              ) : view.rows.length === 0 ? (
+                <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
+                  No transactions match the current filters.
+                </p>
+              ) : (
+                <ManagedTransactionsTable rows={view.rows} onDelete={openDeleteConfirm} />
               )}
             </div>
-
-            <PaymentsToolbar
-              filters={filters}
-              setSearch={setSearch}
-              setKind={setKind}
-              setDateRange={setDateRange}
-              setSort={setSort}
-              searchPlaceholder="Title, member, or description"
-            />
-
-            {view.totalRows === 0 ? (
-              <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
-                No transactions are listed yet.
-              </p>
-            ) : view.rows.length === 0 ? (
-              <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
-                No transactions match the current filters.
-              </p>
-            ) : (
-              <ManagedTransactionsTable rows={view.rows} onDelete={openDeleteConfirm} />
-            )}
-          </div>
-        </>
-      )}
+          )}
+        </TabsContent>
+      </Tabs>
 
       <TransactionCreateDialog members={view.memberOptions} />
 
       <AlertDialog
         open={deleteTargetId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setDeleteError(null)
-            closeDeleteConfirm()
-          }
+          if (!open) closeDeleteConfirm()
         }}
       >
         <AlertDialogContent>
@@ -357,11 +378,6 @@ function ManagedPaymentsContent({
               {deleteTarget?.memberName ?? 'this member'}? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {deleteError}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTransaction.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
@@ -371,7 +387,11 @@ function ManagedPaymentsContent({
                 void confirmDelete()
               }}
             >
-              {deleteTransaction.isPending ? 'Deleting' : 'Delete'}
+              {deleteTransaction.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -509,7 +529,6 @@ function BalanceTable({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-h3 font-semibold tracking-tight text-text-primary">Balances</h2>
       <BalanceToolbar
         filters={balanceFilters}
         setSearch={setBalanceSearch}
@@ -884,14 +903,12 @@ function MemberSearchPicker({
 function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }) {
   const isOpen = usePaymentsUiStore((state) => state.isCreateDialogOpen)
   const closeCreateDialog = usePaymentsUiStore((state) => state.closeCreateDialog)
-  const setMutationNotice = usePaymentsUiStore((state) => state.setMutationNotice)
   const createTransaction = useCreateTransaction()
   const [memberId, setMemberId] = useState('')
   const [kind, setKind] = useState<TransactionKind>('charge')
   const [amount, setAmount] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const sortedMembers = useMemo(
     () => members.toSorted((a, b) => a.name.localeCompare(b.name)),
@@ -899,6 +916,9 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
   )
   const memberStillListed = sortedMembers.some((member) => member.id === memberId)
   const effectiveMemberId = memberStillListed ? memberId : ''
+  const memberError = fieldError(fieldErrors, 'memberId', 'member')
+  const amountError = fieldError(fieldErrors, 'amount', 'amount_cents')
+  const titleError = fieldError(fieldErrors, 'title')
 
   const resetForm = () => {
     setMemberId('')
@@ -906,7 +926,6 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
     setAmount('')
     setTitle('')
     setDescription('')
-    setFormError(null)
     setFieldErrors(null)
   }
 
@@ -917,25 +936,22 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
+
+    const validationErrors = validateTransactionCreateForm({
+      memberId: effectiveMemberId,
+      amount,
+      title,
+      description,
+    })
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
+      return
+    }
 
     const amountCents = parseEuroAmountCents(amount)
+    if (amountCents === null) return
     const trimmedTitle = title.trim()
-
-    if (!effectiveMemberId) {
-      setFormError('Select a member.')
-      return
-    }
-    if (amountCents === null) {
-      setFormError('Enter an amount in euros with up to two decimals.')
-      return
-    }
-    if (!trimmedTitle) {
-      setFormError('Title is required.')
-      return
-    }
-
-    setFormError(null)
-    setFieldErrors(null)
 
     try {
       const created = await createTransaction.mutateAsync({
@@ -945,22 +961,27 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
         description: description.trim() || undefined,
       })
 
-      setMutationNotice(`Transaction recorded for ${created.member.name}.`)
+      toast.success(`Transaction recorded for ${created.member.name}.`)
       handleClose()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
-      setFieldErrors(serverErrorFieldMessages(error))
+      setFieldErrors(formMutationErrorFields(error, mutationFeedbackCopy.transaction.create))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-lg"
+        dismissOnInteractOutside={false}
+      >
         <DialogHeader>
           <DialogTitle>New Transaction</DialogTitle>
+          <DialogDescription className="sr-only">
+            Record a charge or payment for a member.
+          </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="payment-member">Member</Label>
             <MemberSearchPicker
@@ -969,8 +990,11 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
               value={effectiveMemberId}
               onChange={setMemberId}
               disabled={createTransaction.isPending || sortedMembers.length === 0}
-              invalid={(formError !== null && !effectiveMemberId) || fieldErrors?.member !== undefined}
+              invalid={memberError !== undefined}
             />
+            {memberError && (
+              <p className="text-caption text-destructive">{memberError}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -1025,13 +1049,10 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
                 placeholder="0.00"
                 required
                 disabled={createTransaction.isPending}
-                aria-invalid={
-                  (formError !== null && parseEuroAmountCents(amount) === null) ||
-                  fieldErrors?.amount_cents !== undefined
-                }
+                aria-invalid={amountError !== undefined}
               />
-              {fieldErrors?.amount_cents && (
-                <p className="text-caption text-destructive">{fieldErrors.amount_cents}</p>
+              {amountError && (
+                <p className="text-caption text-destructive">{amountError}</p>
               )}
             </div>
 
@@ -1043,12 +1064,10 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
                 onChange={(event) => setTitle(event.target.value)}
                 required
                 disabled={createTransaction.isPending}
-                aria-invalid={
-                  (formError !== null && title.trim() === '') || fieldErrors?.title !== undefined
-                }
+                aria-invalid={titleError !== undefined}
               />
-              {fieldErrors?.title && (
-                <p className="text-caption text-destructive">{fieldErrors.title}</p>
+              {titleError && (
+                <p className="text-caption text-destructive">{titleError}</p>
               )}
             </div>
           </div>
@@ -1064,12 +1083,6 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
             />
           </div>
 
-          {formError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {formError}
-            </p>
-          )}
-
           <DialogFooter>
             <Button
               type="button"
@@ -1079,27 +1092,19 @@ function TransactionCreateDialog({ members }: { members: PaymentMemberOption[] }
             >
               Cancel
             </Button>
-            <Button
+            <PendingButton
               type="submit"
-              disabled={createTransaction.isPending || sortedMembers.length === 0}
+              disabled={sortedMembers.length === 0}
+              isPending={createTransaction.isPending}
+              pendingLabel="Saving…"
             >
-              {createTransaction.isPending ? 'Saving' : 'Record Transaction'}
-            </Button>
+              Record Transaction
+            </PendingButton>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   )
-}
-
-function parseEuroAmountCents(value: string): number | null {
-  const normalized = value.trim().replace(',', '.')
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null
-
-  const [euros, cents = ''] = normalized.split('.')
-  const amountCents = Number(euros) * 100 + Number(cents.padEnd(2, '0'))
-
-  return amountCents > 0 ? amountCents : null
 }
 
 function PaymentsTableSkeleton() {

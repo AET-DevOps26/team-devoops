@@ -420,6 +420,16 @@ export function usePaymentsViewModel() {
       )
     : firstError(transactionsQuery.error)
 
+  const refetch = () => {
+    void transactionsQuery.refetch()
+    if (canManagePayments) void balancesQuery.refetch()
+    if (user.role === 'director') {
+      void sportsQuery.refetch()
+      void teamsQuery.refetch()
+    }
+    if (user.role === 'admin') void membersQuery.refetch()
+  }
+
   return {
     view,
     isLoading:
@@ -428,5 +438,6 @@ export function usePaymentsViewModel() {
       (user.role === 'director' && (sportsQuery.isLoading || teamsQuery.isLoading)) ||
       (user.role === 'admin' && membersQuery.isLoading),
     error,
+    refetch,
   }
 }

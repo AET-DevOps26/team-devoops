@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { MessageSquarePlus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -15,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
@@ -25,10 +27,13 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { useAuth } from '@/features/auth'
-import { FeedbackComposeDialog, FeedbackComposeNotice } from '@/features/feedback'
+import { FeedbackComposeDialog } from '@/features/feedback'
 import { useFeedbackUiStore } from '@/features/feedback/model/feedbackUiStore'
+import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { useDeleteMember } from '../api/queries'
 import { MemberEditorDialog } from '../components/MemberEditorDialog'
 import { useMembersUiStore } from '../model/membersUiStore'
@@ -36,7 +41,7 @@ import { useMembersViewModel } from '../model/useMembersViewModel'
 
 export function MembersPage() {
   const { user } = useAuth()
-  const { view, isLoading, error } = useMembersViewModel()
+  const { view, isLoading, error, refetch } = useMembersViewModel()
   const openCompose = useFeedbackUiStore((state) => state.openCompose)
   const filters = useMembersUiStore((state) => state.filters)
   const setSearch = useMembersUiStore((state) => state.setSearch)
@@ -48,17 +53,13 @@ export function MembersPage() {
   const openDeleteConfirm = useMembersUiStore((state) => state.openDeleteConfirm)
   const closeDeleteConfirm = useMembersUiStore((state) => state.closeDeleteConfirm)
   const deleteTargetId = useMembersUiStore((state) => state.deleteTargetId)
-  const mutationNotice = useMembersUiStore((state) => state.mutationNotice)
-  const setMutationNotice = useMembersUiStore((state) => state.setMutationNotice)
   const deleteMember = useDeleteMember()
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const isAdmin = user.role === 'admin'
   const deleteTarget = view.rows.find((row) => row.id === deleteTargetId) ?? null
 
   useEffect(() => resetFilters, [resetFilters])
 
   const handleDeleteMember = (memberId: string) => {
-    setDeleteError(null)
     openDeleteConfirm(memberId)
   }
 
@@ -67,11 +68,10 @@ export function MembersPage() {
 
     try {
       await deleteMember.mutateAsync(deleteTargetId)
-      setMutationNotice('Member deleted.')
-      setDeleteError(null)
+      toast.success('Member deleted.')
       closeDeleteConfirm()
     } catch (deleteMemberError) {
-      setDeleteError(serverErrorMessage(deleteMemberError))
+      notifyMutationError(deleteMemberError, mutationFeedbackCopy.member.delete)
     }
   }
 
@@ -91,23 +91,10 @@ export function MembersPage() {
         }
       />
 
-      {mutationNotice && (
-        <p
-          role="status"
-          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-        >
-          {mutationNotice}
-        </p>
-      )}
-
-      <FeedbackComposeNotice />
-
       {isLoading ? (
         <MembersTableSkeleton />
       ) : error ? (
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {error.message}
-        </p>
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} />
       ) : view.totalRows === 0 ? (
         <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
           No members are listed yet.
@@ -224,10 +211,7 @@ export function MembersPage() {
       <AlertDialog
         open={deleteTargetId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setDeleteError(null)
-            closeDeleteConfirm()
-          }
+          if (!open) closeDeleteConfirm()
         }}
       >
         <AlertDialogContent>
@@ -239,15 +223,14 @@ export function MembersPage() {
               authored. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {deleteError}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMember.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={deleteMember.isPending} onClick={confirmDeleteMember}>
-              {deleteMember.isPending ? 'Deleting' : 'Delete'}
+              {deleteMember.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

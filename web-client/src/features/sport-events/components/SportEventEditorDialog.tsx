@@ -1,39 +1,47 @@
 import { type FormEvent, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { DateTimePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DialogFormSkeleton } from '@/components/ui/dialog-form-skeleton'
 import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MultiSelectCombobox, type MultiSelectOption } from '@/components/ui/multi-select-combobox'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
-import { sameIds, toggleId } from '@/lib/id-selection'
+import { toggleId } from '@/lib/id-selection'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
-import { memberRefName, type AuthUser, type Reference, type Sport, type Team } from '@/types'
+import { fieldError } from '@/lib/validation'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
+import { memberRefName, type AuthUser, type Sport, type Team } from '@/types'
 import {
   useCreateSportEvent,
   useEvent,
   useUpdateSportEvent,
 } from '../api/queries'
 import type { SportEvent } from '../types'
+import {
+  buildAttendeeOptions,
+  buildSportEventCreatePayload,
+  buildSportEventEditorInitialState,
+  buildSportEventUpdatePayload,
+  roleScopedSports,
+  roleScopedTeams,
+  syncAttendeesForTeams,
+  type EventEditorFormState,
+  validateSportEventEditorForm,
+} from '../model/eventEditor'
 import { type EventEditorTarget, useEventsUiStore } from '../model/eventsUiStore'
-
-interface EventFormState {
-  name: string
-  description: string
-  startLocal: string
-  endLocal: string
-  sportIds: string[]
-  teamIds: string[]
-  attendeeIds: string[]
-}
 
 const eventSteps: DialogStep[] = [
   { id: 'details', label: 'Details' },
@@ -53,7 +61,6 @@ export function SportEventEditorDialog() {
     </Dialog>
   )
 }
-
 function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
   const { user } = useAuth()
   const eventQuery = useEvent(target.mode === 'edit' ? target.eventId : null)
@@ -73,10 +80,19 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {target.mode === 'create' ? 'Create a sport event.' : 'Update this sport event.'}
+          </DialogDescription>
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          {serverErrorMessage(queryError)}
-        </p>
+        <ErrorNotice
+          message={serverErrorMessage(queryError)}
+          onRetry={() => {
+            void teamsQuery.refetch()
+            void sportsQuery.refetch()
+            if (target.mode === 'edit') void eventQuery.refetch()
+          }}
+          compact
+        />
       </DialogContent>
     )
   }
@@ -86,10 +102,11 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {target.mode === 'create' ? 'Create a sport event.' : 'Update this sport event.'}
+          </DialogDescription>
         </DialogHeader>
-        <p className="border bg-card px-4 py-3 text-body-sm text-text-secondary">
-          Loading event form.
-        </p>
+        <DialogFormSkeleton />
       </DialogContent>
     )
   }
@@ -99,10 +116,9 @@ function SportEventEditorForm({ target }: { target: EventEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription className="sr-only">Update this sport event.</DialogDescription>
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          Event not found.
-        </p>
+        <ErrorNotice message="Event not found." compact />
       </DialogContent>
     )
   }
@@ -133,18 +149,24 @@ function SportEventEditorLoaded({
 }) {
   const closeEditor = useEventsUiStore((state) => state.closeEditor)
   const openEvent = useEventsUiStore((state) => state.open)
-  const setMutationNotice = useEventsUiStore((state) => state.setMutationNotice)
   const createEvent = useCreateSportEvent()
   const updateEvent = useUpdateSportEvent()
-  const [form, setForm] = useState<EventFormState>(() =>
-    buildInitialForm(target, user, teams, sports, event),
+  const [form, setForm] = useState<EventEditorFormState>(() =>
+    buildSportEventEditorInitialState(target, user, teams, sports, event),
   )
   const [stepIndex, setStepIndex] = useState(0)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const isPending = createEvent.isPending || updateEvent.isPending
   const isPastEvent = target.mode === 'edit' && event ? new Date(event.end_time) < new Date() : false
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === eventSteps.length - 1
+  const currentStepId = eventSteps[stepIndex].id
+  const nameError = fieldError(fieldErrors, 'name')
+  const startError = fieldError(fieldErrors, 'startLocal', 'start_time')
+  const endError = fieldError(fieldErrors, 'endLocal', 'end_time')
+  const sportsError = fieldError(fieldErrors, 'sportIds', 'sports_linked')
+  const teamsError = fieldError(fieldErrors, 'teamIds', 'teams_linked')
+  const attendeesError = fieldError(fieldErrors, 'attendeeIds', 'attendees')
 
   const scopedSports = useMemo(
     () => roleScopedSports(user, sports, teams),
@@ -215,7 +237,7 @@ function SportEventEditorLoaded({
       return {
         ...current,
         teamIds: nextTeamIds,
-        sportIds: unique([...nextSportIds, ...addedSportIds]),
+        sportIds: Array.from(new Set([...nextSportIds, ...addedSportIds])),
         attendeeIds: syncAttendeesForTeams(current.teamIds, nextTeamIds, current.attendeeIds, teams),
       }
     })
@@ -230,14 +252,24 @@ function SportEventEditorLoaded({
 
   const handleSubmit = async (submitEvent: FormEvent<HTMLFormElement>) => {
     submitEvent.preventDefault()
+    setFieldErrors(null)
 
-    const stepError = validateStep(eventSteps[stepIndex].id, form)
-    if (stepError) {
-      setFormError(stepError)
+    const stepFields =
+      currentStepId === 'details'
+        ? (['name'] as const)
+        : currentStepId === 'schedule'
+          ? (['startLocal', 'endLocal'] as const)
+          : null
+    const validationErrors = isLastStep
+      ? validateSportEventEditorForm(form)
+      : stepFields
+        ? validateSportEventEditorForm(form, stepFields)
+        : null
+
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
       return
     }
-
-    setFormError(null)
 
     if (!isLastStep) {
       setStepIndex((current) => current + 1)
@@ -246,17 +278,9 @@ function SportEventEditorLoaded({
 
     try {
       if (target.mode === 'create') {
-        const created = await createEvent.mutateAsync({
-          name: form.name.trim(),
-          description: cleanedDescription(form.description),
-          start_time: localDateTimeToIso(form.startLocal),
-          end_time: localDateTimeToIso(form.endLocal),
-          sports_linked: resolvedSportIds(form, teams),
-          teams_linked: form.teamIds,
-          attendees: form.attendeeIds,
-        })
+        const created = await createEvent.mutateAsync(buildSportEventCreatePayload(form, teams))
 
-        setMutationNotice('Event created.')
+        toast.success('Event created.')
         openEvent(created.id)
         closeEditor()
         return
@@ -264,26 +288,37 @@ function SportEventEditorLoaded({
 
       if (!event) return
 
-      const payload = buildUpdatePayload(event, form, teams)
+      const payload = buildSportEventUpdatePayload(event, form, teams)
       if (Object.keys(payload).length > 0) {
         await updateEvent.mutateAsync({ id: event.id, ...payload })
-        setMutationNotice('Event updated.')
+        toast.success('Event updated.')
       }
       closeEditor()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
+      setFieldErrors(
+        formMutationErrorFields(
+          error,
+          target.mode === 'create' ? mutationFeedbackCopy.event.create : mutationFeedbackCopy.event.update,
+        ),
+      )
     }
   }
 
   return (
-    <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+    <DialogContent
+      className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl"
+      dismissOnInteractOutside={false}
+    >
       <DialogHeader>
         <DialogTitle>{target.mode === 'create' ? 'New Event' : 'Edit Event'}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {target.mode === 'create' ? 'Create a sport event.' : 'Update this sport event.'}
+        </DialogDescription>
       </DialogHeader>
 
       <DialogStepperNav steps={eventSteps} currentStep={stepIndex} />
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           {eventSteps[stepIndex].id === 'details' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
@@ -296,8 +331,11 @@ function SportEventEditorLoaded({
                   }
                   required
                   disabled={isPending}
-                  aria-invalid={formError !== null && form.name.trim() === ''}
+                  aria-invalid={nameError !== undefined}
                 />
+                {nameError && (
+                  <p className="text-caption text-destructive">{nameError}</p>
+                )}
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
@@ -326,8 +364,11 @@ function SportEventEditorLoaded({
                   onChange={(value) => setForm({ ...form, startLocal: value })}
                   required
                   disabled={isPending}
-                  aria-invalid={formError !== null && form.startLocal === ''}
+                  aria-invalid={startError !== undefined}
                 />
+                {startError && (
+                  <p className="text-caption text-destructive">{startError}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -339,55 +380,67 @@ function SportEventEditorLoaded({
                   onChange={(value) => setForm({ ...form, endLocal: value })}
                   required
                   disabled={isPending}
-                  aria-invalid={formError !== null && form.endLocal === ''}
+                  aria-invalid={endError !== undefined}
                 />
+                {endError && (
+                  <p className="text-caption text-destructive">{endError}</p>
+                )}
               </div>
             </div>
           )}
 
           {eventSteps[stepIndex].id === 'sports-teams' && (
             <div className="space-y-5">
-              <MultiSelectCombobox
-                label="Sports"
-                placeholder="Search and select sports..."
-                emptyLabel="No sports available."
-                emptySearchLabel="No sports match your search."
-                options={sportOptions}
-                selectedIds={form.sportIds}
-                disabled={isPending}
-                onToggle={handleSportToggle}
-              />
+              <div className="space-y-1.5">
+                <MultiSelectCombobox
+                  label="Sports"
+                  placeholder="Search and select sports..."
+                  emptyLabel="No sports available."
+                  emptySearchLabel="No sports match your search."
+                  options={sportOptions}
+                  selectedIds={form.sportIds}
+                  disabled={isPending}
+                  onToggle={handleSportToggle}
+                />
+                {sportsError && (
+                  <p className="text-caption text-destructive">{sportsError}</p>
+                )}
+              </div>
 
-              <MultiSelectCombobox
-                label="Teams"
-                placeholder="Search and select teams..."
-                emptyLabel="No teams available."
-                emptySearchLabel="No teams match your search."
-                options={teamOptions}
-                selectedIds={form.teamIds}
-                disabled={isPending}
-                onToggle={handleTeamToggle}
-              />
+              <div className="space-y-1.5">
+                <MultiSelectCombobox
+                  label="Teams"
+                  placeholder="Search and select teams..."
+                  emptyLabel="No teams available."
+                  emptySearchLabel="No teams match your search."
+                  options={teamOptions}
+                  selectedIds={form.teamIds}
+                  disabled={isPending}
+                  onToggle={handleTeamToggle}
+                />
+                {teamsError && (
+                  <p className="text-caption text-destructive">{teamsError}</p>
+                )}
+              </div>
             </div>
           )}
 
           {eventSteps[stepIndex].id === 'attendees' && (
-            <MultiSelectCombobox
-              label={isPastEvent ? 'Attendance Upkeep' : 'Attendees'}
-              placeholder="Search and add attendees..."
-              emptyLabel="No team attendees available"
-              emptySearchLabel="No attendees match your search."
-              options={attendeeSelectOptions}
-              selectedIds={form.attendeeIds}
-              disabled={isPending}
-              onToggle={handleAttendeeToggle}
-            />
-          )}
-
-          {formError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {formError}
-            </p>
+            <div className="space-y-1.5">
+              <MultiSelectCombobox
+                label={isPastEvent ? 'Attendance Upkeep' : 'Attendees'}
+                placeholder="Search and add attendees..."
+                emptyLabel="No team attendees available"
+                emptySearchLabel="No attendees match your search."
+                options={attendeeSelectOptions}
+                selectedIds={form.attendeeIds}
+                disabled={isPending}
+                onToggle={handleAttendeeToggle}
+              />
+              {attendeesError && (
+                <p className="text-caption text-destructive">{attendeesError}</p>
+              )}
+            </div>
           )}
 
           <DialogStepperFooter
@@ -397,245 +450,10 @@ function SportEventEditorLoaded({
             submitLabel={target.mode === 'create' ? 'Create Event' : 'Save Event'}
             onCancel={closeEditor}
             onBack={() => {
-              setFormError(null)
               setStepIndex((current) => Math.max(current - 1, 0))
             }}
           />
       </form>
     </DialogContent>
   )
-}
-
-function buildInitialForm(
-  target: EventEditorTarget,
-  user: AuthUser,
-  teams: Team[],
-  sports: Sport[],
-  event: SportEvent | undefined,
-): EventFormState {
-  if (target.mode === 'edit' && event) {
-    return {
-      name: event.name,
-      description: event.description ?? '',
-      startLocal: isoToLocalDateTime(event.start_time),
-      endLocal: isoToLocalDateTime(event.end_time),
-      sportIds: event.sports_linked?.map((sport) => sport.id) ?? [],
-      teamIds: event.teams_linked?.map((team) => team.id) ?? [],
-      attendeeIds: event.attendees?.map((attendee) => attendee.id) ?? [],
-    }
-  }
-
-  const startLocal = defaultStartLocal()
-  const teamIds =
-    user.role === 'trainer'
-      ? teams
-          .filter((team) => team.trainers.some((trainer) => trainer.id === user.id))
-          .map((team) => team.id)
-      : []
-  const sportIds =
-    user.role === 'director'
-      ? sports
-          .filter((sport) => sport.directors.some((director) => director.id === user.id))
-          .map((sport) => sport.id)
-      : unique(
-          teams
-            .filter((team) => teamIds.includes(team.id))
-            .map((team) => team.sport.id),
-        )
-
-  return {
-    name: '',
-    description: '',
-    startLocal,
-    endLocal: addMinutesLocal(startLocal, 90),
-    sportIds,
-    teamIds,
-    attendeeIds: rosterIdsForTeams(teamIds, teams),
-  }
-}
-
-function roleScopedSports(user: AuthUser, sports: Sport[], teams: Team[]): Sport[] {
-  if (user.role === 'admin') return sports
-  if (user.role === 'director') {
-    return sports.filter((sport) => sport.directors.some((director) => director.id === user.id))
-  }
-  if (user.role === 'trainer') {
-    const sportIds = new Set(
-      teams
-        .filter((team) => team.trainers.some((trainer) => trainer.id === user.id))
-        .map((team) => team.sport.id),
-    )
-
-    return sports.filter((sport) => sportIds.has(sport.id))
-  }
-
-  return []
-}
-
-function roleScopedTeams(user: AuthUser, teams: Team[], sports: Sport[]): Team[] {
-  if (user.role === 'admin') return teams
-  if (user.role === 'director') {
-    const sportIds = new Set(
-      sports
-        .filter((sport) => sport.directors.some((director) => director.id === user.id))
-        .map((sport) => sport.id),
-    )
-
-    return teams.filter((team) => sportIds.has(team.sport.id))
-  }
-  if (user.role === 'trainer') {
-    return teams.filter((team) => team.trainers.some((trainer) => trainer.id === user.id))
-  }
-
-  return []
-}
-
-interface AttendeeOption {
-  member: Reference
-  teamName: string
-}
-
-function buildAttendeeOptions(
-  teamIds: string[],
-  teams: Team[],
-  event: SportEvent | undefined,
-): AttendeeOption[] {
-  const selectedTeams = new Set(teamIds)
-  const options = new Map<string, AttendeeOption>()
-
-  teams
-    .filter((team) => selectedTeams.has(team.id))
-    .forEach((team) => {
-      team.trainees.forEach((member) => {
-        options.set(member.id, { member, teamName: team.name })
-      })
-    })
-
-  event?.attendees?.forEach((attendee) => {
-    if (!options.has(attendee.id)) {
-      options.set(attendee.id, { member: attendee, teamName: 'Other' })
-    }
-  })
-
-  return Array.from(options.values()).toSorted((a, b) =>
-    memberRefName(a.member).localeCompare(memberRefName(b.member)),
-  )
-}
-
-function syncAttendeesForTeams(
-  currentTeamIds: string[],
-  nextTeamIds: string[],
-  currentAttendeeIds: string[],
-  teams: Team[],
-): string[] {
-  const currentTeams = new Set(currentTeamIds)
-  const nextTeams = new Set(nextTeamIds)
-  const addedTeamIds = nextTeamIds.filter((id) => !currentTeams.has(id))
-  const removedTeamIds = currentTeamIds.filter((id) => !nextTeams.has(id))
-  const nextRoster = new Set(rosterIdsForTeams(nextTeamIds, teams))
-  const nextAttendees = new Set(currentAttendeeIds)
-
-  rosterIdsForTeams(addedTeamIds, teams).forEach((id) => nextAttendees.add(id))
-  rosterIdsForTeams(removedTeamIds, teams).forEach((id) => {
-    if (!nextRoster.has(id)) nextAttendees.delete(id)
-  })
-
-  return Array.from(nextAttendees)
-}
-
-function rosterIdsForTeams(teamIds: string[], teams: Team[]): string[] {
-  const selectedTeams = new Set(teamIds)
-  return unique(
-    teams
-      .filter((team) => selectedTeams.has(team.id))
-      .flatMap((team) => team.trainees.map((trainee) => trainee.id)),
-  )
-}
-
-function validateStep(stepId: string, form: EventFormState): string | null {
-  if (stepId === 'details') {
-    if (!form.name.trim()) return 'Name is required.'
-    return null
-  }
-
-  if (stepId === 'schedule') {
-    if (!form.startLocal || !form.endLocal) return 'Start and end time are required.'
-    if (new Date(form.endLocal) <= new Date(form.startLocal)) {
-      return 'End time must be after start time.'
-    }
-    return null
-  }
-
-  return null
-}
-
-function buildUpdatePayload(event: SportEvent, form: EventFormState, teams: Team[]) {
-  const payload: Partial<Pick<SportEvent, 'name' | 'description' | 'start_time' | 'end_time'>> & {
-    attendees?: string[]
-    sports_linked?: string[]
-    teams_linked?: string[]
-  } = {}
-  const name = form.name.trim()
-  const description = cleanedDescription(form.description) ?? ''
-  const startTime = localDateTimeToIso(form.startLocal)
-  const endTime = localDateTimeToIso(form.endLocal)
-  const sportIds = resolvedSportIds(form, teams)
-
-  if (name !== event.name) payload.name = name
-  if (description !== (event.description ?? '')) payload.description = description
-  if (startTime !== event.start_time) payload.start_time = startTime
-  if (endTime !== event.end_time) payload.end_time = endTime
-  if (!sameIds(sportIds, event.sports_linked?.map((sport) => sport.id) ?? [])) {
-    payload.sports_linked = sportIds
-  }
-  if (!sameIds(form.teamIds, event.teams_linked?.map((team) => team.id) ?? [])) {
-    payload.teams_linked = form.teamIds
-  }
-  if (!sameIds(form.attendeeIds, event.attendees?.map((attendee) => attendee.id) ?? [])) {
-    payload.attendees = form.attendeeIds
-  }
-
-  return payload
-}
-
-function resolvedSportIds(form: EventFormState, teams: Team[]): string[] {
-  const teamSports = teams
-    .filter((team) => form.teamIds.includes(team.id))
-    .map((team) => team.sport.id)
-
-  return unique([...form.sportIds, ...teamSports])
-}
-
-function cleanedDescription(description: string): string | undefined {
-  const cleaned = description.trim()
-  return cleaned.length > 0 ? cleaned : undefined
-}
-
-function unique(ids: string[]): string[] {
-  return Array.from(new Set(ids))
-}
-
-function isoToLocalDateTime(iso: string): string {
-  return dateToLocalDateTime(new Date(iso))
-}
-
-function defaultStartLocal(): string {
-  const start = new Date()
-  start.setHours(start.getHours() + 1, 0, 0, 0)
-  return dateToLocalDateTime(start)
-}
-
-function addMinutesLocal(localValue: string, minutes: number): string {
-  const date = new Date(localValue)
-  date.setMinutes(date.getMinutes() + minutes)
-  return dateToLocalDateTime(date)
-}
-
-function dateToLocalDateTime(date: Date): string {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return local.toISOString().slice(0, 16)
-}
-
-function localDateTimeToIso(localValue: string): string {
-  return new Date(localValue).toISOString()
 }

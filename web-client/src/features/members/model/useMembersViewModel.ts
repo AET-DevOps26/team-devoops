@@ -142,5 +142,9 @@ export function useMembersViewModel() {
     view,
     isLoading: membersQuery.isLoading || teamsQuery.isLoading,
     error: membersQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void membersQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }

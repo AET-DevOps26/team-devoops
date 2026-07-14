@@ -6,6 +6,15 @@ const mutationMocks = vi.hoisted(() => ({
   createFeedback: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/feedback/api/queries', () => ({
   useCreateFeedback: () => ({ mutateAsync: mutationMocks.createFeedback, isPending: false }),
 }))
@@ -119,10 +128,10 @@ describe('FeedbackComposeDialog', () => {
       rating: 9,
     })
     expect(useFeedbackUiStore.getState().composeTarget).toBeNull()
-    expect(useFeedbackUiStore.getState().composeNotice).toBe(`Feedback added for ${TARGET.name}.`)
+    expect(toastMocks.success).toHaveBeenCalledWith(`Feedback added for ${TARGET.name}.`)
   })
 
-  it('surfaces a server 403 as the form error and stays open', async () => {
+  it('surfaces a server 403 as a toast and stays open', async () => {
     mutationMocks.createFeedback.mockRejectedValue(
       httpError(403, 'You are not allowed to create feedback for this member'),
     )
@@ -132,9 +141,31 @@ describe('FeedbackComposeDialog', () => {
     await fillField('feedback-rating', '9')
     await submitForm()
 
-    expect(document.body.textContent).toContain(
-      'You are not allowed to create feedback for this member',
-    )
+    expect(toastMocks.error).toHaveBeenCalledWith('Feedback not added', {
+      description: 'You are not allowed to create feedback for this member',
+    })
     expect(useFeedbackUiStore.getState().composeTarget).not.toBeNull()
+  })
+
+  it('surfaces server field errors next to the matching inputs', async () => {
+    mutationMocks.createFeedback.mockRejectedValue(
+      httpError(400, 'Validation failed', [
+        { message: 'feedback: must not be blank' },
+        { message: 'rating: must be between 0 and 10' },
+      ]),
+    )
+
+    await renderOpen()
+    await fillField('feedback-body', 'Strong session.')
+    await fillField('feedback-rating', '9')
+    await submitForm()
+
+    expect(document.body.textContent).toContain('must not be blank')
+    expect(document.body.textContent).toContain('must be between 0 and 10')
+    const feedbackField = document.body.querySelector('#feedback-body')
+    const ratingField = document.body.querySelector('#feedback-rating')
+    expect(feedbackField?.getAttribute('aria-invalid')).toBe('true')
+    expect(ratingField?.getAttribute('aria-invalid')).toBe('true')
+    expect(toastMocks.error).not.toHaveBeenCalled()
   })
 })

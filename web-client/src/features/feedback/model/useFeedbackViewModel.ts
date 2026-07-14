@@ -6,7 +6,7 @@ import { buildComposableMemberIds } from '@/features/members/model/useMembersVie
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
 import { useEventsList } from '@/features/sport-events/api/queries'
 import { buildEventSportNamesById } from '@/lib/event-sports'
-import { formatDateShort, formatDateTime } from '@/lib/format'
+import { formatDateShort, formatDateTime, memberSummaryName } from '@/lib/format'
 import {
   type AuthUser,
   creatorName,
@@ -63,6 +63,11 @@ export interface FeedbackCoverage {
   sports: FeedbackCoverageSport[]
 }
 
+export interface FeedbackComposableMember {
+  id: string
+  name: string
+}
+
 export interface FeedbackView {
   rows: FeedbackRow[]
   totalRows: number
@@ -74,6 +79,10 @@ export interface FeedbackView {
     latestLabel: string
   }
   coverage: FeedbackCoverage | null
+  // Members the current user is allowed to give feedback to (admins: everyone; trainers: their
+  // trainees). Drives the "New feedback" button and the free member-pick fallback, so it matches
+  // the Members page rather than the narrower "missing feedback" coverage picker.
+  composableMembers: FeedbackComposableMember[]
 }
 
 export interface FeedbackDetailView {
@@ -85,6 +94,7 @@ export interface FeedbackDetailView {
   isLoading: boolean
   // rating is undefined only while detail is unloaded; every loaded feedback has one.
   error: Error | null
+  refetch: () => void
 }
 
 export function canManageFeedback(
@@ -308,6 +318,12 @@ export function buildFeedbackView(
     null,
   )
 
+  const composableMemberIds = user ? buildComposableMemberIds(members, teams, user) : new Set<string>()
+  const composableMembers: FeedbackComposableMember[] = members
+    .filter((member) => composableMemberIds.has(member.id))
+    .map((member) => ({ id: member.id, name: memberSummaryName(member) }))
+    .toSorted((a, b) => a.name.localeCompare(b.name))
+
   return {
     rows: filteredRows,
     totalRows: rows.length,
@@ -321,6 +337,7 @@ export function buildFeedbackView(
     coverage: user
       ? buildFeedbackCoverage(summaries, members, teams, sports, events, user)
       : null,
+    composableMembers,
   }
 }
 
@@ -369,6 +386,13 @@ export function useFeedbackViewModel() {
       teamsQuery.error ??
       sportsQuery.error ??
       eventsQuery.error,
+    refetch: () => {
+      void feedbackQuery.refetch()
+      void membersQuery.refetch()
+      void teamsQuery.refetch()
+      void sportsQuery.refetch()
+      void eventsQuery.refetch()
+    },
   }
 }
 
@@ -384,5 +408,6 @@ export function useFeedbackDetailView(id: string | null): FeedbackDetailView {
     rating: detail ? detail.rating : undefined,
     isLoading: feedbackQuery.isLoading,
     error: feedbackQuery.error,
+    refetch: () => void feedbackQuery.refetch(),
   }
 }

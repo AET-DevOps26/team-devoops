@@ -1,5 +1,6 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 
@@ -23,7 +24,11 @@ describe('NotFoundPage', () => {
 
   async function render() {
     await act(async () => {
-      root.render(<NotFoundPage />)
+      root.render(
+        <MemoryRouter>
+          <NotFoundPage />
+        </MemoryRouter>,
+      )
     })
   }
 

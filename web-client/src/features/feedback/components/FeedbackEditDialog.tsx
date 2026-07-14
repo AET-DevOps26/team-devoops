@@ -1,8 +1,10 @@
 import { type FormEvent, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -10,20 +12,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PendingButton } from '@/components/ui/pending-button'
 import { Textarea } from '@/components/ui/textarea'
-import { serverErrorMessage } from '@/lib/server-error'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
+import { fieldError } from '@/lib/validation'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { useUpdateFeedback } from '../api/queries'
+import { parseFeedbackRating, validateFeedbackEditForm } from '../model/feedbackEditor'
 import {
   type FeedbackEditTarget,
   useFeedbackUiStore,
 } from '../model/feedbackUiStore'
-
-function validateRating(value: string): number | null {
-  if (value.trim() === '') return null
-
-  const rating = Number(value)
-  return Number.isInteger(rating) && rating >= 0 && rating <= 10 ? rating : null
-}
 
 export function FeedbackEditDialog() {
   const target = useFeedbackUiStore((state) => state.editTarget)
@@ -40,24 +39,23 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
   const closeEdit = useFeedbackUiStore((state) => state.closeEdit)
   const [feedback, setFeedback] = useState(target.feedback)
   const [rating, setRating] = useState(String(target.rating))
-  const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const updateFeedback = useUpdateFeedback()
+  const feedbackError = fieldError(fieldErrors, 'feedback')
+  const ratingError = fieldError(fieldErrors, 'rating')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
 
-    const parsedRating = validateRating(rating)
-
-    if (!feedback.trim()) {
-      setFormError('Feedback is required.')
-      return
-    }
-    if (parsedRating === null) {
-      setFormError('Rating must be an integer from 0 to 10.')
+    const validationErrors = validateFeedbackEditForm({ feedback, rating })
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
       return
     }
 
-    setFormError(null)
+    const parsedRating = parseFeedbackRating(rating)
+    if (parsedRating === null) return
 
     try {
       await updateFeedback.mutateAsync({
@@ -65,16 +63,20 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
         feedback: feedback.trim(),
         rating: parsedRating,
       })
+      toast.success('Feedback updated.')
       closeEdit()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
+      setFieldErrors(formMutationErrorFields(error, mutationFeedbackCopy.feedback.update))
     }
   }
 
   return (
-    <DialogContent>
+    <DialogContent dismissOnInteractOutside={false}>
       <DialogHeader>
         <DialogTitle>Edit feedback</DialogTitle>
+        <DialogDescription className="sr-only">
+          Update the feedback text and rating.
+        </DialogDescription>
       </DialogHeader>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -88,7 +90,7 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
         </div>
       </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <div className="space-y-1.5">
           <Label htmlFor="feedback-edit-body">Feedback</Label>
           <Textarea
@@ -97,9 +99,12 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
             onChange={(event) => setFeedback(event.target.value)}
             required
             disabled={updateFeedback.isPending}
-            aria-invalid={formError !== null && feedback.trim() === ''}
+            aria-invalid={feedbackError !== undefined}
             className="min-h-28"
           />
+          {feedbackError && (
+            <p className="text-caption text-destructive">{feedbackError}</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -115,15 +120,12 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
             onChange={(event) => setRating(event.target.value)}
             required
             disabled={updateFeedback.isPending}
-            aria-invalid={formError !== null && validateRating(rating) === null}
+            aria-invalid={ratingError !== undefined}
           />
+          {ratingError && (
+            <p className="text-caption text-destructive">{ratingError}</p>
+          )}
         </div>
-
-        {formError && (
-          <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {formError}
-          </p>
-        )}
 
         <DialogFooter>
           <Button
@@ -134,9 +136,13 @@ function FeedbackEditForm({ target }: { target: FeedbackEditTarget }) {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={updateFeedback.isPending}>
-            {updateFeedback.isPending ? 'Saving' : 'Save changes'}
-          </Button>
+          <PendingButton
+            type="submit"
+            isPending={updateFeedback.isPending}
+            pendingLabel="Saving…"
+          >
+            Save changes
+          </PendingButton>
         </DialogFooter>
       </form>
     </DialogContent>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { BookOpenText, Trash2 } from 'lucide-react'
+import { BookOpenText, Loader2, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -13,7 +14,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -23,7 +26,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { useHelperUiStore } from '../model/helperUiStore'
 import {
   useDeleteReport,
@@ -39,9 +44,11 @@ export function HelperPage() {
     rows,
     isLoading,
     isError,
+    error,
+    refetch,
     generate,
     isGenerating,
-    generateError,
+    isAwaitingReport,
     listKey,
   } = useReportViewModel()
 
@@ -51,19 +58,20 @@ export function HelperPage() {
   const detailView = useReportDetailView(openReportId)
   const deleteReport = useDeleteReport()
 
-  const [generated, setGenerated] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
-  const onGenerate = () => {
-    setGenerated(false)
-    generate()
-    // The result is async (the POST returns 202 with no body); confirm we kicked it off.
-    setGenerated(true)
+  const onGenerate = async () => {
+    try {
+      await generate()
+      toast.success('Report generation started.', {
+        description: 'It will appear below when it is ready.',
+      })
+    } catch (error) {
+      notifyMutationError(error, mutationFeedbackCopy.report.generate)
+    }
   }
 
   const requestDelete = (reportId: string) => {
-    setDeleteError(null)
     setDeleteTargetId(reportId)
   }
 
@@ -76,8 +84,7 @@ export function HelperPage() {
       if (reportId === openReportId) closeReport()
       setDeleteTargetId(null)
     } catch (deleteFailure) {
-      setDeleteError(serverErrorMessage(deleteFailure))
-      setDeleteTargetId(null)
+      notifyMutationError(deleteFailure, mutationFeedbackCopy.report.delete)
     }
   }
 
@@ -93,12 +100,6 @@ export function HelperPage() {
         }
       />
 
-      {deleteError && (
-        <p className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
-          {deleteError}
-        </p>
-      )}
-
       <Card className="max-w-content-narrow">
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -107,21 +108,31 @@ export function HelperPage() {
                 Generate a fresh report{scope === 'team' ? ` for ${subjectLabel}` : ''}. Reports are
                 produced in the background and appear in the list below once ready.
               </p>
-              {generated && !generateError && (
-                <p className="text-body-sm text-text-tertiary">
-                  Report generation started — refresh in a moment to see it.
-                </p>
-              )}
-              {generateError && (
-                <p className="text-body-sm text-destructive">{generateError.message}</p>
-              )}
             </div>
-            <Button onClick={onGenerate} disabled={isGenerating}>
-              {isGenerating ? 'Starting…' : 'Generate report'}
+            <Button onClick={onGenerate} disabled={isGenerating || isAwaitingReport}>
+              {isGenerating ? 'Starting…' : isAwaitingReport ? 'Generating…' : 'Generate report'}
             </Button>
           </div>
 
           <Separator />
+
+          {isAwaitingReport && (
+            <div
+              className="flex items-center gap-3 border border-primary/25 bg-primary/5 px-4 py-3"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+              <div className="min-w-0">
+                <p className="text-body-sm font-medium text-text-primary">
+                  Generating your report…
+                </p>
+                <p className="text-caption text-text-tertiary">
+                  This can take a moment. It will appear in the list below automatically.
+                </p>
+              </div>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="space-y-3">
@@ -130,9 +141,7 @@ export function HelperPage() {
               <Skeleton className="h-10 w-4/5" />
             </div>
           ) : isError ? (
-            <p className="text-body-sm text-destructive">
-              We couldn’t load your development reports. Please try again later.
-            </p>
+            <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} />
           ) : rows.length === 0 ? (
             <p className="text-body-sm text-text-tertiary">
               No reports yet — generate one to get started.
@@ -189,7 +198,11 @@ export function HelperPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteReport.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={deleteReport.isPending} onClick={confirmDelete}>
-              {deleteReport.isPending ? 'Deleting' : 'Delete'}
+              {deleteReport.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -203,7 +216,7 @@ function ReportDetailSheet({
 }: {
   detailView: ReturnType<typeof useReportDetailView>
 }) {
-  const { text, subject, dateLabel, isLoading, isError } = detailView
+  const { text, subject, dateLabel, isLoading, isError, error, refetch } = detailView
 
   if (isLoading) {
     return (
@@ -218,9 +231,9 @@ function ReportDetailSheet({
 
   if (isError) {
     return (
-      <p className="m-8 border bg-card px-4 py-3 text-body-sm text-destructive">
-        We couldn’t load this report. Please try again later.
-      </p>
+      <div className="m-8">
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} compact />
+      </div>
     )
   }
 

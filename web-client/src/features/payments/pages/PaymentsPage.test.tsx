@@ -15,6 +15,15 @@ const mutationMocks = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/auth', async () => {
   const { TEST_PERSONAS } = await import('@/testing/personas')
 
@@ -238,9 +247,7 @@ describe('PaymentsPage', () => {
         }),
       )
       expect(usePaymentsUiStore.getState().isCreateDialogOpen).toBe(false)
-      expect(usePaymentsUiStore.getState().mutationNotice).toBe(
-        'Transaction recorded for Marie Wolf.',
-      )
+      expect(toastMocks.success).toHaveBeenCalledWith('Transaction recorded for Marie Wolf.')
     })
 
     it('maps server field errors onto the form', async () => {
@@ -254,9 +261,9 @@ describe('PaymentsPage', () => {
       await fillField('payment-title', 'x')
       await submitDialogForm()
 
-      expect(document.body.textContent).toContain('Validation failed')
       expect(document.body.textContent).toContain('must not be blank')
       expect(usePaymentsUiStore.getState().isCreateDialogOpen).toBe(true)
+      expect(toastMocks.error).not.toHaveBeenCalled()
     })
 
     // Opens the member combobox popover and clicks the named option. Radix

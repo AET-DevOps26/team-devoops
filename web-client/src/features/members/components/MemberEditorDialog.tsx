@@ -1,4 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { DatePicker } from '@/components/ui/date-picker'
 import {
@@ -8,12 +9,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DialogFormSkeleton } from '@/components/ui/dialog-form-skeleton'
 import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
+import { PhoneInput } from '@/components/ui/phone-input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
-import { serverErrorFieldMessages, serverErrorMessage } from '@/lib/server-error'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
+import { serverErrorMessage } from '@/lib/server-error'
+import { fieldError } from '@/lib/validation'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import type { Member } from '@/types'
 import { useCreateMember, useMember, useUpdateMember } from '../api/queries'
 import {
@@ -22,8 +30,8 @@ import {
   buildMemberEditorInitialState,
   buildMemberUpdatePayload,
   type MemberEditorFormState,
-  validateMemberCreatorForm,
-  validateMemberEditorForm,
+  validateMemberCreatorFieldErrors,
+  validateMemberEditorFieldErrors,
 } from '../model/memberEditor'
 import { type MemberEditorTarget, useMembersUiStore } from '../model/membersUiStore'
 
@@ -49,12 +57,18 @@ function MemberEditorForm({ target }: { target: MemberEditorTarget }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {target.mode === 'create' ? 'Create a club member.' : 'Update this club member.'}
+          </DialogDescription>
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          {target.mode === 'create'
-            ? 'You are not allowed to create members.'
-            : 'You are not allowed to update this member.'}
-        </p>
+        <ErrorNotice
+          message={
+            target.mode === 'create'
+              ? 'You are not allowed to create members.'
+              : 'You are not allowed to update this member.'
+          }
+          compact
+        />
       </DialogContent>
     )
   }
@@ -65,10 +79,13 @@ function MemberEditorForm({ target }: { target: MemberEditorTarget }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
+            <DialogDescription className="sr-only">Update this club member.</DialogDescription>
           </DialogHeader>
-          <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {serverErrorMessage(memberQuery.error)}
-          </p>
+          <ErrorNotice
+            message={serverErrorMessage(memberQuery.error)}
+            onRetry={() => void memberQuery.refetch()}
+            compact
+          />
         </DialogContent>
       )
     }
@@ -78,10 +95,9 @@ function MemberEditorForm({ target }: { target: MemberEditorTarget }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
+            <DialogDescription className="sr-only">Update this club member.</DialogDescription>
           </DialogHeader>
-          <p className="border bg-card px-4 py-3 text-body-sm text-text-secondary">
-            Loading member form.
-          </p>
+          <DialogFormSkeleton />
         </DialogContent>
       )
     }
@@ -100,7 +116,6 @@ function MemberEditorEditable({
   member: Member | null
 }) {
   const closeEditor = useMembersUiStore((state) => state.closeEditor)
-  const setMutationNotice = useMembersUiStore((state) => state.setMutationNotice)
   const createMember = useCreateMember()
   const updateMember = useUpdateMember()
   const [form, setForm] = useState<MemberEditorFormState>(() =>
@@ -109,7 +124,6 @@ function MemberEditorEditable({
       : buildMemberCreatorInitialState(),
   )
   const [stepIndex, setStepIndex] = useState(0)
-  const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const isPending = createMember.isPending || updateMember.isPending
   const title = target.mode === 'create' ? 'New Member' : 'Edit Member'
@@ -123,22 +137,35 @@ function MemberEditorEditable({
   )
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === steps.length - 1
+  const currentStepId = steps[stepIndex].id
+
+  const firstNameError = fieldError(fieldErrors, 'firstName', 'first_name')
+  const lastNameError = fieldError(fieldErrors, 'lastName', 'last_name')
+  const emailError = fieldError(fieldErrors, 'email')
+  const passwordError = fieldError(fieldErrors, 'password')
+  const birthdayError = fieldError(fieldErrors, 'birthday')
+  const phoneNumberError = fieldError(fieldErrors, 'phoneNumber', 'phone_number')
+  const addressError = fieldError(fieldErrors, 'address')
+  const informationError = fieldError(fieldErrors, 'information')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
-    if (steps[stepIndex].id === 'identity') {
-      const validationError =
-        target.mode === 'create' ? validateMemberCreatorForm(form) : validateMemberEditorForm(form)
-      if (validationError) {
-        setFormError(validationError)
-        setFieldErrors(null)
-        return
-      }
-    }
-
-    setFormError(null)
     setFieldErrors(null)
+
+    const validateForm =
+      target.mode === 'create' ? validateMemberCreatorFieldErrors : validateMemberEditorFieldErrors
+    const stepFields =
+      currentStepId === 'identity'
+        ? (['firstName', 'lastName', 'email', 'password'] as const)
+        : currentStepId === 'contact'
+          ? (['birthday', 'phoneNumber'] as const)
+          : undefined
+    const validationErrors = isLastStep ? validateForm(form) : validateForm(form, stepFields)
+
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
+      return
+    }
 
     if (!isLastStep) {
       setStepIndex((current) => current + 1)
@@ -148,7 +175,7 @@ function MemberEditorEditable({
     try {
       if (target.mode === 'create') {
         await createMember.mutateAsync(buildMemberCreatePayload(form))
-        setMutationNotice('Member created.')
+        toast.success('Member created.')
         closeEditor()
         return
       }
@@ -162,26 +189,36 @@ function MemberEditorEditable({
       }
 
       await updateMember.mutateAsync({ id: member.id, ...payload })
-      setMutationNotice('Member updated.')
+      toast.success('Member updated.')
       closeEditor()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
-      setFieldErrors(serverErrorFieldMessages(error))
+      setFieldErrors(
+        formMutationErrorFields(
+          error,
+          target.mode === 'create' ? mutationFeedbackCopy.member.create : mutationFeedbackCopy.member.update,
+        ),
+      )
     }
   }
 
   return (
-    <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+    <DialogContent
+      className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl"
+      dismissOnInteractOutside={false}
+    >
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         {target.mode === 'edit' && member && (
           <DialogDescription>{member.email}</DialogDescription>
         )}
+        {target.mode === 'create' && (
+          <DialogDescription className="sr-only">Create a club member.</DialogDescription>
+        )}
       </DialogHeader>
 
       <DialogStepperNav steps={steps} currentStep={stepIndex} />
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {steps[stepIndex].id === 'identity' && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -192,10 +229,10 @@ function MemberEditorEditable({
                 onChange={(event) => setForm({ ...form, firstName: event.target.value })}
                 required
                 disabled={isPending}
-                aria-invalid={fieldErrors?.first_name !== undefined}
+                aria-invalid={firstNameError !== undefined}
               />
-              {fieldErrors?.first_name && (
-                <p className="text-caption text-destructive">{fieldErrors.first_name}</p>
+              {firstNameError && (
+                <p className="text-caption text-destructive">{firstNameError}</p>
               )}
             </div>
 
@@ -207,10 +244,10 @@ function MemberEditorEditable({
                 onChange={(event) => setForm({ ...form, lastName: event.target.value })}
                 required
                 disabled={isPending}
-                aria-invalid={fieldErrors?.last_name !== undefined}
+                aria-invalid={lastNameError !== undefined}
               />
-              {fieldErrors?.last_name && (
-                <p className="text-caption text-destructive">{fieldErrors.last_name}</p>
+              {lastNameError && (
+                <p className="text-caption text-destructive">{lastNameError}</p>
               )}
             </div>
 
@@ -223,28 +260,27 @@ function MemberEditorEditable({
                 onChange={(event) => setForm({ ...form, email: event.target.value })}
                 required
                 disabled={isPending}
-                aria-invalid={fieldErrors?.email !== undefined}
+                aria-invalid={emailError !== undefined}
               />
-              {fieldErrors?.email && (
-                <p className="text-caption text-destructive">{fieldErrors.email}</p>
+              {emailError && (
+                <p className="text-caption text-destructive">{emailError}</p>
               )}
             </div>
 
             {target.mode === 'create' && (
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="member-password">Initial password</Label>
-                <Input
+                <PasswordInput
                   id="member-password"
-                  type="password"
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(event) => setForm({ ...form, password: event.target.value })}
                   required
                   disabled={isPending}
-                  aria-invalid={fieldErrors?.password !== undefined}
+                  aria-invalid={passwordError !== undefined}
                 />
-                {fieldErrors?.password && (
-                  <p className="text-caption text-destructive">{fieldErrors.password}</p>
+                {passwordError && (
+                  <p className="text-caption text-destructive">{passwordError}</p>
                 )}
               </div>
             )}
@@ -261,24 +297,26 @@ function MemberEditorEditable({
                 value={form.birthday}
                 onChange={(value) => setForm({ ...form, birthday: value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.birthday !== undefined}
+                endMonth={new Date()}
+                aria-invalid={birthdayError !== undefined}
               />
-              {fieldErrors?.birthday && (
-                <p className="text-caption text-destructive">{fieldErrors.birthday}</p>
+              {birthdayError && (
+                <p className="text-caption text-destructive">{birthdayError}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="member-phone">Phone number</Label>
-              <Input
+              <PhoneInput
                 id="member-phone"
+                aria-label="Phone number"
                 value={form.phoneNumber}
-                onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })}
+                onChange={(value) => setForm({ ...form, phoneNumber: value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.phone_number !== undefined}
+                aria-invalid={phoneNumberError !== undefined}
               />
-              {fieldErrors?.phone_number && (
-                <p className="text-caption text-destructive">{fieldErrors.phone_number}</p>
+              {phoneNumberError && (
+                <p className="text-caption text-destructive">{phoneNumberError}</p>
               )}
             </div>
 
@@ -289,10 +327,10 @@ function MemberEditorEditable({
                 value={form.address}
                 onChange={(event) => setForm({ ...form, address: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.address !== undefined}
+                aria-invalid={addressError !== undefined}
               />
-              {fieldErrors?.address && (
-                <p className="text-caption text-destructive">{fieldErrors.address}</p>
+              {addressError && (
+                <p className="text-caption text-destructive">{addressError}</p>
               )}
             </div>
           </div>
@@ -306,15 +344,13 @@ function MemberEditorEditable({
               value={form.information}
               onChange={(event) => setForm({ ...form, information: event.target.value })}
               disabled={isPending}
+              aria-invalid={informationError !== undefined}
               className="min-h-24"
             />
+            {informationError && (
+              <p className="text-caption text-destructive">{informationError}</p>
+            )}
           </div>
-        )}
-
-        {formError && (
-          <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {formError}
-          </p>
         )}
 
         <DialogStepperFooter
@@ -324,7 +360,6 @@ function MemberEditorEditable({
           submitLabel={target.mode === 'create' ? 'Create Member' : 'Save Member'}
           onCancel={closeEditor}
           onBack={() => {
-            setFormError(null)
             setStepIndex((current) => Math.max(current - 1, 0))
           }}
         />

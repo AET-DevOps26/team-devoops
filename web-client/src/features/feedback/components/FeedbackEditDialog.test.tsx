@@ -6,6 +6,15 @@ const mutationMocks = vi.hoisted(() => ({
   updateFeedback: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/feedback/api/queries', () => ({
   useUpdateFeedback: () => ({ mutateAsync: mutationMocks.updateFeedback, isPending: false }),
 }))
@@ -114,6 +123,7 @@ describe('FeedbackEditDialog', () => {
       rating: 9,
     })
     expect(useFeedbackUiStore.getState().editTarget).toBeNull()
+    expect(toastMocks.success).toHaveBeenCalledWith('Feedback updated.')
   })
 
   it('surfaces a server 403 and stays open', async () => {
@@ -124,7 +134,9 @@ describe('FeedbackEditDialog', () => {
     await renderOpen()
     await submitForm()
 
-    expect(document.body.textContent).toContain('You are not allowed to update this feedback')
+    expect(toastMocks.error).toHaveBeenCalledWith('Feedback not updated', {
+      description: 'You are not allowed to update this feedback',
+    })
     expect(useFeedbackUiStore.getState().editTarget).not.toBeNull()
   })
 })

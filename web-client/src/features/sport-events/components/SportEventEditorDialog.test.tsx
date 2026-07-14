@@ -13,6 +13,15 @@ const mutationMocks = vi.hoisted(() => ({
   updateEvent: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/auth', async () => {
   const { TEST_PERSONAS } = await import('@/testing/personas')
 
@@ -155,7 +164,7 @@ describe('SportEventEditorDialog', () => {
       attendees: [],
     })
     expect(useEventsUiStore.getState().editorTarget).toBeNull()
-    expect(useEventsUiStore.getState().mutationNotice).toBe('Event created.')
+    expect(toastMocks.success).toHaveBeenCalledWith('Event created.')
   })
 
   it('pre-links the coach persona teams and roster on create', async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ChevronRight, Eye, MessageSquarePlus, Pencil, Trash2, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -22,7 +23,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
@@ -39,14 +42,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/features/auth'
 import { formatDate, formatDateShort } from '@/lib/format'
+import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { useDeleteFeedback } from '../api/queries'
-import { FeedbackComposeDialog, FeedbackComposeNotice } from '../components/FeedbackComposeDialog'
+import { FeedbackComposeDialog } from '../components/FeedbackComposeDialog'
 import { FeedbackEditDialog } from '../components/FeedbackEditDialog'
 import { type FeedbackEditTarget, useFeedbackUiStore } from '../model/feedbackUiStore'
 import { canManageFeedback, useFeedbackDetailView, useFeedbackViewModel } from '../model/useFeedbackViewModel'
@@ -58,15 +65,18 @@ const ratingOptions = [
   { value: 'low', label: '0-3' },
 ] as const
 
+type PickerMode = 'member' | 'event'
+
 export function FeedbackPage() {
   const { user } = useAuth()
   const isTrainer = user.role === 'trainer'
   const isAdmin = user.role === 'admin'
-  const { view, isLoading, error } = useFeedbackViewModel()
+  const { view, isLoading, error, refetch } = useFeedbackViewModel()
   const deleteFeedback = useDeleteFeedback()
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerMode, setPickerMode] = useState<PickerMode>('member')
+  const [pickerMemberSearch, setPickerMemberSearch] = useState('')
   const [pickerSport, setPickerSport] = useState('')
   const [pickerTeamId, setPickerTeamId] = useState('')
   const [pickerEventId, setPickerEventId] = useState('')
@@ -92,7 +102,6 @@ export function FeedbackPage() {
   const canEditFeedback = canDeleteFeedback
 
   const requestDeleteFeedback = (id: string, label: string) => {
-    setDeleteError(null)
     setDeleteTarget({ id, label })
   }
 
@@ -102,21 +111,24 @@ export function FeedbackPage() {
 
     try {
       await deleteFeedback.mutateAsync(id)
+      toast.success('Feedback deleted.')
       if (openFeedbackId === id) closeFeedback()
       setDeleteTarget(null)
-    } catch (deleteError) {
-      setDeleteError(serverErrorMessage(deleteError))
-      setDeleteTarget(null)
+    } catch (deleteFailure) {
+      notifyMutationError(deleteFailure, mutationFeedbackCopy.feedback.delete)
     }
   }
 
   const openFeedbackPicker = () => {
+    setPickerMode('member')
+    setPickerMemberSearch('')
     setPickerSport('')
     setPickerTeamId('')
     setPickerEventId('')
     setPickerOpen(true)
   }
 
+  const canCompose = view.composableMembers.length > 0
   const pickerCoverage = isTrainer || isAdmin ? view.coverage : null
   const pickerSports = pickerCoverage?.sports ?? []
   const pickerTeams = pickerSports.find((sport) => sport.name === pickerSport)?.teams ?? []
@@ -129,6 +141,120 @@ export function FeedbackPage() {
     setPickerOpen(false)
     openCompose({ id: trainee.id, name: trainee.name, eventId: pickerEvent.id })
   }
+
+  // Free path (matches the Members page): pick any member you're allowed to compose for,
+  // then choose the event inside the compose dialog. Always available to admins/trainers,
+  // so the button is never gated on the narrower "missing feedback" coverage.
+  const composeForMember = (member: { id: string; name: string }) => {
+    setPickerOpen(false)
+    openCompose({ id: member.id, name: member.name })
+  }
+
+  const memberMatches = view.composableMembers.filter((member) =>
+    member.name.toLocaleLowerCase().includes(pickerMemberSearch.trim().toLocaleLowerCase()),
+  )
+
+  const hasCoverageTree = pickerCoverage !== null && pickerSports.length > 0
+
+  const memberPicker = (
+    <div className="space-y-3">
+      <Input
+        value={pickerMemberSearch}
+        onChange={(event) => setPickerMemberSearch(event.target.value)}
+        placeholder="Search members"
+        aria-label="Search members"
+      />
+      {memberMatches.length === 0 ? (
+        <p className="border bg-card px-4 py-3 text-body-sm text-text-secondary">
+          No members match your search.
+        </p>
+      ) : (
+        <ul className="roost-scroll max-h-80 divide-y overflow-y-auto border bg-card">
+          {memberMatches.map((member) => (
+            <li key={member.id} className="flex items-center justify-between gap-3 px-3 py-2">
+              <p className="text-body-sm font-medium text-text-primary">{member.name}</p>
+              <RowActions>
+                <RowActionButton
+                  icon={MessageSquarePlus}
+                  label={`Give feedback for ${member.name}`}
+                  onClick={() => composeForMember(member)}
+                />
+              </RowActions>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+
+  const eventPicker = (
+    <div className="space-y-4">
+      <PickerBreadcrumb
+        sport={pickerSport}
+        teamName={pickerTeamName}
+        eventName={pickerEvent?.name}
+        onResetToSports={() => {
+          setPickerSport('')
+          setPickerTeamId('')
+          setPickerEventId('')
+        }}
+        onResetToTeams={() => {
+          setPickerTeamId('')
+          setPickerEventId('')
+        }}
+        onResetToEvents={() => setPickerEventId('')}
+      />
+
+      {!pickerSport ? (
+        <PickerList
+          items={pickerSports.map((sport) => ({
+            key: sport.name,
+            label: sport.name,
+            meta: `${sport.teams.length} team(s)`,
+          }))}
+          onSelect={(key) => setPickerSport(key)}
+        />
+      ) : !pickerTeamId ? (
+        <PickerList
+          items={pickerTeams.map((team) => ({
+            key: team.id,
+            label: team.name,
+            meta: isAdmin
+              ? `${team.events.length} event(s)`
+              : `${team.events.length} event(s) need feedback`,
+          }))}
+          onSelect={(key) => setPickerTeamId(key)}
+        />
+      ) : !pickerEvent ? (
+        <PickerList
+          items={pickerEvents.map((event) => ({
+            key: event.id,
+            label: event.name,
+            meta: event.formattedWhen,
+            badge: isAdmin
+              ? `${event.missing.length} attendee(s)`
+              : `${event.missing.length} missing`,
+          }))}
+          onSelect={(key) => setPickerEventId(key)}
+        />
+      ) : (
+        <ul className="divide-y border bg-card">
+          {pickerEvent.missing.map((trainee) => (
+            <li key={trainee.id} className="flex items-center justify-between gap-3 px-3 py-2">
+              <p className="text-body-sm font-medium text-text-primary">{trainee.name}</p>
+              <RowActions>
+                <RowActionButton
+                  icon={MessageSquarePlus}
+                  label={`Give feedback for ${trainee.name}`}
+                  onClick={() => composeForMissing(trainee)}
+                />
+              </RowActions>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6">
@@ -143,16 +269,14 @@ export function FeedbackPage() {
               : 'Feedback coaches have given you, by event.'
         }
         action={
-          pickerCoverage ? (
-            <Button onClick={openFeedbackPicker} disabled={pickerCoverage.totalCount === 0}>
+          canCompose ? (
+            <Button onClick={openFeedbackPicker}>
               <UserPlus />
               New feedback
             </Button>
           ) : undefined
         }
       />
-
-      <FeedbackComposeNotice />
 
       <div
         className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${isTrainer && view.coverage ? 'lg:grid-cols-4' : ''}`}
@@ -188,18 +312,10 @@ export function FeedbackPage() {
         )}
       </div>
 
-      {deleteError && (
-        <p className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
-          {deleteError}
-        </p>
-      )}
-
       {isLoading ? (
         <FeedbackTableSkeleton />
       ) : error ? (
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {error.message}
-        </p>
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} />
       ) : view.totalRows === 0 ? (
         <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
           No feedback is listed yet.
@@ -386,97 +502,41 @@ export function FeedbackPage() {
               disabled={deleteFeedback.isPending}
               onClick={confirmDeleteFeedback}
             >
-              {deleteFeedback.isPending ? 'Deleting' : 'Delete'}
+              {deleteFeedback.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {pickerCoverage && (
+      {canCompose && (
         <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>New feedback</DialogTitle>
             </DialogHeader>
 
-            {pickerSports.length === 0 ? (
-              <p className="text-body-sm text-text-secondary">
-                {isAdmin
-                  ? 'No event attendees are available for feedback.'
-                  : 'All your trainees already have feedback for every event.'}
-              </p>
-            ) : (
-              <div className="space-y-4">
-                <PickerBreadcrumb
-                  sport={pickerSport}
-                  teamName={pickerTeamName}
-                  eventName={pickerEvent?.name}
-                  onResetToSports={() => {
-                    setPickerSport('')
-                    setPickerTeamId('')
-                    setPickerEventId('')
-                  }}
-                  onResetToTeams={() => {
-                    setPickerTeamId('')
-                    setPickerEventId('')
-                  }}
-                  onResetToEvents={() => setPickerEventId('')}
-                />
+            {/* Two ways in: pick any member you can give feedback to (unconstrained, matches the
+                Members page), or drill down by event to see who is still missing feedback. The
+                event tab only exists when there is a coverage tree to drill into. */}
+            {hasCoverageTree ? (
+              <Tabs
+                value={pickerMode}
+                onValueChange={(value) => setPickerMode(value as PickerMode)}
+              >
+                <TabsList>
+                  <TabsTrigger value="member">By member</TabsTrigger>
+                  <TabsTrigger value="event">By event</TabsTrigger>
+                </TabsList>
 
-                {!pickerSport ? (
-                  <PickerList
-                    items={pickerSports.map((sport) => ({
-                      key: sport.name,
-                      label: sport.name,
-                      meta: `${sport.teams.length} team(s)`,
-                    }))}
-                    onSelect={(key) => setPickerSport(key)}
-                  />
-                ) : !pickerTeamId ? (
-                  <PickerList
-                    items={pickerTeams.map((team) => ({
-                      key: team.id,
-                      label: team.name,
-                      meta: isAdmin
-                        ? `${team.events.length} event(s)`
-                        : `${team.events.length} event(s) need feedback`,
-                    }))}
-                    onSelect={(key) => setPickerTeamId(key)}
-                  />
-                ) : !pickerEvent ? (
-                  <PickerList
-                    items={pickerEvents.map((event) => ({
-                      key: event.id,
-                      label: event.name,
-                      meta: event.formattedWhen,
-                      badge: isAdmin
-                        ? `${event.missing.length} attendee(s)`
-                        : `${event.missing.length} missing`,
-                    }))}
-                    onSelect={(key) => setPickerEventId(key)}
-                  />
-                ) : (
-                  <ul className="divide-y border bg-card">
-                    {pickerEvent.missing.map((trainee) => (
-                      <li
-                        key={trainee.id}
-                        className="flex items-center justify-between gap-3 px-3 py-2"
-                      >
-                        <p className="text-body-sm font-medium text-text-primary">
-                          {trainee.name}
-                        </p>
-                        <RowActions>
-                          <RowActionButton
-                            icon={MessageSquarePlus}
-                            label={`Give feedback for ${trainee.name}`}
-                            onClick={() => composeForMissing(trainee)}
-                          />
-                        </RowActions>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                <TabsContent value="member">{memberPicker}</TabsContent>
+                <TabsContent value="event">{eventPicker}</TabsContent>
+              </Tabs>
+            ) : (
+              memberPicker
             )}
 
             <DialogFooter>
@@ -509,7 +569,7 @@ function FeedbackDetailSheet({
   onDeleteFeedback: (id: string, label: string) => void
   onEditFeedback: (target: FeedbackEditTarget) => void
 }) {
-  const { detail, eventName, memberName, creatorName, isLoading, error } = detailView
+  const { detail, eventName, memberName, creatorName, isLoading, error, refetch } = detailView
 
   if (isLoading) {
     return (
@@ -524,9 +584,9 @@ function FeedbackDetailSheet({
 
   if (error) {
     return (
-      <p className="m-8 border bg-card px-4 py-3 text-body-sm text-destructive">
-        {error.message}
-      </p>
+      <div className="m-8">
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} compact />
+      </div>
     )
   }
 

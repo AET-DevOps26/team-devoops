@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { CalendarPlus, Eye, Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { DataTable, TCell, THead, TRow } from '@/components/ui/data-table'
 import { DateRangeFilter } from '@/components/ui/date-range-filter'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import {
   Select,
@@ -33,12 +35,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
 import { TableToolbar } from '@/components/ui/table-toolbar'
 import { useAuth } from '@/features/auth'
 import { formatDateShort, formatTime } from '@/lib/format'
+import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { creatorName, memberRefName } from '@/types'
 import { useDeleteSportEvent } from '../api/queries'
 import { SportEventEditorDialog } from '../components/SportEventEditorDialog'
@@ -65,7 +70,7 @@ const statusTone: Record<EventStatus, React.ComponentProps<typeof Badge>['tone']
 
 export function SportEventsPage() {
   const { user } = useAuth()
-  const { view, isLoading, error } = useEventsViewModel()
+  const { view, isLoading, error, refetch } = useEventsViewModel()
   const filters = useEventsUiStore((state) => state.filters)
   const setSearch = useEventsUiStore((state) => state.setSearch)
   const setStatus = useEventsUiStore((state) => state.setStatus)
@@ -81,11 +86,8 @@ export function SportEventsPage() {
   const deleteTargetId = useEventsUiStore((state) => state.deleteTargetId)
   const openDeleteConfirm = useEventsUiStore((state) => state.openDeleteConfirm)
   const closeDeleteConfirm = useEventsUiStore((state) => state.closeDeleteConfirm)
-  const mutationNotice = useEventsUiStore((state) => state.mutationNotice)
-  const setMutationNotice = useEventsUiStore((state) => state.setMutationNotice)
   const detailView = useEventDetailView(openEventId)
   const deleteEvent = useDeleteSportEvent()
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const canCreateEvent = user.role === 'trainer' || user.role === 'director' || user.role === 'admin'
   const showAttendanceStatusFilters = user.role === 'member'
   const deleteTargetName =
@@ -96,15 +98,13 @@ export function SportEventsPage() {
     const targetId = deleteTargetId
     if (!targetId) return
 
-    setDeleteError(null)
-
     try {
       await deleteEvent.mutateAsync(targetId)
-      setMutationNotice('Event deleted.')
+      toast.success('Event deleted.')
       closeDeleteConfirm()
       if (openEventId === targetId) closeEvent()
     } catch (deleteFailure) {
-      setDeleteError(serverErrorMessage(deleteFailure))
+      notifyMutationError(deleteFailure, mutationFeedbackCopy.event.delete)
     }
   }
 
@@ -135,15 +135,6 @@ export function SportEventsPage() {
         }
       />
 
-      {mutationNotice && (
-        <p
-          role="status"
-          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-        >
-          {mutationNotice}
-        </p>
-      )}
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Upcoming" value={String(view.stats.upcoming)} meta="Scheduled ahead" />
         <StatCard label="This Week" value={String(view.stats.thisWeek)} meta="Next 7 days" />
@@ -153,9 +144,7 @@ export function SportEventsPage() {
       {isLoading ? (
         <EventsTableSkeleton />
       ) : error ? (
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {error.message}
-        </p>
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} />
       ) : view.totalRows === 0 ? (
         <p className="border bg-card px-5 py-4 text-body-sm text-text-secondary">
           No events are listed yet.
@@ -296,10 +285,7 @@ export function SportEventsPage() {
       <AlertDialog
         open={deleteTargetId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setDeleteError(null)
-            closeDeleteConfirm()
-          }
+          if (!open) closeDeleteConfirm()
         }}
       >
         <AlertDialogContent>
@@ -309,15 +295,14 @@ export function SportEventsPage() {
               Delete {deleteTargetName ?? 'this event'} permanently? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {deleteError}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteEvent.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={deleteEvent.isPending} onClick={confirmDeleteEvent}>
-              {deleteEvent.isPending ? 'Deleting' : 'Delete'}
+              {deleteEvent.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -329,7 +314,7 @@ export function SportEventsPage() {
 }
 
 function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEventDetailView> }) {
-  const { detail, isLoading, error, missed, sportNames } = detailView
+  const { detail, isLoading, error, missed, sportNames, refetch } = detailView
   const { user } = useAuth()
   const openEdit = useEventsUiStore((state) => state.openEdit)
   const openDeleteConfirm = useEventsUiStore((state) => state.openDeleteConfirm)
@@ -347,9 +332,9 @@ function EventDetailSheet({ detailView }: { detailView: ReturnType<typeof useEve
 
   if (error) {
     return (
-      <p className="m-8 border bg-card px-4 py-3 text-body-sm text-destructive">
-        {error.message}
-      </p>
+      <div className="m-8">
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} compact />
+      </div>
     )
   }
 

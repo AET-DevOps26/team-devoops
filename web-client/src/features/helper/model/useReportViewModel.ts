@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAuth } from '@/features/auth'
 import { useTeamsList } from '@/features/organization/api/queries'
@@ -38,6 +38,14 @@ export function useReportViewModel() {
 
   const scope: ReportScope = isTrainer ? 'team' : 'member'
 
+  // Generation is fire-and-forget (POST 202, no body) and the service has no status endpoint —
+  // a report only exists once it's fully written. So after firing we poll the list and treat the
+  // arrival of a newly-created report as "done". `awaitCount` is the report count at fire time;
+  // `isAwaitingReport` is derived (no setState-in-effect): we're still waiting until the list
+  // grows past that count, or until the safety timeout nulls `awaitCount`.
+  const [awaitCount, setAwaitCount] = useState<number | null>(null)
+  const awaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const memberReports = useMemberReports(user.id, scope === 'member')
   const teamReports = useTeamReports(team?.id ?? '', scope === 'team')
 
@@ -47,9 +55,46 @@ export function useReportViewModel() {
       ? helperKeys.teamReports(team?.id ?? '')
       : helperKeys.memberReports(user.id)
 
+  const reportCount = query.data?.length ?? 0
+  const isAwaitingReport = awaitCount !== null && reportCount <= awaitCount
+
+  // Poll every 4s only while awaiting a fresh report; otherwise no background polling.
+  const refetch = query.refetch
+  useEffect(() => {
+    if (!isAwaitingReport) return
+    const id = setInterval(() => void refetch(), 4000)
+    return () => clearInterval(id)
+  }, [isAwaitingReport, refetch])
+
+  // Clear the safety timeout on unmount so it can't fire into an unmounted component.
+  useEffect(() => () => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+  }, [])
+
   const generateMember = useGenerateMemberReport(user.id)
   const generateTeam = useGenerateTeamReport(team?.id ?? '')
-  const generate = scope === 'team' ? generateTeam : generateMember
+  const generateMutation = scope === 'team' ? generateTeam : generateMember
+
+  const stopAwaiting = () => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+    awaitTimer.current = null
+    setAwaitCount(null)
+  }
+
+  const generate = async () => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+    setAwaitCount(reportCount)
+    // Give up waiting after 2 minutes so a generation that never lands doesn't spin forever.
+    awaitTimer.current = setTimeout(() => setAwaitCount(null), 120_000)
+    // The POST itself can fail (or time out). Without this the page would keep claiming
+    // "Generating…" for the full 2 minutes while also showing the error.
+    try {
+      await generateMutation.mutateAsync()
+    } catch (error) {
+      stopAwaiting()
+      throw error
+    }
+  }
 
   const rows = useMemo<ReportRow[]>(() => {
     const data = query.data ?? []
@@ -76,9 +121,13 @@ export function useReportViewModel() {
     rows,
     isLoading: (isTrainer && teamsQuery.isLoading) || query.isLoading,
     isError: query.isError,
-    generate: () => generate.mutate(),
-    isGenerating: generate.isPending,
-    generateError: generate.error,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    generate,
+    // `isGenerating` covers the POST itself; `isAwaitingReport` covers the longer window where
+    // the background job is still producing the report we polled for.
+    isGenerating: generateMutation.isPending,
+    isAwaitingReport,
     listKey,
   }
 }
@@ -89,6 +138,8 @@ export interface ReportDetailView {
   dateLabel: string
   isLoading: boolean
   isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 export function useReportDetailView(reportId: string | null): ReportDetailView {
@@ -109,6 +160,8 @@ export function useReportDetailView(reportId: string | null): ReportDetailView {
     dateLabel: report ? formatDate(report.created_at) : '',
     isLoading: reportQuery.isLoading,
     isError: reportQuery.isError,
+    error: reportQuery.error,
+    refetch: () => void reportQuery.refetch(),
   }
 }
 

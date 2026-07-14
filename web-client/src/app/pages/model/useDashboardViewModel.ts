@@ -130,6 +130,7 @@ export interface DashboardView {
 export interface DashboardSectionState {
   isLoading: boolean
   error: Error | null
+  refetch: () => void
 }
 
 export interface DashboardViewModel {
@@ -143,6 +144,11 @@ export interface DashboardViewModel {
     adminCounts?: DashboardSectionState
     adminOrganization?: DashboardSectionState
   }
+  // Set only when the root dashboard call itself failed (not a dependent query like
+  // events/sports/teams) — every section state above traces back to this same failure,
+  // so the page renders one error instead of one per section.
+  rootError: Error | null
+  rootRefetch: () => void
 }
 
 // "Recent" = latest N by created_at, no time window.
@@ -214,6 +220,14 @@ function buildFeedbackSection(feedback: FeedbackSummary[]): DashboardFeedbackSec
     total: feedback.length,
     items,
   }
+}
+
+function hasEventsContent(events: DashboardEventsSection): boolean {
+  return Boolean(events.nextEvent) || events.upcomingCount > 0 || events.items.length > 0
+}
+
+function hasFeedbackContent(feedback: DashboardFeedbackSection): boolean {
+  return feedback.total > 0 || feedback.items.length > 0
 }
 
 export function buildDirectorSportSection(
@@ -333,6 +347,10 @@ export function useDashboardViewModel(): DashboardViewModel {
   const shouldLoadOrganizationInsights = data ? data.role === 'admin' : user.role === 'admin'
   const sportsQuery = useSportsList(shouldLoadOrganizationInsights)
   const teamsQuery = useTeamsList(shouldLoadOrganizationInsights)
+  const dashboardRefetch = dashboardQuery.refetch
+  const eventsRefetch = eventsQuery.refetch
+  const sportsRefetch = sportsQuery.refetch
+  const teamsRefetch = teamsQuery.refetch
 
   const role = user.role
 
@@ -345,6 +363,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     const state: DashboardSectionState = {
       isLoading: dashboardQuery.isLoading,
       error: dashboardQuery.error,
+      refetch: () => void dashboardRefetch(),
     }
 
     fillSections(view, states, data, state, {
@@ -352,26 +371,44 @@ export function useDashboardViewModel(): DashboardViewModel {
       eventsState: {
         isLoading: dashboardQuery.isLoading || eventsQuery.isLoading,
         error: dashboardQuery.error ?? eventsQuery.error,
+        refetch: () => {
+          void dashboardRefetch()
+          void eventsRefetch()
+        },
       },
       sports: sportsQuery.data ?? [],
       teams: teamsQuery.data ?? [],
       organizationState: {
         isLoading: dashboardQuery.isLoading || sportsQuery.isLoading || teamsQuery.isLoading,
         error: dashboardQuery.error ?? sportsQuery.error ?? teamsQuery.error,
+        refetch: () => {
+          void dashboardRefetch()
+          void sportsRefetch()
+          void teamsRefetch()
+        },
       },
     })
 
-    return { view, states }
+    return {
+      view,
+      states,
+      rootError: dashboardQuery.error,
+      rootRefetch: () => void dashboardRefetch(),
+    }
   }, [
     data,
+    dashboardRefetch,
     dashboardQuery.error,
     dashboardQuery.isLoading,
+    eventsRefetch,
     eventsQuery.data,
     eventsQuery.error,
     eventsQuery.isLoading,
+    sportsRefetch,
     sportsQuery.data,
     sportsQuery.error,
     sportsQuery.isLoading,
+    teamsRefetch,
     teamsQuery.data,
     teamsQuery.error,
     teamsQuery.isLoading,
@@ -416,33 +453,56 @@ function fillSections(
   }
 
   switch (data.role) {
-    case 'trainee':
+    case 'trainee': {
+      const events = buildEventsSection(data.upcoming_events, data.next_event, org.events)
+      const feedback = buildFeedbackSection(data.recent_feedback)
+
+      // Always shown: a zero balance is the "settled up" state (status: 'clear'), not an
+      // empty section, so it must not be gated on the amount being non-zero.
       view.myBalance = buildBalanceSection(data.balance_cents)
-      view.myEvents = buildEventsSection(data.upcoming_events, data.next_event, org.events)
-      view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      if (hasEventsContent(events)) {
+        view.myEvents = events
+      }
+      if (hasFeedbackContent(feedback)) {
+        view.myFeedback = feedback
+      }
       states.myBalance = state
       states.myEvents = org.eventsState
       states.myFeedback = state
       break
+    }
 
-    case 'trainer':
+    case 'trainer': {
+      const events = buildEventsSection(data.upcoming_events, null, org.events)
+      const feedback = buildFeedbackSection(data.recent_feedback)
+
       view.myTeam = {
         teamName: data.team.name,
         totalMembers: data.total_members,
       }
-      view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
-      view.myFeedback = buildFeedbackSection(data.recent_feedback)
+      if (hasEventsContent(events)) {
+        view.myEvents = events
+      }
+      if (hasFeedbackContent(feedback)) {
+        view.myFeedback = feedback
+      }
       states.myTeam = state
       states.myEvents = org.eventsState
       states.myFeedback = state
       break
+    }
 
-    case 'director':
+    case 'director': {
+      const events = buildEventsSection(data.upcoming_events, null, org.events)
+
       view.mySport = buildDirectorSportSection(data)
-      view.myEvents = buildEventsSection(data.upcoming_events, null, org.events)
+      if (hasEventsContent(events)) {
+        view.myEvents = events
+      }
       states.mySport = state
       states.myEvents = org.eventsState
       break
+    }
 
     case 'admin':
       view.adminCounts = buildAdminCounts(data)

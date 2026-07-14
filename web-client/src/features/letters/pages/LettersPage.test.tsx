@@ -14,6 +14,15 @@ const mutationMocks = vi.hoisted(() => ({
   generatePdf: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/auth', async () => {
   const { TEST_PERSONAS } = await import('@/testing/personas')
 
@@ -151,10 +160,10 @@ describe('LettersPage', () => {
       subject: 'Newsletter',
       template: '<p>Hello {{first_name}}</p>',
     })
-    expect(container.textContent).toContain('Mail sent to all members.')
+    expect(toastMocks.success).toHaveBeenCalledWith('Mail sent to all members.')
   })
 
-  it('surfaces a send failure as a form error', async () => {
+  it('surfaces a send failure as an error toast', async () => {
     mutationMocks.sendMail.mockRejectedValue(new Error('Mail delivery failed'))
 
     await render()
@@ -162,7 +171,9 @@ describe('LettersPage', () => {
     await fillField('letter-template', '<p>Hello</p>')
     await submitForm()
 
-    expect(container.textContent).toContain('Mail delivery failed')
+    expect(toastMocks.error).toHaveBeenCalledWith('Email not sent', {
+      description: 'Mail delivery failed',
+    })
   })
 
   it('renders the live preview iframe once a template exists', async () => {

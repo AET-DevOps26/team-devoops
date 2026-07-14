@@ -40,14 +40,12 @@ const defaultFilters: FeedbackFilters = {
 interface FeedbackUiState {
   openFeedbackId: string | null
   composeTarget: FeedbackComposeTarget | null
-  composeNotice: string | null
   editTarget: FeedbackEditTarget | null
   filters: FeedbackFilters
   open: (id: string) => void
   close: () => void
   openCompose: (target: FeedbackComposeTarget) => void
   closeCompose: () => void
-  setComposeNotice: (notice: string | null) => void
   openEdit: (target: FeedbackEditTarget) => void
   closeEdit: () => void
   setSearch: (search: string) => void
@@ -62,14 +60,12 @@ interface FeedbackUiState {
 export const useFeedbackUiStore = create<FeedbackUiState>((set) => ({
   openFeedbackId: null,
   composeTarget: null,
-  composeNotice: null,
   editTarget: null,
   filters: defaultFilters,
   open: (id) => set({ openFeedbackId: id }),
   close: () => set({ openFeedbackId: null }),
-  openCompose: (target) => set({ composeTarget: target, composeNotice: null }),
+  openCompose: (target) => set({ composeTarget: target }),
   closeCompose: () => set({ composeTarget: null }),
-  setComposeNotice: (notice) => set({ composeNotice: notice }),
   openEdit: (target) => set({ editTarget: target }),
   closeEdit: () => set({ editTarget: null }),
   setSearch: (search) => set((state) => ({ filters: { ...state.filters, search } })),

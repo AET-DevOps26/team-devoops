@@ -47,12 +47,12 @@ vi.mock('@/features/helper/api/queries', async () => {
     }),
     useReport: () => ({ data: undefined, isLoading: false, error: null }),
     useGenerateMemberReport: () => ({
-      mutate: mutationMocks.generateMember,
+      mutateAsync: mutationMocks.generateMember,
       isPending: false,
       error: null,
     }),
     useGenerateTeamReport: () => ({
-      mutate: mutationMocks.generateTeam,
+      mutateAsync: mutationMocks.generateTeam,
       isPending: false,
       error: null,
     }),

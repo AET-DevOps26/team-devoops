@@ -22,13 +22,11 @@ interface MembersUiState {
   resetFilters: () => void
   editorTarget: MemberEditorTarget | null
   deleteTargetId: string | null
-  mutationNotice: string | null
   openCreateMember: () => void
   openEditMember: (memberId: string) => void
   closeEditor: () => void
   openDeleteConfirm: (memberId: string) => void
   closeDeleteConfirm: () => void
-  setMutationNotice: (notice: string | null) => void
 }
 
 export const useMembersUiStore = create<MembersUiState>((set) => ({
@@ -39,12 +37,9 @@ export const useMembersUiStore = create<MembersUiState>((set) => ({
   resetFilters: () => set({ filters: defaultFilters }),
   editorTarget: null,
   deleteTargetId: null,
-  mutationNotice: null,
-  openCreateMember: () => set({ editorTarget: { mode: 'create' }, mutationNotice: null }),
-  openEditMember: (memberId) =>
-    set({ editorTarget: { mode: 'edit', memberId }, mutationNotice: null }),
+  openCreateMember: () => set({ editorTarget: { mode: 'create' } }),
+  openEditMember: (memberId) => set({ editorTarget: { mode: 'edit', memberId } }),
   closeEditor: () => set({ editorTarget: null }),
   openDeleteConfirm: (memberId) => set({ deleteTargetId: memberId }),
   closeDeleteConfirm: () => set({ deleteTargetId: null }),
-  setMutationNotice: (notice) => set({ mutationNotice: notice }),
 }))

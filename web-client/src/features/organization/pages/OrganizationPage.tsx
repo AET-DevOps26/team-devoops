@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -13,7 +14,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -25,7 +28,9 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
+import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { cn } from '@/lib/utils'
 import { isTeamCoach, memberRefName } from '@/types'
 import { useDeleteSport, useDeleteTeam } from '../api/queries'
@@ -42,7 +47,7 @@ const nameList = (refs: Parameters<typeof memberRefName>[0][]) =>
   refs.map(memberRefName).join(', ') || '--'
 
 export function OrganizationPage() {
-  const { view, currentUserId, currentUserRole, isLoading, error } = useTeamsViewModel()
+  const { view, currentUserId, currentUserRole, isLoading, error, refetch } = useTeamsViewModel()
   const openCreateTeam = useOrganizationUiStore((state) => state.openCreateTeam)
   const openEditTeam = useOrganizationUiStore((state) => state.openEditTeam)
   const openCreateSport = useOrganizationUiStore((state) => state.openCreateSport)
@@ -53,14 +58,10 @@ export function OrganizationPage() {
   const closeDeleteSportConfirm = useOrganizationUiStore((state) => state.closeDeleteSportConfirm)
   const deleteTargetId = useOrganizationUiStore((state) => state.deleteTargetId)
   const sportDeleteTargetId = useOrganizationUiStore((state) => state.sportDeleteTargetId)
-  const mutationNotice = useOrganizationUiStore((state) => state.mutationNotice)
-  const setMutationNotice = useOrganizationUiStore((state) => state.setMutationNotice)
   const deleteTeam = useDeleteTeam()
   const deleteSport = useDeleteSport()
   const [openSportId, setOpenSportId] = useState<string | null>(null)
   const [rosterTeamId, setRosterTeamId] = useState<string | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [sportDeleteError, setSportDeleteError] = useState<string | null>(null)
   const activeOpenSport = openSportId ?? view.sports[0]?.id ?? ''
   const rosterTeam = findRosterTeam(view.sports, rosterTeamId)
   const rosterSport = rosterTeam
@@ -84,11 +85,9 @@ export function OrganizationPage() {
     openEditSport(sportId)
   }
   const handleDeleteTeam = (teamId: string) => {
-    setDeleteError(null)
     openDeleteConfirm(teamId)
   }
   const handleDeleteSport = (sportId: string) => {
-    setSportDeleteError(null)
     openDeleteSportConfirm(sportId)
   }
   const confirmDeleteTeam = async () => {
@@ -96,12 +95,11 @@ export function OrganizationPage() {
 
     try {
       await deleteTeam.mutateAsync(deleteTarget.id)
-      setMutationNotice('Team deleted.')
+      toast.success('Team deleted.')
       if (rosterTeamId === deleteTarget.id) setRosterTeamId(null)
-      setDeleteError(null)
       closeDeleteConfirm()
     } catch (error) {
-      setDeleteError(serverErrorMessage(error))
+      notifyMutationError(error, mutationFeedbackCopy.team.delete)
     }
   }
   const confirmDeleteSport = async () => {
@@ -109,13 +107,12 @@ export function OrganizationPage() {
 
     try {
       await deleteSport.mutateAsync(sportDeleteTarget.id)
-      setMutationNotice('Sport deleted.')
+      toast.success('Sport deleted.')
       if (rosterSport?.id === sportDeleteTarget.id) setRosterTeamId(null)
       if (openSportId === sportDeleteTarget.id) setOpenSportId(null)
-      setSportDeleteError(null)
       closeDeleteSportConfirm()
     } catch (error) {
-      setSportDeleteError(serverErrorMessage(error))
+      notifyMutationError(error, mutationFeedbackCopy.sport.delete)
     }
   }
 
@@ -149,25 +146,12 @@ export function OrganizationPage() {
         }
       />
 
-      {error && (
-        <div className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
-          Teams could not be loaded. Please try again later.
-        </div>
-      )}
-
-      {mutationNotice && (
-        <p
-          role="status"
-          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-        >
-          {mutationNotice}
-        </p>
-      )}
-
       <StatsRow view={view} isLoading={isLoading} />
 
       {isLoading ? (
         <LoadingState />
+      ) : error ? (
+        <ErrorNotice message={serverErrorMessage(error)} onRetry={refetch} />
       ) : view.sports.length === 0 ? (
         <EmptyState />
       ) : (
@@ -250,10 +234,7 @@ export function OrganizationPage() {
       <AlertDialog
         open={deleteTargetId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setDeleteError(null)
-            closeDeleteConfirm()
-          }
+          if (!open) closeDeleteConfirm()
         }}
       >
         <AlertDialogContent>
@@ -263,15 +244,14 @@ export function OrganizationPage() {
               Delete {deleteTarget?.name ?? 'this team'}? Team memberships will be removed with it.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {deleteError}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTeam.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={deleteTeam.isPending} onClick={confirmDeleteTeam}>
-              {deleteTeam.isPending ? 'Deleting' : 'Delete'}
+              {deleteTeam.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -279,10 +259,7 @@ export function OrganizationPage() {
       <AlertDialog
         open={sportDeleteTargetId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setSportDeleteError(null)
-            closeDeleteSportConfirm()
-          }
+          if (!open) closeDeleteSportConfirm()
         }}
       >
         <AlertDialogContent>
@@ -293,15 +270,14 @@ export function OrganizationPage() {
               all of its teams, and every membership in those teams.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {sportDeleteError && (
-            <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-              {sportDeleteError}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteSport.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={deleteSport.isPending} onClick={confirmDeleteSport}>
-              {deleteSport.isPending ? 'Deleting' : 'Delete sport'}
+              {deleteSport.isPending ? (
+                <PendingButtonContent pendingLabel="Deleting…" />
+              ) : (
+                'Delete sport'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

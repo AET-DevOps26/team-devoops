@@ -44,6 +44,7 @@ export interface EventDetailView {
   sportNames: string[]
   isLoading: boolean
   error: Error | null
+  refetch: () => void
 }
 
 export function eventAttendanceStatus(
@@ -208,6 +209,10 @@ export function useEventsViewModel(now = new Date()) {
     view,
     isLoading: eventsQuery.isLoading || teamsQuery.isLoading,
     error: eventsQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void eventsQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }
 
@@ -242,5 +247,9 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
     sportNames,
     isLoading: eventQuery.isLoading || teamsQuery.isLoading,
     error: eventQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void eventQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }
