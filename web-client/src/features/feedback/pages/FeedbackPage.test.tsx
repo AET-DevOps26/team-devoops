@@ -134,7 +134,6 @@ describe('FeedbackPage', () => {
     expect(scoped.length).toBeGreaterThan(0)
     expect(container.textContent).toContain("Feedback you've given, by event.")
     expect(container.textContent).toContain('Coverage')
-    // Coach view drops the redundant "From" column.
     expect(container.textContent).not.toContain('From')
   })
 

@@ -10,7 +10,6 @@ import { scopeEvents } from '@/testing/scope'
 import type { AuthUser, EventListItem, Reference } from '@/types'
 import type { SportEvent, EventCreate, EventPartialUpdate } from '@/features/sport-events/types'
 
-// In-memory events resource; reset() restores the module-level state per test.
 
 let eventDetailsState: Record<string, SportEvent> = {}
 let eventSummaryState: EventListItem[] = []

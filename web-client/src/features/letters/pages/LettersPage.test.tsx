@@ -184,7 +184,6 @@ describe('LettersPage', () => {
 
     const iframe = container.querySelector<HTMLIFrameElement>('iframe')
     expect(iframe).not.toBeNull()
-    // Tokens are replaced with sample values inside the srcdoc document.
     expect(iframe?.getAttribute('srcdoc')).toContain('Hello Alex')
   })
 })

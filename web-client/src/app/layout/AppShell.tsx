@@ -55,8 +55,6 @@ const ReactQueryDevtools = import.meta.env.DEV
     )
   : null
 
-// Icons are a presentational concern, so they're kept local to the sidebar
-// rather than in the shared nav policy.
 const NAV_ICONS: Record<string, LucideIcon> = {
   '/': LayoutDashboard,
   '/sport-events': CalendarDays,

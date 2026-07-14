@@ -78,7 +78,6 @@ export function validateSportEditorFieldErrors(
   return validateZodSchema(schema, form)
 }
 
-// Kept until the dialog migrates to field-level errors in Group 8.
 export function validateSportEditorForm(
   form: SportEditorFormState,
   fields: readonly SportEditorField[],
@@ -144,9 +143,7 @@ export function sportEditorFieldsForUser(
   return []
 }
 
-// Sport director assignments are the source of the director role: after commit the server derives
-// Keycloak roles from saved organization rows. Any member can be selected here, with existing
-// directors surfaced first.
+// Assignments grant the derived Keycloak role, so every member remains selectable.
 export function buildSportDirectorPickerOptions(
   members: MemberSummary[],
   sports: readonly Sport[],

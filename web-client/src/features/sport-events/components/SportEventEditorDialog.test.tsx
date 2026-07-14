@@ -132,7 +132,7 @@ describe('SportEventEditorDialog', () => {
   it('rejects an end time before the start time on the schedule step', async () => {
     await renderOpenCreate()
     await fillField('event-name', 'Friendly Match')
-    await submitForm() // -> schedule
+    await submitForm()
 
     await fillField('event-start', '2026-08-01T18:00')
     await fillField('event-end', '2026-08-01T17:00')
@@ -147,12 +147,12 @@ describe('SportEventEditorDialog', () => {
 
     await renderOpenCreate()
     await fillField('event-name', 'Friendly Match')
-    await submitForm() // -> schedule
+    await submitForm()
     await fillField('event-start', '2026-08-01T18:00')
     await fillField('event-end', '2026-08-01T19:30')
-    await submitForm() // -> sports & teams
-    await submitForm() // -> attendees
-    await submitForm() // -> create
+    await submitForm()
+    await submitForm()
+    await submitForm()
 
     expect(mutationMocks.createEvent).toHaveBeenCalledWith({
       name: 'Friendly Match',

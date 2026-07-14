@@ -11,11 +11,7 @@ import * as helper from './server/helper'
 import * as letters from './server/letters'
 import * as dashboard from './server/dashboard'
 
-// Intercepts the app's axios calls at the network layer (context.route on **/api/v1/**)
-// and answers them from an in-memory server, so no real services run. The server keeps
-// module-level state; stubApi() resets it per test. Playwright workers are separate
-// processes and execute tests serially within a worker, so this state is never used by
-// two live tests at once. Resets use structuredClone in every resource module.
+// Module state is safe because workers are separate processes and tests are serial within a worker.
 
 const USER: AuthUser = {
   id: E2E_USER.sub,
@@ -39,7 +35,6 @@ function resetServer(): void {
 
 interface Parsed {
   method: string
-  // path segments after /api/v1, e.g. ['members', '<id>'] or ['finance', 'transactions']
   segments: string[]
   body: unknown
 }
@@ -142,13 +137,11 @@ async function run(route: Route, produce: () => unknown | Promise<unknown>): Pro
   }
 }
 
-// Routes one intercepted request to the in-memory server. A thrown httpError() carries its status.
 function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown> {
   const [service, a, b] = segments
 
   switch (service) {
     case 'members': {
-      // dashboard lives under members: GET /members/dashboard
       if (a === 'dashboard') return server.dashboard.getDashboard(USER)
       if (method === 'GET' && a === 'hello') return 'members'
       if (method === 'GET' && !a) return server.members.listMembers(USER)
@@ -203,7 +196,6 @@ function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown
     }
     case 'helper': {
       if (method === 'GET' && a === 'hello') return 'helper'
-      // /helper/reports/member/{id}, /helper/reports/team/{id}, /helper/reports/{id}
       if (a === 'reports') {
         const [, , kind, id] = segments
         if (kind === 'member' && method === 'POST') return void server.helper.generateMemberReport(id, USER)
@@ -223,7 +215,6 @@ function dispatch({ method, segments, body }: Parsed): unknown | Promise<unknown
     }
   }
 
-  // Unmapped route: fail the test loudly rather than hang.
   throw Object.assign(new Error(`Unhandled API route: ${method} /${segments.join('/')}`), {
     response: { status: 501, data: { message: 'Not implemented in the E2E server' } },
   })

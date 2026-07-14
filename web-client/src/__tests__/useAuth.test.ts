@@ -112,7 +112,6 @@ describe('useAuth', () => {
   it('keeps refreshing the surviving consumer when another one unmounts', () => {
     keycloakMock.tokenParsed = { name: 'Jane', email: 'jane@example.com' }
 
-    // Two independent consumers, as in the real app (AppShell plus a page).
     const survivor = renderUseAuth(container)
     root = survivor.root
 

@@ -40,7 +40,6 @@ export interface EventDetailView {
   detail: SportEvent | undefined
   status: EventStatus | undefined
   missed: boolean
-  // sports_linked resolved to display names for the detail view.
   sportNames: string[]
   isLoading: boolean
   error: Error | null
@@ -234,7 +233,6 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
       )
     : undefined
   const missed = status === 'missed'
-  // sports_linked are resolved refs { id, name }; fall back to the sports list if a name is missing.
   const sportNamesById = new Map((sportsQuery.data ?? []).map((sport) => [sport.id, sport.name]))
   const sportNames = (detail?.sports_linked ?? []).map(
     (sport) => sport.name || sportNamesById.get(sport.id) || sport.id,

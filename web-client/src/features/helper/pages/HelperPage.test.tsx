@@ -108,7 +108,6 @@ describe('HelperPage', () => {
   it('scopes the member persona to their own development reports', async () => {
     await render()
 
-    // Member scope: the subject is the signed-in user, not a team.
     expect(container.textContent).toContain('Your progress reports from the coaching staff.')
   })
 

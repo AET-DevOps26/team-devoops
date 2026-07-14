@@ -23,7 +23,6 @@ const {
   resetKeycloakRefreshStateForTests,
 } = await import('@/lib/keycloak')
 
-/** Minimal axios adapter that captures the final request config. */
 function captureAdapter(captured: { config?: InternalAxiosRequestConfig }) {
   return async (config: InternalAxiosRequestConfig) => {
     captured.config = config

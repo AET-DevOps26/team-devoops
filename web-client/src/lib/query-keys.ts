@@ -1,16 +1,6 @@
 import type { QueryKey } from '@tanstack/react-query'
 
-/**
- * Every query key in the app, and the cross-resource dependencies between them.
- *
- * Keys live here rather than in each feature's `queries.ts` for one reason: a mutation on one
- * resource routinely changes another. Members are embedded in team rosters, feedback, events and
- * transactions; a transaction changes a balance; deleting a sport deletes its teams. Expressing
- * those edges means a feature's mutation module has to name another feature's keys, and if keys
- * stay next to their `useQuery` hooks that turns into a cycle of feature modules importing each
- * other. Keys are pure data, so hoisting them breaks the cycle and — more importantly — puts the
- * dependency map in one place where a missing edge is visible instead of implied.
- */
+// Cross-resource dependency keys live here to avoid cycles between feature query modules.
 
 export const membersKeys = {
   hello: ['members', 'hello'] as const,
@@ -61,15 +51,7 @@ export const dashboardKeys = {
   me: ['dashboard', 'me'] as const,
 }
 
-/**
- * Resources that embed a member ref and are therefore stale after any member write.
- *
- * Rosters, feedback, events and transactions all carry a resolved `{ id, name }` member ref, and
- * the dashboard aggregates them. Deleting a member drops their team and sport memberships, deletes
- * feedback about them and clears their name from records they authored (this is what the delete
- * confirmation promises); renaming one changes the name every roster and picker shows. Neither
- * cascade can be reproduced by editing the client cache, so these are refetched.
- */
+// These resources embed member refs or aggregates and must be refetched after member writes.
 export const memberCreateDependentKeys: QueryKey[] = [dashboardKeys.me]
 
 export const memberDependentKeys = (memberId: string): QueryKey[] => [
@@ -84,10 +66,7 @@ export const memberDependentKeys = (memberId: string): QueryKey[] => [
   dashboardKeys.me,
 ]
 
-/**
- * A team's roster and its sport link are embedded in the member rows (which show team and sport
- * names) and in the dashboard. Deleting a sport also deletes its teams server-side.
- */
+// Team and sport changes cascade into embedded member rows and dashboard aggregates.
 export const teamCreateDependentKeys: QueryKey[] = [membersKeys.all, dashboardKeys.me]
 
 export const teamDependentKeys = (teamId: string): QueryKey[] => [
@@ -109,13 +88,11 @@ export const sportDependentKeys: QueryKey[] = [
 
 export const sportCreateDependentKeys: QueryKey[] = [dashboardKeys.me]
 
-/** A transaction is what a balance is computed from, so a balance is never authoritative locally. */
+// Balances are server-computed from transactions.
 export const transactionDependentKeys: QueryKey[] = [paymentsKeys.balances, dashboardKeys.me]
 
-/** Feedback is attached to an event and surfaced on the dashboard. */
 export const feedbackDependentKeys: QueryKey[] = [dashboardKeys.me]
 
-/** An event carries its attendees and the feedback written against it. */
 export const eventCreateDependentKeys: QueryKey[] = [dashboardKeys.me]
 
 export const eventDependentKeys: QueryKey[] = [feedbackKeys.all, dashboardKeys.me]

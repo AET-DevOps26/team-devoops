@@ -6,7 +6,6 @@ import { httpError } from '@/testing/httpError'
 import { scopeMembers } from '@/testing/scope'
 import type { AuthUser, Member, MemberCreate, MemberPartialUpdate, MemberSummary } from '@/types'
 
-// In-memory members resource. State is a deep clone of the fixtures; reset() restores it per test.
 let memberFixtures: Member[] = []
 let memberSummaryFixtures: MemberSummary[] = []
 

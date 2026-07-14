@@ -79,9 +79,7 @@ export interface FeedbackView {
     latestLabel: string
   }
   coverage: FeedbackCoverage | null
-  // Members the current user is allowed to give feedback to (admins: everyone; trainers: their
-  // trainees). Drives the "New feedback" button and the free member-pick fallback, so it matches
-  // the Members page rather than the narrower "missing feedback" coverage picker.
+  // This broader permission set must not be narrowed to members missing event feedback.
   composableMembers: FeedbackComposableMember[]
 }
 
@@ -92,7 +90,7 @@ export interface FeedbackDetailView {
   creatorName: string | undefined
   rating: number | undefined
   isLoading: boolean
-  // rating is undefined only while detail is unloaded; every loaded feedback has one.
+  // Loaded feedback always has a rating; undefined means detail is still unavailable.
   error: Error | null
   refetch: () => void
 }

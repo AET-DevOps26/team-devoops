@@ -9,18 +9,14 @@ import {
 } from './support/data'
 import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
-// Regression coverage for stale caches across resources. Per-feature specs assert the list a
-// mutation starts from; these scenarios navigate within the SPA and assert a dependent resource.
-// A page reload would rebuild the query cache and hide the exact regression under test.
+// Do not reload between pages: rebuilding the query cache would hide these regressions.
 
 function fixtureOrThrow<T>(value: T | undefined, description: string): T {
   if (value === undefined) throw new Error(`Missing E2E fixture: ${description}`)
   return value
 }
 
-// Choose a fixture relationship that exists in members, a default-visible team roster, and
-// feedback. If fixture relationships change, setup fails explicitly instead of silently using
-// stale names copied into this spec.
+// Derive relationships from fixtures so changes fail explicitly instead of using stale names.
 const defaultSport = fixtureOrThrow(sportFixtures[0], 'at least one sport')
 const rosterTeam = fixtureOrThrow(
   teamFixtures.find(

@@ -78,12 +78,10 @@ export function validateMemberEditorFieldErrors(
   return pickFieldErrors(validateZodSchema(memberEditorFormSchema, form), fields ?? Object.keys(form))
 }
 
-// Kept until the dialogs migrate to field-level errors in Group 8.
 export function validateMemberCreatorForm(form: MemberEditorFormState): string | null {
   return Object.values(validateMemberCreatorFieldErrors(form) ?? {})[0] ?? null
 }
 
-// Kept until the dialogs migrate to field-level errors in Group 8.
 export function validateMemberEditorForm(form: MemberEditorFormState): string | null {
   return Object.values(validateMemberEditorFieldErrors(form) ?? {})[0] ?? null
 }
@@ -135,8 +133,7 @@ export function buildMemberUpdatePayload(
   return payload
 }
 
-// Same diff as the admin editor, minus email: a member cannot change their own login identity,
-// so the profile form renders it read-only and never sends it.
+// Members cannot change their own login identity.
 export function buildMemberProfileUpdatePayload(
   member: Member,
   form: MemberEditorFormState,

@@ -14,7 +14,6 @@ import type {
   TeamPartialUpdate,
 } from '@/features/organization/types'
 
-// In-memory organization resource. State is a deep clone of the fixtures; reset() restores it per test.
 let sportFixtures: Sport[] = []
 let teamFixtures: Team[] = []
 let sportsById: Record<string, Sport> = {}
@@ -207,10 +206,7 @@ export function updateTeam(
   }
 }
 
-/**
- * Mirrors the server-side rename propagation: each service keeps its own member replica, so a
- * renamed member shows their new name in every roster and director list that embeds a ref to them.
- */
+// Each service owns member replicas, so renames must propagate through embedded refs.
 export function renameMemberInOrganization(memberId: string, name: string): void {
   const rename = (ref: MemberRef) => (ref.id === memberId ? { ...ref, name } : ref)
 
@@ -224,7 +220,6 @@ export function renameMemberInOrganization(memberId: string, name: string): void
   }
 }
 
-/** Removes a deleted member from every roster and director list that embeds them. */
 export function removeMemberFromOrganization(memberId: string): void {
   for (const team of teamFixtures) {
     team.trainers = team.trainers.filter((trainer) => trainer.id !== memberId)

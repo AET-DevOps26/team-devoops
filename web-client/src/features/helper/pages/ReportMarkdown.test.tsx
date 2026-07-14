@@ -71,7 +71,6 @@ describe('ReportMarkdown', () => {
   it('does not inject raw HTML from the report text', async () => {
     await render('<img src=x onerror="alert(1)"> & <script>bad()</script>')
 
-    // No element was created from the malicious markup — it is escaped text.
     expect(container.querySelector('img')).toBeNull()
     expect(container.querySelector('script')).toBeNull()
     expect(container.textContent).toContain('<img src=x onerror="alert(1)">')

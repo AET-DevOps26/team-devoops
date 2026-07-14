@@ -90,7 +90,6 @@ describe('FeedbackComposeDialog', () => {
 
     expect(document.body.textContent).toContain('Give Feedback')
     expect(document.body.textContent).toContain(TARGET.name)
-    // No event selector — straight to the details step.
     expect(document.body.querySelector('#feedback-event')).toBeNull()
     expect(document.body.querySelector('#feedback-body')).not.toBeNull()
   })

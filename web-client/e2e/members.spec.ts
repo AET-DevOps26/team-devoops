@@ -1,8 +1,6 @@
 import { memberFixtures, memberSummaryFixtures } from './support/data'
 import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 
-// Admin members CRUD. Each test gets a pristine server copy (stubApi resets it),
-// so the specs are order-independent.
 
 const targetMember = memberFixtures[0]
 if (!targetMember) throw new Error('memberFixtures must contain at least one member')
@@ -13,7 +11,6 @@ test('lists every member for the admin', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible()
   await expect(page.getByRole('cell', { name: targetMemberName, exact: true })).toBeVisible()
-  // Admin scope = all rows (one table row per member summary + 1 header row).
   await expect(page.getByRole('row')).toHaveCount(memberSummaryFixtures.length + 1)
 })
 

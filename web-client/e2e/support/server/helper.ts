@@ -9,7 +9,6 @@ import { httpError } from '@/testing/httpError'
 import { scopeReport, scopeTeamReport } from '@/testing/scope'
 import type { AuthUser, MemberReportSummary, Report, TeamReportSummary } from '@/types'
 
-// In-memory helper (reports) resource; reset() restores the module-level state per test.
 
 let reportState: Record<string, Report> = {}
 let memberReportSummariesState: Record<string, MemberReportSummary[]> = {}

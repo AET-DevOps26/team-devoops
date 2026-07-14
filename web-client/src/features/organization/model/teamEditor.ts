@@ -121,7 +121,6 @@ export function validateTeamEditorFieldErrors(
   return validateZodSchema(schema, form)
 }
 
-// Kept until the dialog migrates to field-level errors in Group 8.
 export function validateTeamEditorForm(
   form: TeamEditorFormState,
   fields: readonly TeamEditorField[],
@@ -211,9 +210,7 @@ export function buildMemberPickerOptions(
   return Array.from(options.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
-// Team trainer assignments are the source of the coach role: after commit the server derives
-// Keycloak roles from saved organization rows. Any member can be selected here, with existing
-// coaches surfaced first.
+// Assignments grant the derived Keycloak role, so every member remains selectable.
 export function buildCoachPickerOptions(
   members: MemberSummary[],
   teams: readonly Team[],

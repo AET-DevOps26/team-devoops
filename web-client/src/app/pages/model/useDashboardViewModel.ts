@@ -151,7 +151,6 @@ export interface DashboardViewModel {
   rootRefetch: () => void
 }
 
-// "Recent" = latest N by created_at, no time window.
 const RECENT_FEEDBACK_COUNT = 3
 const DIRECTOR_TEAM_PREVIEW_COUNT = 5
 const ADMIN_SPORT_PREVIEW_COUNT = 5
@@ -203,7 +202,6 @@ function shouldShowBalance(role: Role): boolean {
   return role === 'member'
 }
 
-// recent_feedback arrives already scoped to the caller; render the latest N by created_at.
 function buildFeedbackSection(feedback: FeedbackSummary[]): DashboardFeedbackSection {
   const items = feedback
     .toSorted((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

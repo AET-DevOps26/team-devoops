@@ -14,8 +14,6 @@ export function useHelperHello() {
   })
 }
 
-// ---- generate (async 202, fire-and-forget) ----
-
 export function useGenerateMemberReport(memberId: string) {
   const qc = useQueryClient()
 
@@ -37,8 +35,6 @@ export function useGenerateTeamReport(teamId: string) {
   })
 }
 
-// ---- list summaries (newest-first, no text) ----
-
 export function useMemberReports(memberId: string, enabled = true) {
   return useQuery<MemberReportSummary[]>({
     queryKey: helperKeys.memberReports(memberId),
@@ -57,8 +53,6 @@ export function useTeamReports(teamId: string, enabled = true) {
   })
 }
 
-// ---- read one full report (with text) ----
-
 export function useReport(reportId: string | null) {
   return useQuery<Report>({
     queryKey: helperKeys.report(reportId ?? ''),
@@ -66,8 +60,6 @@ export function useReport(reportId: string | null) {
     queryFn: () => helperClient.get<Report>(`/reports/${reportId}`).then(r => r.data),
   })
 }
-
-// ---- delete ----
 
 export function useDeleteReport() {
   const qc = useQueryClient()

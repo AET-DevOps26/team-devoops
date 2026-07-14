@@ -42,7 +42,6 @@ function safeCopyForStatus(status: number): string {
   return STATUS_COPY[status] ?? FALLBACK_MESSAGE
 }
 
-/** Classifies an unknown thrown value into a broad error category, based on HTTP status when available. */
 export function classifyError(error: unknown): ErrorKind {
   if (isAxiosError(error)) {
     if (!error.response) return 'network'
@@ -78,12 +77,6 @@ function extractFieldErrors(body: unknown): Record<string, string> | null {
   return Object.keys(fields).length > 0 ? fields : null
 }
 
-/**
- * The single client error adapter. Reads Spring `{ message }` and helper Flask `{ error }`
- * response bodies, maps bean-validation `errors: [{message: "field: reason"}]` onto field
- * names, and falls back to safe user-facing copy by HTTP status when the server didn't send
- * a usable message.
- */
 export function parseServerError(error: unknown): ParsedServerError {
   if (isAxiosError<unknown>(error)) {
     const body = error.response?.data
@@ -99,11 +92,8 @@ export function parseServerError(error: unknown): ParsedServerError {
 
     const fieldErrors = status === 400 ? extractFieldErrors(body) : null
     const serverMessage = extractServerMessage(body)
-    // 5xx bodies can carry stack traces or internal detail, and 401 means the session is gone
-    // (whatever the server says, "sign in again" is the only useful instruction). Everything
-    // else — notably 403, whose messages are deliberate product copy ("You are not allowed to
-    // create feedback for this member") — is more useful than the generic per-status fallback.
-    // "Validation failed" is Spring's placeholder for a body whose real detail is in `errors`.
+    // Never expose 5xx details; 401 always requires re-authentication. Other 4xx copy is intentional.
+    // Spring's "Validation failed" detail lives in `errors` instead.
     const trustServerMessage =
       status !== 401 && status < 500 && serverMessage !== 'Validation failed'
     const message =
@@ -130,11 +120,6 @@ export function serverErrorMessage(error: unknown, fallback = FALLBACK_MESSAGE):
   return parseServerError(error).message
 }
 
-/**
- * Bean-validation 400s carry `errors: [{message: "field: reason"}]` — map each onto its
- * field name so a form can highlight the specific input. Returns null when the error isn't
- * that shape (e.g. a top-level 409/403 message), so callers fall back to serverErrorMessage.
- */
 export function serverErrorFieldMessages(error: unknown): Record<string, string> | null {
   return parseServerError(error).fieldErrors
 }

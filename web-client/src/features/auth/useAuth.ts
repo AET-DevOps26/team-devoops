@@ -4,15 +4,10 @@ import type { AuthUser } from '@/types'
 import { getCurrentUser } from './currentUser'
 
 export function useAuth(): { user: AuthUser; logout: () => void } {
-  // getCurrentUser is the single source of identity — do not re-derive it here.
-  // It reads a snapshot of the token, so this component must re-render whenever
-  // the token is refreshed (e.g. after a profile edit forces a token update) for
-  // the snapshot to pick up new claims like `name`.
+  // Token claims are snapshots, so refreshes must trigger a new read.
   const [user, setUser] = useState(getCurrentUser)
 
-  // Many components call useAuth() at once; each gets its own subscription rather than
-  // taking over keycloak's single onAuthRefreshSuccess slot, so unmounting one (a closing
-  // dialog, a route change) can't unsubscribe the others.
+  // Each consumer subscribes independently because keycloak exposes only one callback slot.
   useEffect(() => {
     const refreshUser = () => setUser(getCurrentUser())
     const unsubscribe = onTokenRefreshed(refreshUser)

@@ -21,7 +21,6 @@ keycloak.onAuthRefreshSuccess = () => {
   for (const listener of tokenRefreshListeners) listener()
 }
 
-/** Subscribes to successful token refreshes. Returns an unsubscribe function. */
 export function onTokenRefreshed(listener: () => void): () => void {
   tokenRefreshListeners.add(listener)
   return () => {

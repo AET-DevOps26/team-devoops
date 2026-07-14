@@ -14,7 +14,6 @@ const headingClass: Record<1 | 2 | 3, string> = {
 }
 
 function parseBlocks(source: string): Block[] {
-  // Normalise line endings, then walk line by line grouping into blocks.
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
   const blocks: Block[] = []
 
@@ -62,7 +61,6 @@ function parseBlocks(source: string): Block[] {
       continue
     }
 
-    // Plain text line — part of the current paragraph.
     flushList()
     paragraph.push(line.trim())
   }

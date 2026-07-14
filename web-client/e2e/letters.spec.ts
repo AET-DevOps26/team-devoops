@@ -3,13 +3,11 @@ import { expect, gotoApp, test, toastRegion } from './support/fixtures'
 test('renders a live preview with sample recipient data', async ({ page }) => {
   await gotoApp(page, '/letters')
 
-  // Admin audience goes to the whole club.
   await expect(page.getByText('This will go to all members.')).toBeVisible()
 
   await page.getByLabel('Template').fill('<p>Hello {{first_name}}, welcome to the club.</p>')
 
   const preview = page.frameLocator('iframe[title="Letter template sample preview"]')
-  // Tokens are substituted with the documented sample values ({{first_name}} -> Alex).
   await expect(preview.getByText('Hello Alex, welcome to the club.')).toBeVisible()
 })
 

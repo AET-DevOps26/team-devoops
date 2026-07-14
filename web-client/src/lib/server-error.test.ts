@@ -86,8 +86,6 @@ describe('parseServerError', () => {
     expect(parsed.message).toBe('Access is restricted')
   })
 
-  // 403 bodies are deliberate product copy ("You are not allowed to …"), so they are shown
-  // as-is; only 401 (session gone) and 5xx (may leak internals) are overridden.
   it('keeps the server message on a 403', () => {
     const parsed = parseServerError(
       httpError(403, 'You are not allowed to create feedback for this member'),

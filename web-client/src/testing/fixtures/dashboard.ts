@@ -14,11 +14,7 @@ import { balanceFixtures } from './finance'
 import { sportFixtures, teamFixtures } from './organization'
 import { memberReportSummaries } from './report'
 
-// Pre-built dashboard envelopes, one per persona — the discriminated union GET
-// /members/dashboard returns. The server emits only the caller's highest role's shape, so
-// each persona gets exactly one envelope. Assembled from the typed fixtures + scope helpers.
-
-// Reference dashboard "now": upcoming = on/after this instant (matches the view-model).
+// Fixed reference time keeps fixture output deterministic.
 const DASHBOARD_NOW = new Date('2026-06-19T00:00:00Z')
 
 function upcomingEvents(user: AuthUser): EventSummary[] {
@@ -123,7 +119,6 @@ export const dashboardFixtures: Record<TestPersonaKey, Dashboard> = {
   admin: dashboardFor('admin'),
 }
 
-// Pick the pre-built envelope for the current persona (matched by id, role as fallback).
 export function dashboardForUser(user: AuthUser): Dashboard {
   const byId = (Object.keys(dashboardFixtures) as TestPersonaKey[]).find(
     (key) => TEST_PERSONAS[key].id === user.id,

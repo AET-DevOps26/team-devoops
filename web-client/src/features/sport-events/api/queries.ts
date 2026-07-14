@@ -58,8 +58,7 @@ export function useUpdateSportEvent() {
 
   return useMutation<SportEvent, Error, { id: string } & EventPartialUpdate>({
     mutationFn: ({ id, ...data }) => sportEventsClient.patch<SportEvent>(`/${id}`, data).then(r => r.data),
-    // Rescheduling an event moves it in the date-ordered list, so the list is refetched. The old
-    // code merged the detail response over the list row, which also risked widening the row shape.
+    // Rescheduling can move an event in the date-ordered list, so refetch it.
     onSuccess: (event, { id }) => {
       qc.setQueryData(eventKeys.detail(id), event)
       return settleMutation(qc, {

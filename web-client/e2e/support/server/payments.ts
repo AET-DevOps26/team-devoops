@@ -18,7 +18,6 @@ import type {
   TransactionPartialUpdate,
 } from '@/features/payments/types'
 
-// In-memory payments resource. State is a deep clone of the fixtures; reset() restores it per test.
 let transactionFixtures: Transaction[] = []
 let balanceFixtures: Balance[] = []
 
@@ -85,7 +84,7 @@ export function updateTransaction(
   const existing = transactionFixtures[index]
 
   if (!existing) throw httpError(404, 'Transaction not found.')
-  // Same gate delete uses: only the creator or an admin may modify a transaction.
+  // Only the creator or an admin may modify a transaction.
   if (user.role !== 'admin' && existing.creator?.id !== user.id) {
     throw httpError(403, 'You are not allowed to update this transaction.')
   }

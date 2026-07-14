@@ -140,12 +140,12 @@ describe('MemberEditorDialog', () => {
     await fillField('member-last-name', 'Neu')
     await fillField('member-email', 'nina.neu@club.de')
     await fillField('member-password', 'initial-secret')
-    await submitForm() // -> contact step
+    await submitForm()
     expect(document.body.querySelector('#member-phone')).not.toBeNull()
     await fillField('member-phone', '+49 111 2223334')
-    await submitForm() // -> notes step
+    await submitForm()
     expect(document.body.querySelector('#member-information')).not.toBeNull()
-    await submitForm() // -> create
+    await submitForm()
 
     expect(mutationMocks.createMember).toHaveBeenCalledWith({
       first_name: 'Nina',
@@ -207,8 +207,8 @@ describe('MemberEditorDialog', () => {
       })
     }
 
-    await clickBack() // notes -> contact
-    await clickBack() // contact -> identity
+    await clickBack()
+    await clickBack()
 
     expect(document.body.querySelector('#member-first-name')?.getAttribute('aria-invalid')).toBe(
       'true',

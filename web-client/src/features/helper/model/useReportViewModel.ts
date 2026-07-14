@@ -26,8 +26,6 @@ export interface ReportRow {
 export function useReportViewModel() {
   const { user } = useAuth()
 
-  // Coaches report on the team they train; everyone else reports on a member (their own
-  // for trainees; admins/directors fall back to the member path per the task's scope).
   const isTrainer = user.role === 'trainer'
   const teamsQuery = useTeamsList(isTrainer)
   const team = useMemo<Reference | null>(() => {
@@ -38,11 +36,7 @@ export function useReportViewModel() {
 
   const scope: ReportScope = isTrainer ? 'team' : 'member'
 
-  // Generation is fire-and-forget (POST 202, no body) and the service has no status endpoint —
-  // a report only exists once it's fully written. So after firing we poll the list and treat the
-  // arrival of a newly-created report as "done". `awaitCount` is the report count at fire time;
-  // `isAwaitingReport` is derived (no setState-in-effect): we're still waiting until the list
-  // grows past that count, or until the safety timeout nulls `awaitCount`.
+  // The 202 response has no status endpoint, so a new list entry is the completion signal.
   const [awaitCount, setAwaitCount] = useState<number | null>(null)
   const awaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -58,7 +52,6 @@ export function useReportViewModel() {
   const reportCount = query.data?.length ?? 0
   const isAwaitingReport = awaitCount !== null && reportCount <= awaitCount
 
-  // Poll every 4s only while awaiting a fresh report; otherwise no background polling.
   const refetch = query.refetch
   useEffect(() => {
     if (!isAwaitingReport) return
@@ -66,7 +59,6 @@ export function useReportViewModel() {
     return () => clearInterval(id)
   }, [isAwaitingReport, refetch])
 
-  // Clear the safety timeout on unmount so it can't fire into an unmounted component.
   useEffect(() => () => {
     if (awaitTimer.current) clearTimeout(awaitTimer.current)
   }, [])
@@ -84,7 +76,6 @@ export function useReportViewModel() {
   const generate = async () => {
     if (awaitTimer.current) clearTimeout(awaitTimer.current)
     setAwaitCount(reportCount)
-    // Give up waiting after 2 minutes so a generation that never lands doesn't spin forever.
     awaitTimer.current = setTimeout(() => setAwaitCount(null), 120_000)
     // The POST itself can fail (or time out). Without this the page would keep claiming
     // "Generating…" for the full 2 minutes while also showing the error.
@@ -124,8 +115,6 @@ export function useReportViewModel() {
     error: query.error,
     refetch: () => void query.refetch(),
     generate,
-    // `isGenerating` covers the POST itself; `isAwaitingReport` covers the longer window where
-    // the background job is still producing the report we polled for.
     isGenerating: generateMutation.isPending,
     isAwaitingReport,
     listKey,

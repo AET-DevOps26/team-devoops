@@ -15,7 +15,6 @@ import type {
   FeedbackSummary,
 } from '@/features/feedback/types'
 
-// In-memory feedback resource; reset() restores the module-level state per test.
 
 let feedbackDetailsState: Record<string, Feedback> = {}
 let feedbackSummaryState: FeedbackSummary[] = []
@@ -137,7 +136,6 @@ export function updateFeedback(
   return updated
 }
 
-/** Mirrors the rename propagation into the member/creator refs feedback embeds. */
 export function renameMemberInFeedback(memberId: string, name: string): void {
   const rename = <T extends Reference | null>(ref: T): T =>
     ref && ref.id === memberId ? ({ ...ref, name } as T) : ref

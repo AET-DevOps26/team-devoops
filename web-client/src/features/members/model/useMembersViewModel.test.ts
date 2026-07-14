@@ -80,8 +80,6 @@ describe('buildMembersView', () => {
       trainees: [otherTrainee],
     })
 
-    // scopeMembers already narrows this to the trainer's own trainees before
-    // buildMembersView ever sees it — mirror that here rather than passing the whole club.
     const scopedMembers = [member(trainee.id, 'Trainee', 'One')]
 
     const view = buildMembersView(
@@ -120,7 +118,6 @@ describe('buildMembersView', () => {
       trainees: [basketballTrainee],
     })
 
-    // director's sport scope (scopeMembers) limits rows to members of their sport's teams.
     const scopedMembers = [
       member(footballTrainee.id, 'Trainee', 'One'),
       member(otherFootballTrainee.id, 'Trainee', 'Two'),

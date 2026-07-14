@@ -9,9 +9,7 @@ test('creates an event through the four-step dialog', async ({ page }) => {
 
   await dialog.getByLabel('Name').fill('E2E Friendly Match')
   await dialog.getByRole('button', { name: 'Next' }).click()
-  // Schedule step is pre-filled with a valid start/end pair.
   await dialog.getByRole('button', { name: 'Next' }).click()
-  // Sports & teams and attendees are optional for the admin.
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: 'Create Event' }).click()
 

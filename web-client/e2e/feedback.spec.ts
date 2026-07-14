@@ -7,15 +7,12 @@ test('composes feedback via the sport → team → event picker', async ({ page 
   await page.getByRole('button', { name: 'New feedback' }).click()
   const picker = page.getByRole('dialog', { name: 'New feedback' })
 
-  // The picker opens on the "By member" tab; switch to the coverage tree.
   await picker.getByRole('tab', { name: 'By event' }).click()
 
-  // Drill down the coverage tree: first sport → first team → first event.
   for (let level = 0; level < 3; level += 1) {
     await picker.locator('ul > li button').first().click()
   }
 
-  // Remember who we are giving feedback to, then open the compose dialog.
   const traineeRow = picker.locator('ul > li').first()
   const traineeName = (await traineeRow.locator('p').first().innerText()).trim()
   await traineeRow.getByRole('button', { name: `Give feedback for ${traineeName}` }).click()

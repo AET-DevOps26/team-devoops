@@ -7,8 +7,6 @@ type AuthTokenSnapshot = KeycloakTokenParsed & {
   email?: string
   name?: string
   preferred_username?: string
-  // Keycloak client-role claim: display labels (Trainee/Coach/Director/Admin), unordered.
-  // Collapse to a single Role with `highestRole(member_roles)` — never rely on array order.
   member_roles?: string[]
 }
 

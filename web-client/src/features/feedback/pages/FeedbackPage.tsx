@@ -142,9 +142,7 @@ export function FeedbackPage() {
     openCompose({ id: trainee.id, name: trainee.name, eventId: pickerEvent.id })
   }
 
-  // Free path (matches the Members page): pick any member you're allowed to compose for,
-  // then choose the event inside the compose dialog. Always available to admins/trainers,
-  // so the button is never gated on the narrower "missing feedback" coverage.
+  // Composition is permission-based, not limited to missing-feedback coverage.
   const composeForMember = (member: { id: string; name: string }) => {
     setPickerOpen(false)
     openCompose({ id: member.id, name: member.name })
@@ -519,9 +517,6 @@ export function FeedbackPage() {
               <DialogTitle>New feedback</DialogTitle>
             </DialogHeader>
 
-            {/* Two ways in: pick any member you can give feedback to (unconstrained, matches the
-                Members page), or drill down by event to see who is still missing feedback. The
-                event tab only exists when there is a coverage tree to drill into. */}
             {hasCoverageTree ? (
               <Tabs
                 value={pickerMode}
