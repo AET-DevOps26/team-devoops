@@ -61,6 +61,8 @@
   --roost-border: oklch(0.92 0.004 286.32);
   --roost-input-bg: oklch(1 0 0);
   --roost-destructive: oklch(0.577 0.245 27.325);
+  --roost-warning: oklch(0.72 0.16 78);
+  --roost-success: var(--roost-primary);
   --roost-radius: 0;
 
   /* Ambient gradient spots, straight from the web app. */
@@ -78,6 +80,9 @@
     --roost-muted-foreground: oklch(0.705 0.015 286.067);
     --roost-border: oklch(1 0 0 / 12%);
     --roost-input-bg: oklch(0.18 0.005 285.8);
+    --roost-destructive: oklch(0.704 0.191 22.216);
+    --roost-warning: oklch(0.82 0.14 82);
+    --roost-success: var(--roost-primary);
     --roost-glow-1: oklch(0.55 0.12 128 / 0.22);
     --roost-glow-2: oklch(0.6 0.06 86 / 0.16);
   }
@@ -270,7 +275,7 @@ textarea.pf-c-form-control {
   height: 2.75rem;
   border-radius: var(--roost-radius);
   border: 1px solid var(--roost-border);
-  background: var(--roost-input-bg);
+  background-color: var(--roost-input-bg);
   font-family: 'Poppins', sans-serif;
   font-size: 0.9375rem;
   color: var(--roost-foreground);
@@ -291,6 +296,18 @@ input[type='email']:focus {
   border-color: var(--roost-primary);
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--roost-primary) 30%, transparent);
+}
+
+/* Keycloak/PatternFly adds validation icons as background images. The Roost
+   theme uses plain border + helper text errors, so remove those image
+   backgrounds to avoid tiled icons inside invalid fields. */
+.pf-c-form-control[aria-invalid='true'],
+.pf-v5-c-form-control[aria-invalid='true'],
+input[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--roost-destructive);
+  background-color: var(--roost-input-bg);
+  background-image: none;
 }
 
 /* ---- Buttons (match the app Button: uppercase, tracked out, semibold) ---- */
@@ -399,23 +416,124 @@ a:hover {
 
 /* ---- Alerts / errors ---- */
 .pf-c-alert,
+.pf-v5-c-alert,
 .alert {
+  --roost-alert-accent: var(--roost-muted-foreground);
+  --roost-alert-background: color-mix(in oklch, var(--roost-muted-foreground) 8%, transparent);
+  --roost-alert-border: var(--roost-border);
+  --pf-c-alert--BoxShadow: none;
+  --pf-c-alert--BackgroundColor: var(--roost-alert-background);
+  --pf-c-alert--BorderTopWidth: 0;
+  --pf-c-alert--BorderTopColor: transparent;
+  --pf-c-alert__icon--Color: var(--roost-alert-accent);
+  --pf-c-alert__title--Color: var(--roost-alert-accent);
+  --pf-c-alert--m-inline--BackgroundColor: var(--roost-alert-background);
+  --pf-c-alert--m-inline--m-success--BackgroundColor: var(--roost-alert-background);
+  --pf-c-alert--m-inline--m-danger--BackgroundColor: var(--roost-alert-background);
+  --pf-c-alert--m-inline--m-warning--BackgroundColor: var(--roost-alert-background);
+  --pf-c-alert--m-inline--m-info--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--BoxShadow: none;
+  --pf-v5-c-alert--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--BorderTopWidth: 0;
+  --pf-v5-c-alert--BorderTopColor: transparent;
+  --pf-v5-c-alert__icon--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert__title--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-inline--m-custom--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--m-inline--m-success--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--m-inline--m-danger--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--m-inline--m-warning--BackgroundColor: var(--roost-alert-background);
+  --pf-v5-c-alert--m-inline--m-info--BackgroundColor: var(--roost-alert-background);
   border-radius: var(--roost-radius);
+  border: 1px solid var(--roost-alert-border);
+  border-left: 3px solid var(--roost-alert-accent);
+  border-top: 0;
+  border-block-start: 0;
+  box-shadow: none;
+  background: var(--roost-alert-background);
   font-family: 'Poppins', sans-serif;
   font-size: 0.875rem;
+  color: var(--roost-foreground);
   margin-bottom: 1.25rem;
 }
 
 .pf-c-alert.pf-m-danger,
+.pf-v5-c-alert.pf-m-danger,
 .alert-error {
-  border-radius: var(--roost-radius);
-  border-left: 3px solid var(--roost-destructive);
-  background: color-mix(in oklch, var(--roost-destructive) 10%, transparent);
+  --roost-alert-accent: var(--roost-destructive);
+  --roost-alert-background: color-mix(in oklch, var(--roost-destructive) 10%, transparent);
+  --roost-alert-border: color-mix(in oklch, var(--roost-destructive) 30%, transparent);
+  --pf-c-alert--m-danger--BorderTopColor: var(--roost-alert-accent);
+  --pf-c-alert--m-danger__icon--Color: var(--roost-alert-accent);
+  --pf-c-alert--m-danger__title--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-danger--BorderTopColor: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-danger__icon--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-danger__title--Color: var(--roost-alert-accent);
+}
+
+.pf-c-alert.pf-m-warning,
+.pf-v5-c-alert.pf-m-warning,
+.alert-warning {
+  --roost-alert-accent: var(--roost-warning);
+  --roost-alert-background: color-mix(in oklch, var(--roost-warning) 10%, transparent);
+  --roost-alert-border: color-mix(in oklch, var(--roost-warning) 32%, transparent);
+  --pf-c-alert--m-warning--BorderTopColor: var(--roost-alert-accent);
+  --pf-c-alert--m-warning__icon--Color: var(--roost-alert-accent);
+  --pf-c-alert--m-warning__title--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-warning--BorderTopColor: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-warning__icon--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-warning__title--Color: var(--roost-alert-accent);
+}
+
+.pf-c-alert.pf-m-success,
+.pf-v5-c-alert.pf-m-success,
+.alert-success {
+  --roost-alert-accent: var(--roost-success);
+  --roost-alert-background: color-mix(in oklch, var(--roost-success) 10%, transparent);
+  --roost-alert-border: color-mix(in oklch, var(--roost-success) 30%, transparent);
+  --pf-c-alert--m-success--BorderTopColor: var(--roost-alert-accent);
+  --pf-c-alert--m-success__icon--Color: var(--roost-alert-accent);
+  --pf-c-alert--m-success__title--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-success--BorderTopColor: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-success__icon--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-success__title--Color: var(--roost-alert-accent);
+}
+
+.pf-c-alert.pf-m-info,
+.pf-v5-c-alert.pf-m-info,
+.alert-info {
+  --roost-alert-accent: var(--roost-muted-foreground);
+  --roost-alert-background: color-mix(in oklch, var(--roost-muted-foreground) 8%, transparent);
+  --roost-alert-border: var(--roost-border);
+  --pf-c-alert--m-info--BorderTopColor: var(--roost-alert-border);
+  --pf-c-alert--m-info__icon--Color: var(--roost-alert-accent);
+  --pf-c-alert--m-info__title--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-info--BorderTopColor: var(--roost-alert-border);
+  --pf-v5-c-alert--m-info__icon--Color: var(--roost-alert-accent);
+  --pf-v5-c-alert--m-info__title--Color: var(--roost-alert-accent);
+}
+
+.pf-c-alert__icon,
+.pf-v5-c-alert__icon,
+.pf-c-alert__title,
+.pf-v5-c-alert__title,
+.alert .kc-feedback-text {
+  color: var(--roost-alert-accent);
+}
+
+.pf-c-alert__title,
+.pf-v5-c-alert__title {
+  font-family: 'Poppins', sans-serif;
 }
 
 .kc-feedback-text,
-.pf-c-form__helper-text.pf-m-error {
+.pf-c-form__helper-text.pf-m-error,
+.pf-v5-c-form__helper-text.pf-m-error {
   font-family: 'Poppins', sans-serif;
+}
+
+.kc-feedback-text:not(.pf-c-alert__title):not(.pf-v5-c-alert__title),
+.pf-c-form__helper-text.pf-m-error,
+.pf-v5-c-form__helper-text.pf-m-error {
   color: var(--roost-destructive);
 }
 
