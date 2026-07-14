@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dashboardFixtures } from '@/mocks/fixtures/dashboard'
+import { dashboardFixtures } from '@/testing/fixtures/dashboard'
 import { creatorName, memberRefName, type Reference } from './types'
 
 // These lock the two shapes PR #99 actually ships (see the reconciliation task):

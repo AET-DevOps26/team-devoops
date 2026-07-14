@@ -5,8 +5,8 @@ import type {
   Reference,
   TeamBalanceSummary,
 } from '@/types'
-import type { MockPersonaKey } from '../personas'
-import { MOCK_PERSONAS } from '../personas'
+import type { TestPersonaKey } from '../personas'
+import { TEST_PERSONAS } from '../personas'
 import { scopeEvents, scopeFeedback } from '../scope'
 import { eventSummaryFixtures } from './events'
 import { feedbackSummaryFixtures } from './feedback'
@@ -52,8 +52,8 @@ function sportRef(id: string): Reference {
   return { id, name: sport?.name ?? '' }
 }
 
-function dashboardFor(key: MockPersonaKey): Dashboard {
-  const user = MOCK_PERSONAS[key]
+function dashboardFor(key: TestPersonaKey): Dashboard {
+  const user = TEST_PERSONAS[key]
 
   switch (user.role) {
     case 'member':
@@ -116,7 +116,7 @@ function dashboardFor(key: MockPersonaKey): Dashboard {
   }
 }
 
-export const dashboardFixtures: Record<MockPersonaKey, Dashboard> = {
+export const dashboardFixtures: Record<TestPersonaKey, Dashboard> = {
   member: dashboardFor('member'),
   coach: dashboardFor('coach'),
   director: dashboardFor('director'),
@@ -125,14 +125,14 @@ export const dashboardFixtures: Record<MockPersonaKey, Dashboard> = {
 
 // Pick the pre-built envelope for the current persona (matched by id, role as fallback).
 export function dashboardForUser(user: AuthUser): Dashboard {
-  const byId = (Object.keys(dashboardFixtures) as MockPersonaKey[]).find(
-    (key) => MOCK_PERSONAS[key].id === user.id,
+  const byId = (Object.keys(dashboardFixtures) as TestPersonaKey[]).find(
+    (key) => TEST_PERSONAS[key].id === user.id,
   )
   if (byId) return dashboardFixtures[byId]
 
   const role = user.role
-  const byRole = (Object.keys(dashboardFixtures) as MockPersonaKey[]).find(
-    (key) => MOCK_PERSONAS[key].role === role,
+  const byRole = (Object.keys(dashboardFixtures) as TestPersonaKey[]).find(
+    (key) => TEST_PERSONAS[key].role === role,
   )
   return dashboardFixtures[byRole ?? 'member']
 }

@@ -1,15 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getCurrentUser } from '@/features/auth/currentUser'
-import {
-  balanceFixtures,
-  memberNamesById,
-  transactionFixtures,
-} from '@/mocks/fixtures'
-import { mockHttpError, mockOr } from '@/mocks/mockSwitch'
-import { directorManagesMember, scopeBalances, scopeTransactions, trainerManagesMember } from '@/mocks/scope'
 import { paymentsClient } from './client'
-import type { AuthUser, Reference } from '@/types'
 import type { Balance, Transaction, TransactionCreate, TransactionPartialUpdate } from '../types'
 
 export const paymentsKeys = {
@@ -32,15 +23,7 @@ export function useBalances(enabled = true) {
     queryKey: paymentsKeys.balances,
     staleTime: 30_000,
     enabled,
-    queryFn: () =>
-      mockOr(
-        () => {
-          const user = getCurrentUser()
-          if (user.role === 'member') throw mockHttpError(403, 'Access denied')
-          return Promise.resolve(scopeBalances(balanceFixtures, user))
-        },
-        () => paymentsClient.get<Balance[]>('/balances').then(r => r.data),
-      ),
+    queryFn: () => paymentsClient.get<Balance[]>('/balances').then(r => r.data),
   })
 }
 
@@ -48,16 +31,7 @@ export function useMemberBalance(memberId: string) {
   return useQuery<Balance>({
     queryKey: paymentsKeys.balance(memberId),
     staleTime: 30_000,
-    queryFn: () =>
-      mockOr(
-        () => {
-          const found = balanceFixtures.find(balance => balance.member.id === memberId)
-          const scoped = found ? scopeBalances([found], getCurrentUser()) : []
-          if (!scoped[0]) throw new Error('Balance not found')
-          return Promise.resolve(scoped[0])
-        },
-        () => paymentsClient.get<Balance>(`/balances/${memberId}`).then(r => r.data),
-      ),
+    queryFn: () => paymentsClient.get<Balance>(`/balances/${memberId}`).then(r => r.data),
     enabled: !!memberId,
   })
 }
@@ -67,11 +41,7 @@ export function useTransactions(enabled = true) {
     queryKey: paymentsKeys.transactions,
     staleTime: 30_000,
     enabled,
-    queryFn: () =>
-      mockOr(
-        () => Promise.resolve(scopeTransactions(transactionFixtures, getCurrentUser())),
-        () => paymentsClient.get<Transaction[]>('/transactions').then(r => r.data),
-      ),
+    queryFn: () => paymentsClient.get<Transaction[]>('/transactions').then(r => r.data),
   })
 }
 
@@ -79,16 +49,7 @@ export function useTransaction(id: string) {
   return useQuery<Transaction>({
     queryKey: paymentsKeys.transaction(id),
     staleTime: 30_000,
-    queryFn: () =>
-      mockOr(
-        () => {
-          const found = transactionFixtures.find(transaction => transaction.id === id)
-          const scoped = found ? scopeTransactions([found], getCurrentUser()) : []
-          if (!scoped[0]) throw new Error('Transaction not found')
-          return Promise.resolve(scoped[0])
-        },
-        () => paymentsClient.get<Transaction>(`/transactions/${id}`).then(r => r.data),
-      ),
+    queryFn: () => paymentsClient.get<Transaction>(`/transactions/${id}`).then(r => r.data),
     enabled: !!id,
   })
 }
@@ -97,11 +58,7 @@ export function useCreateTransaction() {
   const qc = useQueryClient()
 
   return useMutation<Transaction, Error, TransactionCreate>({
-    mutationFn: data =>
-      mockOr(
-        () => Promise.resolve(mockCreateTransaction(data)),
-        () => paymentsClient.post<Transaction>('/transactions', data).then(r => r.data),
-      ),
+    mutationFn: data => paymentsClient.post<Transaction>('/transactions', data).then(r => r.data),
     onSuccess: (transaction) => {
       qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
       qc.invalidateQueries({ queryKey: paymentsKeys.balances })
@@ -114,11 +71,7 @@ export function useUpdateTransaction() {
   const qc = useQueryClient()
 
   return useMutation<Transaction, Error, { id: string } & TransactionPartialUpdate>({
-    mutationFn: ({ id, ...data }) =>
-      mockOr(
-        () => Promise.resolve(mockUpdateTransaction({ id, ...data })),
-        () => paymentsClient.patch<Transaction>(`/transactions/${id}`, data).then(r => r.data),
-      ),
+    mutationFn: ({ id, ...data }) => paymentsClient.patch<Transaction>(`/transactions/${id}`, data).then(r => r.data),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
       qc.invalidateQueries({ queryKey: paymentsKeys.balances })
@@ -131,142 +84,11 @@ export function useDeleteTransaction() {
   const qc = useQueryClient()
 
   return useMutation<void, Error, string>({
-    mutationFn: id =>
-      mockOr(
-        () => {
-          mockDeleteTransaction(id)
-          return Promise.resolve(undefined)
-        },
-        () => paymentsClient.delete(`/transactions/${id}`).then(() => undefined),
-      ),
+    mutationFn: id => paymentsClient.delete(`/transactions/${id}`).then(() => undefined),
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
       qc.invalidateQueries({ queryKey: paymentsKeys.balances })
       qc.removeQueries({ queryKey: paymentsKeys.transaction(id) })
     },
   })
-}
-
-function mockCreateTransaction(data: TransactionCreate): Transaction {
-  const user = getCurrentUser()
-  const member = memberRef(data.member)
-  const title = data.title.trim()
-
-  if (!title) throw mockHttpError(400, 'Title is required.')
-  if (!canCreateTransactionForMember(user, data.member)) {
-    throw mockHttpError(403, 'You are not allowed to create transactions for this member.')
-  }
-
-  const transaction: Transaction = {
-    id: mockTransactionId(),
-    member,
-    creator: { id: user.id, name: user.name },
-    amount_cents: data.amount_cents,
-    created_at: new Date().toISOString(),
-    title,
-    description: data.description?.trim() ?? '',
-  }
-
-  transactionFixtures.unshift(transaction)
-  syncMockBalance(member)
-  return cloneTransaction(transaction)
-}
-
-function mockUpdateTransaction({ id, ...data }: { id: string } & TransactionPartialUpdate): Transaction {
-  const user = getCurrentUser()
-  const index = transactionFixtures.findIndex((transaction) => transaction.id === id)
-  const existing = transactionFixtures[index]
-
-  if (!existing) throw mockHttpError(404, 'Transaction not found.')
-  // Same gate delete uses: only the creator or an admin may modify a transaction.
-  if (user.role !== 'admin' && existing.creator?.id !== user.id) {
-    throw mockHttpError(403, 'You are not allowed to update this transaction.')
-  }
-
-  // Resolve a new member only if the caller is moving the transaction; keep the ref otherwise.
-  const nextMember = data.member !== undefined ? memberRef(data.member) : existing.member
-
-  const title = data.title !== undefined ? data.title.trim() : existing.title
-  if (!title) throw mockHttpError(400, 'Title is required.')
-
-  const updated: Transaction = {
-    ...existing,
-    member: nextMember,
-    amount_cents: data.amount_cents !== undefined ? data.amount_cents : existing.amount_cents,
-    title,
-    description: data.description !== undefined ? data.description.trim() : existing.description,
-  }
-
-  transactionFixtures[index] = updated
-
-  // Re-sync the affected member balance(s). If the member changed, both the old and the new
-  // member's balances must be recomputed.
-  if (existing.member.id !== updated.member.id) {
-    syncMockBalance(existing.member)
-  }
-  syncMockBalance(updated.member)
-
-  return cloneTransaction(updated)
-}
-
-function mockDeleteTransaction(id: string): void {
-  const user = getCurrentUser()
-  const index = transactionFixtures.findIndex((transaction) => transaction.id === id)
-  const transaction = transactionFixtures[index]
-
-  if (!transaction) throw mockHttpError(404, 'Transaction not found.')
-  if (user.role !== 'admin' && transaction.creator?.id !== user.id) {
-    throw mockHttpError(403, 'You are not allowed to delete this transaction.')
-  }
-
-  transactionFixtures.splice(index, 1)
-  syncMockBalance(transaction.member)
-}
-
-function memberRef(memberId: string): Reference {
-  const name = memberNamesById[memberId]
-  if (!name) throw mockHttpError(404, 'Member not found.')
-  return { id: memberId, name }
-}
-
-function canCreateTransactionForMember(user: AuthUser, memberId: string): boolean {
-  if (user.role === 'admin') return true
-  if (user.role === 'director') return directorManagesMember(user.id, memberId)
-  if (user.role === 'trainer') return trainerManagesMember(user.id, memberId)
-  return false
-}
-
-function syncMockBalance(member: Reference): void {
-  const balanceCents = transactionFixtures.reduce(
-    (sum, transaction) =>
-      transaction.member.id === member.id ? sum + transaction.amount_cents : sum,
-    0,
-  )
-  const index = balanceFixtures.findIndex((balance) => balance.member.id === member.id)
-  const balance: Balance = {
-    member: { ...member },
-    balance_cents: balanceCents,
-  }
-
-  if (index === -1) {
-    balanceFixtures.push(balance)
-    return
-  }
-
-  balanceFixtures[index] = balance
-}
-
-function mockTransactionId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `cccccccc-cccc-4ccc-8ccc-${Date.now().toString(16).padStart(12, '0').slice(-12)}`
-  )
-}
-
-function cloneTransaction(transaction: Transaction): Transaction {
-  return {
-    ...transaction,
-    member: { ...transaction.member },
-    creator: transaction.creator ? { ...transaction.creator } : null,
-  }
 }

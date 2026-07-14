@@ -20,6 +20,10 @@ spec:
       # Unlike prometheus/grafana/loki, the official ollama/ollama image has no USER directive
       # (runs as root), so it doesn't hit the CSI PVC's root-owned-mount permission issue those
       # need fsGroup for -- confirmed via the image's config blob (Config.User is empty).
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -28,6 +32,8 @@ spec:
         - name: ollama
           image: {{ .Values.ollama.image }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" false) | nindent 12 }}
           command: ["/usr/bin/bash", "/entrypoint_ollama.sh"]
           env:
             # Keeps the chat and embedding models from being resident in memory at the same

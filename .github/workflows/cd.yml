@@ -30,6 +30,44 @@ jobs:
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
+      - name: Write compose .env file
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+          ORGANIZATION_DB_PASSWORD: ${{ secrets.DB_ORGANIZATION_PASSWORD }}
+          MEMBER_DB_PASSWORD: ${{ secrets.DB_MEMBER_PASSWORD }}
+          EVENT_DB_PASSWORD: ${{ secrets.DB_EVENT_PASSWORD }}
+          FEEDBACK_DB_PASSWORD: ${{ secrets.DB_FEEDBACK_PASSWORD }}
+          FINANCE_DB_PASSWORD: ${{ secrets.DB_FINANCE_PASSWORD }}
+          LETTER_DB_PASSWORD: ${{ secrets.DB_LETTER_PASSWORD }}
+          REPORTS_DB_PASSWORD: ${{ secrets.DB_REPORTS_PASSWORD }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+          KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
+          KEYCLOAK_REALM_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_REALM_ADMIN_PASSWORD }}
+          KEYCLOAK_REALM_USER_PASSWORD: ${{ secrets.KEYCLOAK_REALM_USER_PASSWORD }}
+          FORWARD_AUTH_COOKIE_SECRET: ${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}
+          KEYCLOAK_ADMIN_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
+          FORWARD_AUTH_CLIENT_SECRET: ${{ secrets.FORWARD_AUTH_CLIENT_SECRET }}
+          GRAFANA_OAUTH_CLIENT_SECRET: ${{ secrets.GRAFANA_OAUTH_CLIENT_SECRET }}
+        run: |
+          cat > /tmp/compose.env << ENVFILE
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          ORGANIZATION_DB_PASSWORD=$ORGANIZATION_DB_PASSWORD
+          MEMBER_DB_PASSWORD=$MEMBER_DB_PASSWORD
+          EVENT_DB_PASSWORD=$EVENT_DB_PASSWORD
+          FEEDBACK_DB_PASSWORD=$FEEDBACK_DB_PASSWORD
+          FINANCE_DB_PASSWORD=$FINANCE_DB_PASSWORD
+          LETTER_DB_PASSWORD=$LETTER_DB_PASSWORD
+          REPORTS_DB_PASSWORD=$REPORTS_DB_PASSWORD
+          KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD
+          KEYCLOAK_DB_PASSWORD=$KEYCLOAK_DB_PASSWORD
+          KEYCLOAK_REALM_ADMIN_PASSWORD=$KEYCLOAK_REALM_ADMIN_PASSWORD
+          KEYCLOAK_REALM_USER_PASSWORD=$KEYCLOAK_REALM_USER_PASSWORD
+          FORWARD_AUTH_COOKIE_SECRET=$FORWARD_AUTH_COOKIE_SECRET
+          KEYCLOAK_ADMIN_CLIENT_SECRET=$KEYCLOAK_ADMIN_CLIENT_SECRET
+          FORWARD_AUTH_CLIENT_SECRET=$FORWARD_AUTH_CLIENT_SECRET
+          GRAFANA_OAUTH_CLIENT_SECRET=$GRAFANA_OAUTH_CLIENT_SECRET
+          ENVFILE
+
       - name: Write genai .env file
         env:
           GENAI_ENV_CONTENT: ${{ secrets.GENAI_ENV_CONTENT }}
@@ -59,6 +97,7 @@ jobs:
             infra/ansible/playbook.yml \
             -e "repo_url=https://github.com/${{ github.repository }}.git" \
             -e "branch=${{ github.ref_name }}" \
+            -e "compose_env_file=/tmp/compose.env" \
             -e "genai_env_file=/tmp/genai.env" \
             -e "letter_env_file=/tmp/letter.env"
 
@@ -253,5 +292,21 @@ jobs:
             --namespace "$NAMESPACE" \
             --set global.image.tag=${{ github.sha }} \
             --set keycloak.hostname=https://ge83mom-devops26.stud.k8s.aet.cit.tum.de/auth \
+            --set database.password="${{ secrets.DB_ADMIN_PASSWORD }}" \
+            --set database.users.organization.password="${{ secrets.DB_ORGANIZATION_PASSWORD }}" \
+            --set database.users.member.password="${{ secrets.DB_MEMBER_PASSWORD }}" \
+            --set database.users.event.password="${{ secrets.DB_EVENT_PASSWORD }}" \
+            --set database.users.feedback.password="${{ secrets.DB_FEEDBACK_PASSWORD }}" \
+            --set database.users.finance.password="${{ secrets.DB_FINANCE_PASSWORD }}" \
+            --set database.users.letter.password="${{ secrets.DB_LETTER_PASSWORD }}" \
+            --set database.users.reports.password="${{ secrets.DB_REPORTS_PASSWORD }}" \
+            --set keycloak.adminPassword="${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" \
+            --set keycloak.db.password="${{ secrets.KEYCLOAK_DB_PASSWORD }}" \
+            --set keycloak.users.admin.password="${{ secrets.KEYCLOAK_REALM_ADMIN_PASSWORD }}" \
+            --set keycloak.users.user.password="${{ secrets.KEYCLOAK_REALM_USER_PASSWORD }}" \
             --set forwardAuth.cookieSecret="${{ secrets.FORWARD_AUTH_COOKIE_SECRET }}" \
+            --set forwardAuth.clientSecret="${{ secrets.FORWARD_AUTH_CLIENT_SECRET }}" \
+            --set monitoring.grafana.oauthClientSecret="${{ secrets.GRAFANA_OAUTH_CLIENT_SECRET }}" \
+            --set services.organization-service.env.KEYCLOAK_ADMIN_CLIENT_SECRET="${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}" \
+            --set services.member-service.env.KEYCLOAK_SERVICE_ACCOUNT_CLIENT_SECRET="${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}" \
             --rollback-on-failure --timeout 15m

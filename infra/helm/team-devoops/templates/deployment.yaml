@@ -7,10 +7,14 @@ metadata:
   labels:
     {{- include "team-devoops.labels" (dict "name" $name "root" $root) | nindent 4 }}
 spec:
+  {{- /* Omitted when HPA-managed: setting it here would make every `helm upgrade`
+        reset replicas back to the default and fight the HPA's scaling decisions. */}}
+  {{- if not (and $svc.autoscaling $svc.autoscaling.enabled) }}
   replicas: {{ $svc.replicas | default 1 }}
+  {{- end }}
   progressDeadlineSeconds: {{ $svc.progressDeadlineSeconds | default 600 }}
   strategy:
-    {{- toYaml $root.Values.strategy | nindent 4 }}
+    {{- toYaml ($svc.strategy | default $root.Values.strategy) | nindent 4 }}
   selector:
     matchLabels:
       {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 6 }}
@@ -19,20 +23,34 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" $name) | nindent 8 }}
     spec:
-      {{- if $svc.persistence }}
+      automountServiceAccountToken: false
       securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        {{- if $svc.persistence }}
         fsGroup: {{ $svc.persistence.fsGroup }}
-      {{- end }}
+        {{- end }}
       {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ $svc.terminationGracePeriodSeconds | default 30 }}
       containers:
         - name: {{ $name }}
           image: {{ include "team-devoops.image" (dict "name" $name "svc" $svc "root" $root) }}
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" (ne $svc.runAsNonRoot false)) | nindent 12 }}
           ports:
             - containerPort: {{ $svc.port }}
+          {{- /* Gives the endpoints controller time to remove this pod from Service
+                routing before SIGTERM, so in-flight requests aren't dropped mid-rollout --
+                matters most for maxUnavailable-driven rollouts, which briefly have zero
+                healthy pods for a service otherwise. */}}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
           {{- if $svc.persistence }}
           volumeMounts:
             - name: data

@@ -11,7 +11,7 @@ import {
   teamFixtures,
   transactionFixtures,
 } from './fixtures'
-import { MOCK_PERSONAS } from './personas'
+import { TEST_PERSONAS } from './personas'
 import {
   scopeBalances,
   scopeEvents,
@@ -24,10 +24,10 @@ import {
 type EventRow = EventListItem | SportEvent
 
 const users = {
-  member: MOCK_PERSONAS.member,
-  trainer: MOCK_PERSONAS.coach,
-  director: MOCK_PERSONAS.director,
-  admin: MOCK_PERSONAS.admin,
+  member: TEST_PERSONAS.member,
+  trainer: TEST_PERSONAS.coach,
+  director: TEST_PERSONAS.director,
+  admin: TEST_PERSONAS.admin,
 } satisfies Record<string, AuthUser>
 
 function ids(rows: { id: string }[]): string[] {

@@ -35,6 +35,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     passWithNoTests: true,
+    // Heavy page/dialog component tests exceed the 5s default when v8 coverage
+    // instrumentation is on (pnpm test:coverage); the suite itself stays fast.
+    testTimeout: 15_000,
     setupFiles: ['src/setupTests.ts'],
     include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     coverage: {

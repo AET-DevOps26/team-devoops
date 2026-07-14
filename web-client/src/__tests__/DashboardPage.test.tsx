@@ -15,15 +15,15 @@ const organizationQueryMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/auth', async () => {
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
 
   return {
-    useAuth: () => ({ user: MOCK_PERSONAS[mockState.persona] }),
+    useAuth: () => ({ user: TEST_PERSONAS[mockState.persona] }),
   }
 })
 
 vi.mock('@/app/pages/api/dashboardQueries', async () => {
-  const { dashboardFixtures } = await import('@/mocks/fixtures/dashboard')
+  const { dashboardFixtures } = await import('@/testing/fixtures/dashboard')
 
   return {
     useDashboard: () => ({
@@ -35,13 +35,13 @@ vi.mock('@/app/pages/api/dashboardQueries', async () => {
 })
 
 vi.mock('@/features/sport-events/api/queries', async () => {
-  const { eventSummaryFixtures } = await import('@/mocks/fixtures')
-  const { MOCK_PERSONAS } = await import('@/mocks/personas')
-  const { scopeEvents } = await import('@/mocks/scope')
+  const { eventSummaryFixtures } = await import('@/testing/fixtures')
+  const { TEST_PERSONAS } = await import('@/testing/personas')
+  const { scopeEvents } = await import('@/testing/scope')
 
   return {
     useEventsList: () => ({
-      data: scopeEvents(eventSummaryFixtures, MOCK_PERSONAS[mockState.persona]),
+      data: scopeEvents(eventSummaryFixtures, TEST_PERSONAS[mockState.persona]),
       isLoading: false,
       error: null,
     }),
@@ -49,7 +49,7 @@ vi.mock('@/features/sport-events/api/queries', async () => {
 })
 
 vi.mock('@/features/organization/api/queries', async () => {
-  const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+  const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 
   organizationQueryMocks.useSportsList.mockImplementation((enabled = true) => ({
     data: enabled ? sportFixtures : undefined,
@@ -69,8 +69,8 @@ vi.mock('@/features/organization/api/queries', async () => {
 })
 
 const { DashboardPage } = await import('@/app/pages/DashboardPage')
-const { dashboardFixtures } = await import('@/mocks/fixtures/dashboard')
-const { sportFixtures, teamFixtures } = await import('@/mocks/fixtures/organization')
+const { dashboardFixtures } = await import('@/testing/fixtures/dashboard')
+const { sportFixtures, teamFixtures } = await import('@/testing/fixtures/organization')
 const { formatCents } = await import('@/lib/format')
 
 describe('DashboardPage', () => {
