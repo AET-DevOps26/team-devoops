@@ -2,6 +2,7 @@ import { CheckIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { DialogFooter } from '@/components/ui/dialog'
+import { PendingButton } from '@/components/ui/pending-button'
 import { cn } from '@/lib/utils'
 
 export interface DialogStep {
@@ -106,9 +107,9 @@ export function DialogStepperFooter({
       >
         {isFirstStep ? 'Cancel' : 'Back'}
       </Button>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? 'Saving' : isLastStep ? submitLabel : nextLabel}
-      </Button>
+      <PendingButton type="submit" isPending={isPending} pendingLabel="Saving…">
+        {isLastStep ? submitLabel : nextLabel}
+      </PendingButton>
     </DialogFooter>
   )
 }
