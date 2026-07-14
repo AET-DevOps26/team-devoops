@@ -1,15 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { eventCreateDependentKeys, eventDependentKeys, eventKeys } from '@/lib/query-keys'
+import { settleMutation } from '@/lib/query-cache'
 import { sportEventsClient } from './client'
 import type { EventListItem } from '@/types'
 import type { SportEvent, EventCreate, EventPartialUpdate } from '../types'
 
-export const eventKeys = {
-  hello: ['sport-events', 'hello'] as const,
-  all: ['sport-events'] as const,
-  list: () => ['sport-events', 'list'] as const,
-  detail: (id: string | null | undefined) => ['sport-events', 'detail', id] as const,
-}
+export { eventKeys }
 
 export const sportEventsKeys = eventKeys
 
@@ -45,9 +42,13 @@ export function useCreateSportEvent() {
 
   return useMutation<SportEvent, Error, EventCreate>({
     mutationFn: data => sportEventsClient.post<SportEvent>('', data).then(r => r.data),
+    // Events are ordered by date, not by insertion, so the new row is refetched into position
+    // rather than prepended.
     onSuccess: (event) => {
       qc.setQueryData(eventKeys.detail(event.id), event)
-      qc.invalidateQueries({ queryKey: eventKeys.all })
+      return settleMutation(qc, {
+        invalidate: [eventKeys.list(), ...eventCreateDependentKeys],
+      })
     },
   })
 }
@@ -57,10 +58,13 @@ export function useUpdateSportEvent() {
 
   return useMutation<SportEvent, Error, { id: string } & EventPartialUpdate>({
     mutationFn: ({ id, ...data }) => sportEventsClient.patch<SportEvent>(`/${id}`, data).then(r => r.data),
+    // Rescheduling an event moves it in the date-ordered list, so the list is refetched. The old
+    // code merged the detail response over the list row, which also risked widening the row shape.
     onSuccess: (event, { id }) => {
       qc.setQueryData(eventKeys.detail(id), event)
-      qc.invalidateQueries({ queryKey: eventKeys.all })
-      qc.invalidateQueries({ queryKey: eventKeys.detail(id) })
+      return settleMutation(qc, {
+        invalidate: [eventKeys.list(), eventKeys.detail(id), ...eventDependentKeys],
+      })
     },
   })
 }
@@ -70,9 +74,11 @@ export function useDeleteSportEvent() {
 
   return useMutation<void, Error, string>({
     mutationFn: id => sportEventsClient.delete(`/${id}`).then(() => undefined),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: eventKeys.all })
-      qc.removeQueries({ queryKey: eventKeys.detail(id) })
-    },
+    onSuccess: (_, id) =>
+      settleMutation(qc, {
+        remove: [{ key: eventKeys.list(), id }],
+        evict: [eventKeys.detail(id)],
+        invalidate: [eventKeys.list(), ...eventDependentKeys],
+      }),
   })
 }
