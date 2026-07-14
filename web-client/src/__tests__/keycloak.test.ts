@@ -7,6 +7,7 @@ const mock = {
   tokenParsed: { exp: Math.floor(Date.now() / 1000) + 10 } as { exp?: number } | undefined,
   updateToken: vi.fn<(n: number) => Promise<boolean>>(),
   login: vi.fn<() => Promise<void>>(),
+  onAuthRefreshSuccess: undefined as (() => void) | undefined,
 }
 
 // vi.mock is hoisted before static imports, so keycloak-js is replaced before
@@ -15,7 +16,12 @@ vi.mock('keycloak-js', () => ({
   default: vi.fn(() => mock),
 }))
 
-const { createApiClient, resetKeycloakRefreshStateForTests } = await import('@/lib/keycloak')
+const {
+  createApiClient,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  onTokenRefreshed,
+  resetKeycloakRefreshStateForTests,
+} = await import('@/lib/keycloak')
 
 /** Minimal axios adapter that captures the final request config. */
 function captureAdapter(captured: { config?: InternalAxiosRequestConfig }) {
@@ -53,6 +59,18 @@ describe('createApiClient', () => {
     await client.get('/something')
 
     expect(mock.updateToken).toHaveBeenCalledWith(30)
+  })
+
+  it('uses the default request timeout', () => {
+    const client = createApiClient('/api/test')
+
+    expect(client.defaults.timeout).toBe(DEFAULT_REQUEST_TIMEOUT_MS)
+  })
+
+  it('accepts a per-client request timeout', () => {
+    const client = createApiClient('/api/test', 60_000)
+
+    expect(client.defaults.timeout).toBe(60_000)
   })
 
   it('skips updateToken() when the token is not close to expiring', async () => {
@@ -129,5 +147,22 @@ describe('createApiClient', () => {
     })
 
     expect(mock.login).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('onTokenRefreshed', () => {
+  it('fans out refreshes and unsubscribes listeners independently', () => {
+    const firstListener = vi.fn()
+    const secondListener = vi.fn()
+    const unsubscribeFirst = onTokenRefreshed(firstListener)
+    const unsubscribeSecond = onTokenRefreshed(secondListener)
+
+    mock.onAuthRefreshSuccess?.()
+    unsubscribeFirst()
+    mock.onAuthRefreshSuccess?.()
+    unsubscribeSecond()
+
+    expect(firstListener).toHaveBeenCalledTimes(1)
+    expect(secondListener).toHaveBeenCalledTimes(2)
   })
 })
