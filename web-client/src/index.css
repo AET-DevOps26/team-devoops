@@ -242,4 +242,39 @@
     scrollbar-color: var(--primary) transparent;
     scrollbar-gutter: stable;
   }
+
+  /* react-phone-number-input ships a light-only default stylesheet; re-skin the country
+     column to match our themed Input. The national-number field is our <Input>, so it
+     already inherits the design. */
+  .roost-phone-input .PhoneInputCountry {
+    @apply flex h-10 shrink-0 items-center gap-1.5 border border-input bg-transparent px-2.5;
+    margin-right: 0;
+  }
+
+  .roost-phone-input .PhoneInputCountryIcon {
+    box-shadow: none;
+    background: transparent;
+    width: 1.5em;
+    height: 1.1em;
+  }
+
+  .roost-phone-input .PhoneInputCountryIcon--border {
+    box-shadow: none;
+  }
+
+  .roost-phone-input .PhoneInputCountrySelectArrow {
+    @apply text-text-tertiary;
+    opacity: 0.7;
+    margin-left: 0.1em;
+  }
+
+  .roost-phone-input .PhoneInputCountrySelect:focus + .PhoneInputCountryIcon + .PhoneInputCountrySelectArrow,
+  .roost-phone-input .PhoneInputCountrySelect:focus-visible ~ .PhoneInputCountrySelectArrow {
+    @apply text-ring;
+    opacity: 1;
+  }
+
+  .roost-phone-input .PhoneInputCountry:focus-within {
+    @apply border-ring;
+  }
 }

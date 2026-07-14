@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 // Shared table shell; scrolls horizontally before columns collapse too far.
 export function DataTable({ className, ...props }: React.ComponentProps<'table'>) {
   return (
-    <div className="roost-scroll overflow-x-auto border bg-card">
+    <div className="overflow-x-auto border bg-card">
       <table className={cn('w-full min-w-[42rem] border-collapse', className)} {...props} />
     </div>
   )

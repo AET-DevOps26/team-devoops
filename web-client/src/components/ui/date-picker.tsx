@@ -8,7 +8,15 @@ import { dateToInputValue, inputValueToDate } from '@/lib/date-fields'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-interface DatePickerProps {
+const DEFAULT_START_MONTH = new Date(1930, 0)
+
+interface DatePickerNavigationProps {
+  startMonth?: Date
+  endMonth?: Date
+  defaultMonth?: Date
+}
+
+interface DatePickerProps extends DatePickerNavigationProps {
   value: string
   onChange: (value: string) => void
   id?: string
@@ -27,8 +35,13 @@ export function DatePicker({
   placeholder = 'Pick a date',
   disabled,
   required,
+  startMonth = DEFAULT_START_MONTH,
+  endMonth = getDefaultEndMonth(),
+  defaultMonth,
   'aria-invalid': ariaInvalid,
 }: DatePickerProps) {
+  const selectedDate = inputValueToDate(value)
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -53,7 +66,12 @@ export function DatePicker({
         <Calendar
           mode="single"
           required={required}
-          selected={inputValueToDate(value)}
+          captionLayout="dropdown"
+          navLayout="after"
+          startMonth={startMonth}
+          endMonth={endMonth}
+          defaultMonth={selectedDate ?? defaultMonth}
+          selected={selectedDate}
           onSelect={(date: Date | undefined) => onChange(date ? dateToInputValue(date) : '')}
           aria-label={ariaLabel}
         />
@@ -62,7 +80,7 @@ export function DatePicker({
   )
 }
 
-interface DateTimePickerProps {
+interface DateTimePickerProps extends DatePickerNavigationProps {
   value: string
   onChange: (value: string) => void
   id?: string
@@ -81,9 +99,13 @@ export function DateTimePicker({
   placeholder = 'Pick a date and time',
   disabled,
   required,
+  startMonth = DEFAULT_START_MONTH,
+  endMonth = getDefaultEndMonth(),
+  defaultMonth,
   'aria-invalid': ariaInvalid,
 }: DateTimePickerProps) {
   const [datePart, timePart] = splitLocalDateTime(value)
+  const selectedDate = inputValueToDate(datePart)
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) {
@@ -124,7 +146,12 @@ export function DateTimePicker({
           <Calendar
             mode="single"
             required={required}
-            selected={inputValueToDate(datePart)}
+            captionLayout="dropdown"
+            navLayout="after"
+            startMonth={startMonth}
+            endMonth={endMonth}
+            defaultMonth={selectedDate ?? defaultMonth}
+            selected={selectedDate}
             onSelect={handleDateSelect}
             aria-label={ariaLabel}
           />
@@ -149,6 +176,11 @@ function splitLocalDateTime(value: string): [string, string] {
 
 function joinLocalDateTime(datePart: string, timePart: string): string {
   return `${datePart}T${timePart}`
+}
+
+function getDefaultEndMonth(): Date {
+  const today = new Date()
+  return new Date(today.getFullYear() + 10, today.getMonth())
 }
 
 function formatDateLabel(value: string, placeholder: string): string {
