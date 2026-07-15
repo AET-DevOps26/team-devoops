@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorNotice } from '@/components/ui/ErrorNotice'
+import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
 import { PendingButtonContent } from '@/components/ui/pending-button'
 import { RowActionButton, RowActions } from '@/components/ui/row-action-button'
@@ -26,6 +27,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { notifyMutationError } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
 import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
@@ -59,10 +61,11 @@ export function HelperPage() {
   const deleteReport = useDeleteReport()
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [useLocalLlm, setUseLocalLlm] = useState(false)
 
   const onGenerate = async () => {
     try {
-      await generate()
+      await generate(useLocalLlm)
       toast.success('Report generation started.', {
         description: 'It will appear below when it is ready.',
       })
@@ -109,9 +112,22 @@ export function HelperPage() {
                 produced in the background and appear in the list below once ready.
               </p>
             </div>
-            <Button onClick={onGenerate} disabled={isGenerating || isAwaitingReport}>
-              {isGenerating ? 'Starting…' : isAwaitingReport ? 'Generating…' : 'Generate report'}
-            </Button>
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="use-local-llm"
+                  checked={useLocalLlm}
+                  onCheckedChange={setUseLocalLlm}
+                  disabled={isGenerating || isAwaitingReport}
+                />
+                <Label htmlFor="use-local-llm" className="text-body-sm text-text-secondary">
+                  Use local LLM
+                </Label>
+              </div>
+              <Button onClick={onGenerate} disabled={isGenerating || isAwaitingReport}>
+                {isGenerating ? 'Starting…' : isAwaitingReport ? 'Generating…' : 'Generate report'}
+              </Button>
+            </div>
           </div>
 
           <Separator />

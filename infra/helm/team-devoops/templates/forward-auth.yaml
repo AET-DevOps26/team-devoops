@@ -17,6 +17,10 @@ spec:
       labels:
         {{- include "team-devoops.selectorLabels" (dict "name" "oauth2-proxy") | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -25,6 +29,8 @@ spec:
         - name: oauth2-proxy
           image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
           imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "team-devoops.containerSecurityContext" (dict "runAsNonRoot" true) | nindent 12 }}
           ports:
             - containerPort: 4180
           env:

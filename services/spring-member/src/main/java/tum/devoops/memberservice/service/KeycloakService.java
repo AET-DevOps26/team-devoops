@@ -15,6 +15,7 @@ import tum.devoops.memberservice.model.MemberCreate;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +23,10 @@ import java.util.UUID;
 public class KeycloakService {
 
     private static final long TOKEN_REFRESH_SKEW_SECONDS = 30L;
+
+    // Baseline realm role every member needs; without it, hasAnyRole('member', 'admin')
+    // rejects them with 403 on first login even though their Keycloak account exists.
+    private static final String MEMBER_ROLE_NAME = "member";
 
     private final RestClient restClient;
     private final String realm;
@@ -79,7 +84,41 @@ public class KeycloakService {
         }
 
         String path = location.getPath();
-        return UUID.fromString(path.substring(path.lastIndexOf("/") + 1));
+        UUID userId = UUID.fromString(path.substring(path.lastIndexOf("/") + 1));
+
+        assignMemberRealmRole(userId);
+
+        return userId;
+    }
+
+    // Looked up via the user's own "available realm roles" endpoint rather than the
+    // realm-wide /roles/{role-name} resource: the org-role-sync service account only
+    // holds the manage-users client role (see realm-config.json), which covers a
+    // user's own role-mappings sub-resource but not the separate view-realm permission
+    // that GET /roles/{role-name} would require.
+    private void assignMemberRealmRole(UUID userId) {
+        try {
+            RoleRepresentation[] availableRoles = restClient.get()
+                    .uri("/admin/realms/{realm}/users/{id}/role-mappings/realm/available", realm, userId)
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+                    .retrieve()
+                    .body(RoleRepresentation[].class);
+
+            RoleRepresentation memberRole = Arrays.stream(availableRoles != null ? availableRoles : new RoleRepresentation[0])
+                    .filter(role -> MEMBER_ROLE_NAME.equals(role.name()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Keycloak realm role not found: " + MEMBER_ROLE_NAME));
+
+            restClient.post()
+                    .uri("/admin/realms/{realm}/users/{id}/role-mappings/realm", realm, userId)
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeader())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(List.of(memberRole))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.Forbidden e) {
+            throw new SecurityException("Insufficient permissions to assign the member realm role");
+        }
     }
 
     public void updateUser(Member member) throws HttpClientErrorException {
@@ -180,6 +219,8 @@ public class KeycloakService {
     ) {}
 
     private record Credential(String type, String value, boolean temporary) {}
+
+    private record RoleRepresentation(String id, String name) {}
 
     private record TokenResponse(
             @JsonProperty("access_token") String accessToken,

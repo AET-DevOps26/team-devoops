@@ -73,14 +73,14 @@ export function useReportViewModel() {
     setAwaitCount(null)
   }
 
-  const generate = async () => {
+  const generate = async (useLocal?: boolean) => {
     if (awaitTimer.current) clearTimeout(awaitTimer.current)
     setAwaitCount(reportCount)
     awaitTimer.current = setTimeout(() => setAwaitCount(null), 120_000)
     // The POST itself can fail (or time out). Without this the page would keep claiming
     // "Generating…" for the full 2 minutes while also showing the error.
     try {
-      await generateMutation.mutateAsync()
+      await generateMutation.mutateAsync(useLocal)
     } catch (error) {
       stopAwaiting()
       throw error

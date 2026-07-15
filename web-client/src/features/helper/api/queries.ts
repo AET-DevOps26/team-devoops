@@ -17,8 +17,9 @@ export function useHelperHello() {
 export function useGenerateMemberReport(memberId: string) {
   const qc = useQueryClient()
 
-  return useMutation<void, Error, void>({
-    mutationFn: () => helperClient.post(`/reports/member/${memberId}`).then(() => undefined),
+  return useMutation<void, Error, boolean | undefined>({
+    mutationFn: (useLocal) =>
+      helperClient.post(`/reports/member/${memberId}`, { uselocal: useLocal }).then(() => undefined),
     // This first refresh may precede the asynchronous result. The view model keeps polling the
     // invalidated list until the generated report appears.
     onSuccess: () =>
@@ -29,8 +30,9 @@ export function useGenerateMemberReport(memberId: string) {
 export function useGenerateTeamReport(teamId: string) {
   const qc = useQueryClient()
 
-  return useMutation<void, Error, void>({
-    mutationFn: () => helperClient.post(`/reports/team/${teamId}`).then(() => undefined),
+  return useMutation<void, Error, boolean | undefined>({
+    mutationFn: (useLocal) =>
+      helperClient.post(`/reports/team/${teamId}`, { uselocal: useLocal }).then(() => undefined),
     onSuccess: () => settleMutation(qc, { invalidate: [helperKeys.teamReports(teamId)] }),
   })
 }

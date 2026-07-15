@@ -139,7 +139,7 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
           <div className="mb-4">
             <h2 className="text-h3 font-semibold text-text-primary">Identity</h2>
             <p className="mt-1 text-body-sm text-text-tertiary">
-              Your name and sign-in email.
+              Update your name below. Email is managed by your account and can&apos;t be changed here.
             </p>
           </div>
 
@@ -174,7 +174,15 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
 
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="profile-email">Email</Label>
-              <Input id="profile-email" type="email" value={form.email} readOnly disabled />
+              <Input
+                id="profile-email"
+                type="email"
+                value={form.email}
+                readOnly
+                aria-readonly="true"
+                className="bg-muted/30 text-text-secondary"
+              />
+              <p className="text-caption text-text-tertiary">Managed in your account.</p>
             </div>
           </div>
         </section>

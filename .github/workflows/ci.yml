@@ -315,7 +315,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.web_client == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: web-client
@@ -353,6 +353,20 @@ jobs:
         with:
           name: web-client-coverage
           path: web-client/coverage/
+          if-no-files-found: ignore
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests (Playwright)
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-client-playwright-report
+          path: web-client/playwright-report/
           if-no-files-found: ignore
 
       - name: Build (Vite)

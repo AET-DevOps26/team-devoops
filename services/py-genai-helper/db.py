@@ -8,11 +8,14 @@ trainer-of-team relationship are read from the other services' schemas via the s
 """
 
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 
+import psycopg2.errors
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ProgrammingError
 
 _engine = None
 
@@ -37,15 +40,7 @@ def get_engine():
     return _engine
 
 
-def init_db() -> None:
-    """Create the report tables if they don't exist yet (idempotent).
-
-    The foreign keys into member.members / organization.teams use ON DELETE CASCADE, matching the rest
-    of the system: deleting a member/team removes their reports. The referenced tables must already
-    exist, so a first boot that wins the race against the member / organization services raises and the
-    container retries (restart: on-failure), the same way the Spring services' cross-schema FK
-    migrations do.
-    """
+def _create_report_tables() -> None:
     with get_engine().begin() as conn:
         conn.execute(
             text(
@@ -77,6 +72,30 @@ def init_db() -> None:
                 """
             )
         )
+
+
+def init_db() -> None:
+    """Create the report tables if they don't exist yet (idempotent).
+
+    The foreign keys into member.members / organization.teams use ON DELETE CASCADE, matching the rest
+    of the system: deleting a member/team removes their reports. The referenced tables must already
+    exist, so on a cold/fresh database this races against the member and organization services
+    creating them, raising UndefinedTable if we lose. Retried here rather than letting the process
+    crash: a crash falls back to the container's restart backoff, which is exponential and can push
+    the next attempt out far enough to blow past a deploy's overall timeout even though the actual
+    dependency only takes a couple of minutes to appear. The retry budget (2 minutes) stays well
+    within the startup probe's ~5.3 minute allowance, so losing this race no longer costs a container
+    restart at all, just a slower first boot.
+    """
+    deadline = time.monotonic() + 120
+    while True:
+        try:
+            _create_report_tables()
+            return
+        except ProgrammingError as e:
+            if not isinstance(e.orig, psycopg2.errors.UndefinedTable) or time.monotonic() >= deadline:
+                raise
+            time.sleep(2)
 
 
 def insert_member_report(member_id: str, report_text: str) -> str:
