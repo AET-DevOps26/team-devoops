@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AuthUser, MemberRef, Sport } from '@/types'
+import type { AuthUser, MemberRef, MemberSummary, Sport } from '@/types'
 import {
   adminSportEditorFields,
   buildSportCreatePayload,
@@ -12,7 +12,7 @@ import {
   sportCreatorFields,
   sportCreatorFieldsForUser,
   sportEditorFieldsForUser,
-  validateSportEditorForm,
+  validateSportEditorFieldErrors,
 } from './sportEditor'
 
 const director = ref('director-1', 'Director One')
@@ -119,11 +119,13 @@ describe('sport editor helpers', () => {
   it('validates required names only when the name field is enabled', () => {
     const form = { ...buildSportCreatorInitialState(), name: ' ' }
 
-    expect(validateSportEditorForm(form, sportCreatorFields)).toBe('Name is required.')
-    expect(validateSportEditorForm(form, ['directors'])).toBeNull()
+    expect(validateSportEditorFieldErrors(form, sportCreatorFields)).toEqual({
+      name: 'Name is required.',
+    })
+    expect(validateSportEditorFieldErrors(form, ['directors'])).toBeNull()
   })
 
-  it('builds director picker options scoped to members who already direct a sport', () => {
+  it('builds director picker options with existing directors first and all members selectable', () => {
     const members = [
       {
         id: 'member-2',
@@ -146,26 +148,21 @@ describe('sport editor helpers', () => {
     ]
 
     expect(buildSportDirectorPickerOptions(members, [football])).toEqual([
-      { id: director.id, name: 'Director One', meta: 'director-1@example.test' },
+      { id: director.id, name: 'Director One', meta: 'Director - director-1@example.test' },
+      { id: 'member-1', name: 'Alpha Member', meta: 'alpha@example.test' },
+      { id: 'member-2', name: 'Beta Member', meta: 'beta@example.test' },
     ])
   })
 
   it('keeps the sport being edited\'s current directors selectable even without another directorship', () => {
-    const members = [
-      {
-        id: director.id,
-        first_name: 'Director',
-        last_name: 'One',
-        email: 'director-1@example.test',
-      },
-    ]
+    const members: MemberSummary[] = []
 
     expect(buildSportDirectorPickerOptions(members, [], [director])).toEqual([
-      { id: director.id, name: 'Director One', meta: 'director-1@example.test' },
+      { id: director.id, name: 'Director One', meta: 'Director' },
     ])
   })
 
-  it('returns no options when nobody currently directs a sport', () => {
+  it('returns every member when nobody currently directs a sport', () => {
     const members = [
       {
         id: 'member-1',
@@ -175,6 +172,8 @@ describe('sport editor helpers', () => {
       },
     ]
 
-    expect(buildSportDirectorPickerOptions(members, [])).toEqual([])
+    expect(buildSportDirectorPickerOptions(members, [])).toEqual([
+      { id: 'member-1', name: 'Alpha Member', meta: 'alpha@example.test' },
+    ])
   })
 })

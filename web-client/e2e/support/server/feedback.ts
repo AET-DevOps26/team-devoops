@@ -15,14 +15,13 @@ import type {
   FeedbackSummary,
 } from '@/features/feedback/types'
 
-// In-memory feedback resource; reset() restores the module-level state per test.
 
 let feedbackDetailsState: Record<string, Feedback> = {}
 let feedbackSummaryState: FeedbackSummary[] = []
 
 export function reset(): void {
-  feedbackDetailsState = { ...feedbackDetailsById }
-  feedbackSummaryState = [...feedbackSummaryFixtures]
+  feedbackDetailsState = structuredClone(feedbackDetailsById)
+  feedbackSummaryState = structuredClone(feedbackSummaryFixtures)
 }
 
 reset()
@@ -135,6 +134,58 @@ export function updateFeedback(
 
   upsertMockFeedback(updated)
   return updated
+}
+
+export function renameMemberInFeedback(memberId: string, name: string): void {
+  const rename = <T extends Reference | null>(ref: T): T =>
+    ref && ref.id === memberId ? ({ ...ref, name } as T) : ref
+
+  for (const [id, feedback] of Object.entries(feedbackDetailsState)) {
+    feedbackDetailsState[id] = {
+      ...feedback,
+      member: rename(feedback.member),
+      creator: rename(feedback.creator),
+    }
+  }
+
+  feedbackSummaryState = feedbackSummaryState.map((row) => ({
+    ...row,
+    member: rename(row.member),
+    creator: rename(row.creator),
+  }))
+}
+
+export function removeMemberFromFeedback(memberId: string): void {
+  for (const [id, feedback] of Object.entries(feedbackDetailsState)) {
+    if (feedback.member?.id === memberId) {
+      delete feedbackDetailsState[id]
+    } else if (feedback.creator?.id === memberId) {
+      feedbackDetailsState[id] = { ...feedback, creator: null }
+    }
+  }
+
+  feedbackSummaryState = feedbackSummaryState
+    .filter((row) => row.member?.id !== memberId)
+    .map((row) => (row.creator?.id === memberId ? { ...row, creator: null } : row))
+}
+
+export function renameEventInFeedback(eventId: string, name: string): void {
+  for (const [id, feedback] of Object.entries(feedbackDetailsState)) {
+    if (feedback.event.id === eventId) {
+      feedbackDetailsState[id] = { ...feedback, event: { ...feedback.event, name } }
+    }
+  }
+
+  feedbackSummaryState = feedbackSummaryState.map((row) =>
+    row.event.id === eventId ? { ...row, event: { ...row.event, name } } : row,
+  )
+}
+
+export function removeEventFromFeedback(eventId: string): void {
+  for (const [id, feedback] of Object.entries(feedbackDetailsState)) {
+    if (feedback.event.id === eventId) delete feedbackDetailsState[id]
+  }
+  feedbackSummaryState = feedbackSummaryState.filter((row) => row.event.id !== eventId)
 }
 
 export function deleteFeedback(id: string, user: AuthUser): void {

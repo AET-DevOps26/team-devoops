@@ -49,7 +49,6 @@ describe('AuthenticatedApp', () => {
   async function render() {
     await act(async () => {
       root.render(<AuthenticatedApp queryClient={queryClient} />)
-      // flush microtasks so the async init chain resolves
       await new Promise((r) => setTimeout(r, 0))
     })
   }
@@ -64,10 +63,6 @@ describe('AuthenticatedApp', () => {
       await new Promise((r) => setTimeout(r, 0))
     })
   }
-
-  // ---------------------------------------------------------------------------
-  // Happy path
-  // ---------------------------------------------------------------------------
 
   it('renders the app when keycloak init resolves authenticated', async () => {
     keycloakMock.init.mockResolvedValue(true)
@@ -129,10 +124,6 @@ describe('AuthenticatedApp', () => {
     expect(keycloakMock.login).not.toHaveBeenCalled()
   })
 
-  // ---------------------------------------------------------------------------
-  // Not-authenticated path (redirect)
-  // ---------------------------------------------------------------------------
-
   it('calls keycloak.login() when init resolves not-authenticated', async () => {
     keycloakMock.init.mockResolvedValue(false)
 
@@ -141,10 +132,6 @@ describe('AuthenticatedApp', () => {
     expect(keycloakMock.login).toHaveBeenCalledTimes(1)
     expect(container.textContent).not.toContain('App ready')
   })
-
-  // ---------------------------------------------------------------------------
-  // Error paths — each error type maps to the right heading
-  // ---------------------------------------------------------------------------
 
   it('shows network error heading when fetch fails', async () => {
     keycloakMock.init.mockRejectedValue(new Error('Failed to fetch'))

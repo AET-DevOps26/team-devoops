@@ -13,6 +13,15 @@ const mutationMocks = vi.hoisted(() => ({
   updateMember: vi.fn(),
 }))
 
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+vi.mock('sonner', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/features/auth', async () => {
   const { TEST_PERSONAS } = await import('@/testing/personas')
 
@@ -110,7 +119,7 @@ describe('MemberEditorDialog', () => {
     expect(mutationMocks.createMember).not.toHaveBeenCalled()
   })
 
-  it('requires a valid email and a password on create', async () => {
+  it('requires a valid email and an eight-character password on create', async () => {
     await renderOpenCreate()
     await fillField('member-first-name', 'Nina')
     await fillField('member-last-name', 'Neu')
@@ -120,7 +129,7 @@ describe('MemberEditorDialog', () => {
 
     await fillField('member-email', 'nina.neu@club.de')
     await submitForm()
-    expect(document.body.textContent).toContain('Password is required.')
+    expect(document.body.textContent).toContain('Password must be at least 8 characters.')
   })
 
   it('walks the stepper and submits the create payload', async () => {
@@ -131,25 +140,26 @@ describe('MemberEditorDialog', () => {
     await fillField('member-last-name', 'Neu')
     await fillField('member-email', 'nina.neu@club.de')
     await fillField('member-password', 'initial-secret')
-    await submitForm() // -> contact step
+    await submitForm()
     expect(document.body.querySelector('#member-phone')).not.toBeNull()
     await fillField('member-phone', '+49 111 2223334')
-    await submitForm() // -> notes step
+    await submitForm()
     expect(document.body.querySelector('#member-information')).not.toBeNull()
-    await submitForm() // -> create
+    await submitForm()
 
     expect(mutationMocks.createMember).toHaveBeenCalledWith({
       first_name: 'Nina',
       last_name: 'Neu',
       email: 'nina.neu@club.de',
       password: 'initial-secret',
-      phone_number: '+49 111 2223334',
+      // react-phone-number-input normalises the entry to E.164 (no spaces).
+      phone_number: '+491112223334',
     })
     expect(useMembersUiStore.getState().editorTarget).toBeNull()
-    expect(useMembersUiStore.getState().mutationNotice).toBe('Member created.')
+    expect(toastMocks.success).toHaveBeenCalledWith('Member created.')
   })
 
-  it('surfaces a server 409 as the dialog form error', async () => {
+  it('surfaces a server 409 as an error toast', async () => {
     mutationMocks.createMember.mockRejectedValue(
       httpError(409, 'Email already in use: nina.neu@club.de'),
     )
@@ -163,7 +173,9 @@ describe('MemberEditorDialog', () => {
     await submitForm()
     await submitForm()
 
-    expect(document.body.textContent).toContain('Email already in use: nina.neu@club.de')
+    expect(toastMocks.error).toHaveBeenCalledWith('Member not created', {
+      description: 'Email already in use: nina.neu@club.de',
+    })
     expect(useMembersUiStore.getState().editorTarget).not.toBeNull()
   })
 
@@ -181,6 +193,26 @@ describe('MemberEditorDialog', () => {
     await submitForm()
     await submitForm()
 
-    expect(document.body.textContent).toContain('Validation failed')
+    expect(toastMocks.error).not.toHaveBeenCalled()
+
+    // The field error lives on the identity step (step 0); the mutation fired from the last
+    // step (notes), so step back to see it rendered next to the input.
+    async function clickBack() {
+      const backButton = Array.from(document.body.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Back',
+      )
+      expect(backButton).not.toBeUndefined()
+      await act(async () => {
+        backButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+    }
+
+    await clickBack()
+    await clickBack()
+
+    expect(document.body.querySelector('#member-first-name')?.getAttribute('aria-invalid')).toBe(
+      'true',
+    )
+    expect(document.body.textContent).toContain('must not be blank')
   })
 })

@@ -9,7 +9,6 @@ test('sidebar shows exactly the nav items the admin role may use', async ({ page
     await expect(page.getByRole('link', { name: item.label, exact: true })).toBeVisible()
   }
 
-  // Nav renders from navPolicy.ts only — no extra destinations beyond the allowed set.
   await expect(page.locator('a[data-sidebar="menu-button"]')).toHaveCount(allowed.length)
 })
 
@@ -39,7 +38,6 @@ test('theme switch flips the dark class and persists to localStorage', async ({ 
     .poll(() => page.evaluate(() => localStorage.getItem('ui-theme')))
     .toBe('dark')
 
-  // Survives a full reload (ThemeProvider re-reads localStorage).
   await gotoApp(page)
   await expect(page.locator('html')).toHaveClass(/dark/)
 

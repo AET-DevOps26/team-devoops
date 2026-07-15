@@ -1,7 +1,6 @@
 import type { Sport, Team } from '@/types'
 import { CURRENT_MEMBER_ID } from './members'
 
-// Sport is keyed by uuid id; Team.sport is a resolved { id, name } ref; member FKs are resolved refs.
 export const sportFixtures: Sport[] = [
   {
     "id": "cccccccc-0001-0000-f001-000000000001",
@@ -753,15 +752,12 @@ export const teamFixtures: Team[] = [
   }
 ]
 
-/** First team the signed-in member belongs to, for convenience. */
 export const TEAM_U16 = 'bbbbbbbb-0001-0000-9e37-000000009e37'
 
-/** id -> Sport. */
 export const sportsById: Record<string, Sport> = Object.fromEntries(
   sportFixtures.map((s) => [s.id, s]),
 )
 
-/** sport id -> its teams (one-to-many). */
 export const teamsBySport: Record<string, Team[]> = sportFixtures.reduce(
   (acc, s) => {
     acc[s.id] = teamFixtures.filter((t) => t.sport.id === s.id)
@@ -770,7 +766,6 @@ export const teamsBySport: Record<string, Team[]> = sportFixtures.reduce(
   {} as Record<string, Team[]>,
 )
 
-/** Teams the signed-in member belongs to (trainees are resolved MemberRefs). */
 export const myTeamFixtures: Team[] = teamFixtures.filter((t) =>
   t.trainees.some((m) => m.id === CURRENT_MEMBER_ID),
 )

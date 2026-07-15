@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   CalendarDays,
@@ -15,12 +16,12 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useTheme } from '@/app/theme/useTheme'
 import type { Theme } from '@/app/theme/ThemeContext'
 import { NAV_ITEMS } from '@/app/navPolicy'
 import { useAuth } from '@/features/auth'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Toaster } from '@/components/ui/sonner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,8 +47,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-// Icons are a presentational concern, so they're kept local to the sidebar
-// rather than in the shared nav policy.
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import('@tanstack/react-query-devtools').then((module) => ({
+        default: module.ReactQueryDevtools,
+      })),
+    )
+  : null
+
 const NAV_ICONS: Record<string, LucideIcon> = {
   '/': LayoutDashboard,
   '/sport-events': CalendarDays,
@@ -201,7 +208,12 @@ function AppShellContent() {
         </main>
       </SidebarInset>
 
-      <ReactQueryDevtools initialIsOpen={false} />
+      {ReactQueryDevtools && (
+        <Suspense fallback={null}>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Suspense>
+      )}
+      <Toaster />
     </>
   )
 }

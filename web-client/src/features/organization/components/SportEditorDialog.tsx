@@ -1,4 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   Dialog,
@@ -7,7 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DialogFormSkeleton } from '@/components/ui/dialog-form-skeleton'
 import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
@@ -15,7 +18,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
 import { useMembers } from '@/features/members/api/queries'
 import { toggleId } from '@/lib/id-selection'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { fieldError } from '@/lib/validation'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import type { AuthUser, MemberSummary, Sport } from '@/types'
 import { useCreateSport, useSportsList, useUpdateSport } from '../api/queries'
 import { type SportEditorTarget, useOrganizationUiStore } from '../model/organizationUiStore'
@@ -28,7 +34,7 @@ import {
   sportCreatorFieldsForUser,
   sportEditorFieldsForUser,
   type SportEditorField,
-  validateSportEditorForm,
+  validateSportEditorFieldErrors,
 } from '../model/sportEditor'
 
 export function SportEditorDialog() {
@@ -60,10 +66,18 @@ function SportEditorForm({ target }: { target: SportEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {target.mode === 'create' ? 'Create a sport.' : 'Update this sport.'}
+          </DialogDescription>
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          {serverErrorMessage(queryError)}
-        </p>
+        <ErrorNotice
+          message={serverErrorMessage(queryError)}
+          onRetry={() => {
+            void membersQuery.refetch()
+            void sportsQuery.refetch()
+          }}
+          compact
+        />
       </DialogContent>
     )
   }
@@ -73,10 +87,11 @@ function SportEditorForm({ target }: { target: SportEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {target.mode === 'create' ? 'Create a sport.' : 'Update this sport.'}
+          </DialogDescription>
         </DialogHeader>
-        <p className="border bg-card px-4 py-3 text-body-sm text-text-secondary">
-          Loading sport form.
-        </p>
+        <DialogFormSkeleton />
       </DialogContent>
     )
   }
@@ -86,10 +101,9 @@ function SportEditorForm({ target }: { target: SportEditorTarget }) {
       <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Sport</DialogTitle>
+          <DialogDescription className="sr-only">Update this sport.</DialogDescription>
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          Sport not found.
-        </p>
+        <ErrorNotice message="Sport not found." compact />
       </DialogContent>
     )
   }
@@ -135,12 +149,16 @@ function SportEditorLoaded({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {sport && <DialogDescription>{sport.name}</DialogDescription>}
+          {!sport && <DialogDescription className="sr-only">Create a sport.</DialogDescription>}
         </DialogHeader>
-        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-          {target.mode === 'create'
-            ? 'You are not allowed to create sports.'
-            : 'You are not allowed to update this sport.'}
-        </p>
+        <ErrorNotice
+          message={
+            target.mode === 'create'
+              ? 'You are not allowed to create sports.'
+              : 'You are not allowed to update this sport.'
+          }
+          compact
+        />
       </DialogContent>
     )
   }
@@ -170,7 +188,6 @@ function SportEditorEditable({
   editableFields: readonly SportEditorField[]
 }) {
   const closeSportEditor = useOrganizationUiStore((state) => state.closeSportEditor)
-  const setMutationNotice = useOrganizationUiStore((state) => state.setMutationNotice)
   const createSport = useCreateSport()
   const updateSport = useUpdateSport()
   const [form, setForm] = useState(() =>
@@ -179,7 +196,7 @@ function SportEditorEditable({
       : buildSportCreatorInitialState(),
   )
   const [stepIndex, setStepIndex] = useState(0)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const fields = useMemo(() => new Set(editableFields), [editableFields])
   const directorOptions = useMemo(
     () => buildSportDirectorPickerOptions(members, sports, sport?.directors ?? []),
@@ -194,19 +211,21 @@ function SportEditorEditable({
   }, [fields])
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === steps.length - 1
+  const nameError = fieldError(fieldErrors, 'name')
+  const descriptionError = fieldError(fieldErrors, 'description')
+  const directorsError = fieldError(fieldErrors, 'directorIds', 'directors')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
 
     if (steps[stepIndex].id === 'details') {
-      const validationError = validateSportEditorForm(form, editableFields)
-      if (validationError) {
-        setFormError(validationError)
+      const validationErrors = validateSportEditorFieldErrors(form, editableFields)
+      if (validationErrors) {
+        setFieldErrors(validationErrors)
         return
       }
     }
-
-    setFormError(null)
 
     if (!isLastStep) {
       setStepIndex((current) => current + 1)
@@ -216,7 +235,7 @@ function SportEditorEditable({
     try {
       if (target.mode === 'create') {
         await createSport.mutateAsync(buildSportCreatePayload(form, editableFields))
-        setMutationNotice('Sport created.')
+        toast.success('Sport created.')
         closeSportEditor()
         return
       }
@@ -230,25 +249,36 @@ function SportEditorEditable({
       }
 
       await updateSport.mutateAsync({ id: sport.id, ...payload })
-      setMutationNotice('Sport updated.')
+      toast.success('Sport updated.')
       closeSportEditor()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
+      setFieldErrors(
+        formMutationErrorFields(
+          error,
+          target.mode === 'create' ? mutationFeedbackCopy.sport.create : mutationFeedbackCopy.sport.update,
+        ),
+      )
     }
   }
 
   return (
-    <DialogContent className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+    <DialogContent
+      className="roost-scroll max-h-[92vh] overflow-y-auto sm:max-w-2xl"
+      dismissOnInteractOutside={false}
+    >
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         {target.mode === 'edit' && sport && (
           <DialogDescription>{sport.directors.length} directors assigned</DialogDescription>
         )}
+        {target.mode === 'create' && (
+          <DialogDescription className="sr-only">Create a sport.</DialogDescription>
+        )}
       </DialogHeader>
 
       {steps.length > 1 && <DialogStepperNav steps={steps} currentStep={stepIndex} />}
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {steps[stepIndex].id === 'details' && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {fields.has('name') && (
@@ -260,8 +290,11 @@ function SportEditorEditable({
                   onChange={(event) => setForm({ ...form, name: event.target.value })}
                   required
                   disabled={isPending}
-                  aria-invalid={formError !== null && form.name.trim() === ''}
+                  aria-invalid={nameError !== undefined}
                 />
+                {nameError && (
+                  <p className="text-caption text-destructive">{nameError}</p>
+                )}
               </div>
             )}
 
@@ -273,35 +306,38 @@ function SportEditorEditable({
                   value={form.description}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                   disabled={isPending}
+                  aria-invalid={descriptionError !== undefined}
                   className="min-h-24"
                 />
+                {descriptionError && (
+                  <p className="text-caption text-destructive">{descriptionError}</p>
+                )}
               </div>
             )}
           </div>
         )}
 
         {steps[stepIndex].id === 'directors' && (
-          <MultiSelectCombobox
-            label="Directors"
-            placeholder="Search and select directors..."
-            emptyLabel="No directors available. Promote a member to Director first."
-            emptySearchLabel="No directors match that search."
-            options={directorOptions.map((option) => ({ ...option, label: option.name }))}
-            selectedIds={form.directorIds}
-            disabled={isPending}
-            onToggle={(id) =>
-              setForm((current) => ({
-                ...current,
-                directorIds: toggleId(current.directorIds, id),
-              }))
-            }
-          />
-        )}
-
-        {formError && (
-          <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {formError}
-          </p>
+          <div className="space-y-1.5">
+            <MultiSelectCombobox
+              label="Directors"
+              placeholder="Search and select directors..."
+              emptyLabel="No members available."
+              emptySearchLabel="No directors match that search."
+              options={directorOptions.map((option) => ({ ...option, label: option.name }))}
+              selectedIds={form.directorIds}
+              disabled={isPending}
+              onToggle={(id) =>
+                setForm((current) => ({
+                  ...current,
+                  directorIds: toggleId(current.directorIds, id),
+                }))
+              }
+            />
+            {directorsError && (
+              <p className="text-caption text-destructive">{directorsError}</p>
+            )}
+          </div>
         )}
 
         <DialogStepperFooter
@@ -311,7 +347,6 @@ function SportEditorEditable({
           submitLabel={target.mode === 'create' ? 'Create Sport' : 'Save Sport'}
           onCancel={closeSportEditor}
           onBack={() => {
-            setFormError(null)
             setStepIndex((current) => Math.max(current - 1, 0))
           }}
         />

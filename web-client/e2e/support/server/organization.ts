@@ -14,7 +14,6 @@ import type {
   TeamPartialUpdate,
 } from '@/features/organization/types'
 
-// In-memory organization resource. State is a deep clone of the fixtures; reset() restores it per test.
 let sportFixtures: Sport[] = []
 let teamFixtures: Team[] = []
 let sportsById: Record<string, Sport> = {}
@@ -124,6 +123,10 @@ export function deleteSport(id: string, user: AuthUser): void {
   }
 }
 
+export function teamIdsForSport(sportId: string): string[] {
+  return teamFixtures.filter((team) => team.sport.id === sportId).map((team) => team.id)
+}
+
 export function createTeam(data: TeamCreate, user: AuthUser): Team {
   const name = data.name.trim()
 
@@ -200,6 +203,31 @@ export function updateTeam(
   } catch (error) {
     pendingTeamUpdates.delete(id)
     throw error
+  }
+}
+
+// Each service owns member replicas, so renames must propagate through embedded refs.
+export function renameMemberInOrganization(memberId: string, name: string): void {
+  const rename = (ref: MemberRef) => (ref.id === memberId ? { ...ref, name } : ref)
+
+  for (const team of teamFixtures) {
+    team.trainers = team.trainers.map(rename)
+    team.trainees = team.trainees.map(rename)
+  }
+
+  for (const sport of sportFixtures) {
+    sport.directors = sport.directors.map(rename)
+  }
+}
+
+export function removeMemberFromOrganization(memberId: string): void {
+  for (const team of teamFixtures) {
+    team.trainers = team.trainers.filter((trainer) => trainer.id !== memberId)
+    team.trainees = team.trainees.filter((trainee) => trainee.id !== memberId)
+  }
+
+  for (const sport of sportFixtures) {
+    sport.directors = sport.directors.filter((director) => director.id !== memberId)
   }
 }
 

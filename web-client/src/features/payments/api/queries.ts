@@ -1,15 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { paymentsKeys, transactionDependentKeys } from '@/lib/query-keys'
+import { settleMutation } from '@/lib/query-cache'
 import { paymentsClient } from './client'
 import type { Balance, Transaction, TransactionCreate, TransactionPartialUpdate } from '../types'
 
-export const paymentsKeys = {
-  hello: ['payments', 'hello'] as const,
-  balances: ['payments', 'balances'] as const,
-  balance: (memberId: string) => ['payments', 'balances', memberId] as const,
-  transactions: ['payments', 'transactions'] as const,
-  transaction: (id: string) => ['payments', 'transactions', id] as const,
-}
+export { paymentsKeys }
 
 export function usePaymentsHello() {
   return useQuery<string>({
@@ -59,10 +55,12 @@ export function useCreateTransaction() {
 
   return useMutation<Transaction, Error, TransactionCreate>({
     mutationFn: data => paymentsClient.post<Transaction>('/transactions', data).then(r => r.data),
-    onSuccess: (transaction) => {
-      qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
-      qc.invalidateQueries({ queryKey: paymentsKeys.balances })
-      qc.invalidateQueries({ queryKey: paymentsKeys.balance(transaction.member.id) })
+    // Transactions are date-ordered, so the new row is refetched into position.
+    onSuccess: (created) => {
+      qc.setQueryData(paymentsKeys.transaction(created.id), created)
+      return settleMutation(qc, {
+        invalidate: [paymentsKeys.transactions, ...transactionDependentKeys],
+      })
     },
   })
 }
@@ -72,10 +70,15 @@ export function useUpdateTransaction() {
 
   return useMutation<Transaction, Error, { id: string } & TransactionPartialUpdate>({
     mutationFn: ({ id, ...data }) => paymentsClient.patch<Transaction>(`/transactions/${id}`, data).then(r => r.data),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
-      qc.invalidateQueries({ queryKey: paymentsKeys.balances })
-      qc.invalidateQueries({ queryKey: paymentsKeys.transaction(id) })
+    onSuccess: (updated, { id }) => {
+      qc.setQueryData(paymentsKeys.transaction(id), updated)
+      return settleMutation(qc, {
+        invalidate: [
+          paymentsKeys.transactions,
+          paymentsKeys.transaction(id),
+          ...transactionDependentKeys,
+        ],
+      })
     },
   })
 }
@@ -85,10 +88,11 @@ export function useDeleteTransaction() {
 
   return useMutation<void, Error, string>({
     mutationFn: id => paymentsClient.delete(`/transactions/${id}`).then(() => undefined),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: paymentsKeys.transactions })
-      qc.invalidateQueries({ queryKey: paymentsKeys.balances })
-      qc.removeQueries({ queryKey: paymentsKeys.transaction(id) })
-    },
+    onSuccess: (_, id) =>
+      settleMutation(qc, {
+        remove: [{ key: paymentsKeys.transactions, id }],
+        evict: [paymentsKeys.transaction(id)],
+        invalidate: [paymentsKeys.transactions, ...transactionDependentKeys],
+      }),
   })
 }

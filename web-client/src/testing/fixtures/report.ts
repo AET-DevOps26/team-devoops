@@ -1,6 +1,5 @@
 import type { MemberReportSummary, Report, TeamReportSummary } from '@/types'
 
-// Freeform report prose, rendered as a safe markdown subset (headings, bullets, bold/italic).
 const lenaText =
   "# Development report — Lena Roth\n\n## Attendance\nLena has attended **10 of 14** sessions this term (71%).\n\n## Technical progress\nCoach feedback over the last month highlights steady improvement in core skills:\n\n- Consistency under pressure is the main *growth area*.\n- Footwork and first touch are trending up.\n- Match awareness noted as a strength.\n\n## Suggested focus\n- Maintain attendance momentum.\n- Dedicate warm-up drills to the highlighted growth area.\n- Revisit in **4 weeks**."
 
@@ -25,7 +24,6 @@ const linusKochRef = { id: "99999999-0014-0001-5c55-0000000c5c4c", name: "Linus 
 const linusBeckRef = { id: "99999999-0015-0001-fa8c-0000000cfa83", name: "Linus Beck" }
 const footballJuniorsRef = { id: "bbbbbbbb-0001-0000-9e37-000000009e37", name: "Football Juniors" }
 
-// Full reports keyed by report id — list→detail resolves through this map.
 export const reportById: Record<string, Report> = {
   "dddddddd-0001-0000-9e37-000000009e37": {
     id: "dddddddd-0001-0000-9e37-000000009e37",
@@ -71,8 +69,6 @@ export const reportById: Record<string, Report> = {
   },
 }
 
-// Member report summaries (newest-first), keyed by member id. The dashboard's trainee
-// `recent_reports` reads these; Task 21's list/detail shares them.
 export const memberReportSummariesById: Record<string, MemberReportSummary[]> = {
   "11111111-1111-1111-1111-111111111111": [
     { id: "dddddddd-0001-0000-9e37-000000009e37", member: lenaMemberRef, created_at: "2026-06-18T09:00:00.000Z" },
@@ -89,19 +85,16 @@ export const memberReportSummariesById: Record<string, MemberReportSummary[]> = 
   ],
 }
 
-// Team report summaries (newest-first), keyed by team id.
 export const teamReportSummariesById: Record<string, TeamReportSummary[]> = {
   "bbbbbbbb-0001-0000-9e37-000000009e37": [
     { id: "eeeeeeee-0001-0000-9e37-000000009e37", team: footballJuniorsRef, created_at: "2026-06-16T09:00:00.000Z" },
   ],
 }
 
-// Saved member report summaries (newest-first), empty if none.
 export function memberReportSummaries(memberId: string): MemberReportSummary[] {
   return memberReportSummariesById[memberId] ?? []
 }
 
-// Saved team report summaries (newest-first), empty if none.
 export function teamReportSummaries(teamId: string): TeamReportSummary[] {
   return teamReportSummariesById[teamId] ?? []
 }

@@ -6,13 +6,12 @@ import { httpError } from '@/testing/httpError'
 import { scopeMembers } from '@/testing/scope'
 import type { AuthUser, Member, MemberCreate, MemberPartialUpdate, MemberSummary } from '@/types'
 
-// In-memory members resource. State is a deep clone of the fixtures; reset() restores it per test.
 let memberFixtures: Member[] = []
 let memberSummaryFixtures: MemberSummary[] = []
 
 export function reset(): void {
-  memberFixtures = memberFixturesSource.map((m) => ({ ...m }))
-  memberSummaryFixtures = memberSummaryFixturesSource.map((m) => ({ ...m }))
+  memberFixtures = structuredClone(memberFixturesSource)
+  memberSummaryFixtures = structuredClone(memberSummaryFixturesSource)
 }
 
 reset()
@@ -105,6 +104,7 @@ export function updateMember(
       email: updated.email,
     }
   }
+
   return { ...updated }
 }
 

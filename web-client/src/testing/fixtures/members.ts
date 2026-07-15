@@ -1,6 +1,5 @@
 import type { Member, MemberSummary } from '@/types'
 
-// Signed-in member (`sub`) for the default test persona.
 export const CURRENT_MEMBER_ID = '11111111-1111-1111-1111-111111111111'
 
 export const memberFixtures: Member[] = [
@@ -3739,7 +3738,6 @@ export const memberSummaryFixtures: MemberSummary[] = memberFixtures.map(
   ({ id, first_name, last_name, email }) => ({ id, first_name, last_name, email }),
 )
 
-/** uuid -> "First Last", mirroring the planned useMemberNames() resolver. */
 export const memberNamesById: Record<string, string> = Object.fromEntries(
   memberFixtures.map((m) => [m.id, `${m.first_name} ${m.last_name}`]),
 )

@@ -1,13 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { feedbackDependentKeys, feedbackKeys } from '@/lib/query-keys'
+import { settleMutation } from '@/lib/query-cache'
 import { feedbackClient } from './client'
 import type { Feedback, FeedbackCreate, FeedbackPartialUpdate, FeedbackSummary } from '../types'
 
-export const feedbackKeys = {
-  all: ['feedback'] as const,
-  detail: (id: string) => ['feedback', id] as const,
-  hello: ['feedback', 'hello'] as const,
-}
+export { feedbackKeys }
 
 export function useFeedbackHello() {
   return useQuery<string>({
@@ -39,7 +37,13 @@ export function useCreateFeedback() {
 
   return useMutation<Feedback, Error, FeedbackCreate>({
     mutationFn: data => feedbackClient.post<Feedback>('', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: feedbackKeys.all }),
+    // The list is server-ordered (newest first) and role-scoped, so the new row is refetched.
+    onSuccess: (created) => {
+      qc.setQueryData(feedbackKeys.detail(created.id), created)
+      return settleMutation(qc, {
+        invalidate: [feedbackKeys.all, ...feedbackDependentKeys],
+      })
+    },
   })
 }
 
@@ -48,9 +52,11 @@ export function useUpdateFeedback() {
 
   return useMutation<Feedback, Error, { id: string } & FeedbackPartialUpdate>({
     mutationFn: ({ id, ...data }) => feedbackClient.patch<Feedback>(`/${id}`, data).then(r => r.data),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: feedbackKeys.all })
-      qc.invalidateQueries({ queryKey: feedbackKeys.detail(id) })
+    onSuccess: (updated, { id }) => {
+      qc.setQueryData(feedbackKeys.detail(id), updated)
+      return settleMutation(qc, {
+        invalidate: [feedbackKeys.all, feedbackKeys.detail(id), ...feedbackDependentKeys],
+      })
     },
   })
 }
@@ -60,9 +66,11 @@ export function useDeleteFeedback() {
 
   return useMutation<void, Error, string>({
     mutationFn: id => feedbackClient.delete(`/${id}`).then(() => undefined),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: feedbackKeys.all })
-      qc.removeQueries({ queryKey: feedbackKeys.detail(id) })
-    },
+    onSuccess: (_, id) =>
+      settleMutation(qc, {
+        remove: [{ key: feedbackKeys.all, id }],
+        evict: [feedbackKeys.detail(id)],
+        invalidate: [feedbackKeys.all, ...feedbackDependentKeys],
+      }),
   })
 }

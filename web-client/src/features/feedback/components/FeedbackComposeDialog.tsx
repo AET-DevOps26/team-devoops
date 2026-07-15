@@ -1,12 +1,15 @@
 import { type FormEvent, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { type DialogStep, DialogStepperFooter, DialogStepperNav } from '@/components/ui/dialog-stepper'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -19,19 +22,19 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useEventsList } from '@/features/sport-events'
 import { formatDateShort } from '@/lib/format'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { fieldError } from '@/lib/validation'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
 import { useCreateFeedback } from '../api/queries'
+import {
+  parseFeedbackRating,
+  validateFeedbackComposeForm,
+} from '../model/feedbackEditor'
 import {
   type FeedbackComposeTarget,
   useFeedbackUiStore,
 } from '../model/feedbackUiStore'
-
-function validateRating(value: string): number | null {
-  if (value.trim() === '') return null
-
-  const rating = Number(value)
-  return Number.isInteger(rating) && rating >= 0 && rating <= 10 ? rating : null
-}
 
 export function FeedbackComposeDialog() {
   const target = useFeedbackUiStore((state) => state.composeTarget)
@@ -46,11 +49,10 @@ export function FeedbackComposeDialog() {
 
 function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
   const closeCompose = useFeedbackUiStore((state) => state.closeCompose)
-  const setComposeNotice = useFeedbackUiStore((state) => state.setComposeNotice)
   const [eventId, setEventId] = useState(target.eventId ?? '')
   const [feedback, setFeedback] = useState('')
   const [rating, setRating] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const eventsQuery = useEventsList()
   const createFeedback = useCreateFeedback()
   const skipEventStep = target.eventId !== undefined
@@ -67,6 +69,9 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
   const [stepIndex, setStepIndex] = useState(0)
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === steps.length - 1
+  const eventError = fieldError(fieldErrors, 'eventId', 'event')
+  const feedbackError = fieldError(fieldErrors, 'feedback')
+  const ratingError = fieldError(fieldErrors, 'rating')
 
   const eventOptions = useMemo(
     () =>
@@ -81,33 +86,29 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
 
     if (steps[stepIndex].id === 'event') {
-      if (!eventId) {
-        setFormError('Select an event.')
+      const validationErrors = validateFeedbackComposeForm(
+        { eventId, feedback, rating },
+        ['eventId'],
+      )
+      if (validationErrors) {
+        setFieldErrors(validationErrors)
         return
       }
-      setFormError(null)
       setStepIndex((current) => current + 1)
       return
     }
 
-    const parsedRating = validateRating(rating)
-
-    if (!eventId) {
-      setFormError('Select an event.')
-      return
-    }
-    if (!feedback.trim()) {
-      setFormError('Feedback is required.')
-      return
-    }
-    if (parsedRating === null) {
-      setFormError('Rating must be an integer from 0 to 10.')
+    const validationErrors = validateFeedbackComposeForm({ eventId, feedback, rating })
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
       return
     }
 
-    setFormError(null)
+    const parsedRating = parseFeedbackRating(rating)
+    if (parsedRating === null) return
 
     try {
       await createFeedback.mutateAsync({
@@ -116,17 +117,20 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
         feedback: feedback.trim(),
         rating: parsedRating,
       })
-      setComposeNotice(`Feedback added for ${target.name}.`)
+      toast.success(`Feedback added for ${target.name}.`)
       closeCompose()
     } catch (error) {
-      setFormError(serverErrorMessage(error))
+      setFieldErrors(formMutationErrorFields(error, mutationFeedbackCopy.feedback.create))
     }
   }
 
   return (
-    <DialogContent>
+    <DialogContent dismissOnInteractOutside={false}>
       <DialogHeader>
         <DialogTitle>Give Feedback</DialogTitle>
+        <DialogDescription className="sr-only">
+          Choose an event, write feedback, and assign a rating.
+        </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-1.5">
@@ -136,7 +140,7 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
 
       {steps.length > 1 && <DialogStepperNav steps={steps} currentStep={stepIndex} />}
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {steps[stepIndex].id === 'event' && (
           <div className="space-y-1.5">
             <Label htmlFor="feedback-event">Event</Label>
@@ -145,7 +149,11 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
               onValueChange={setEventId}
               disabled={eventsQuery.isLoading || createFeedback.isPending}
             >
-              <SelectTrigger id="feedback-event" className="w-full">
+              <SelectTrigger
+                id="feedback-event"
+                className="w-full"
+                aria-invalid={eventError !== undefined}
+              >
                 <SelectValue
                   placeholder={eventsQuery.isLoading ? 'Loading events' : 'Select event'}
                 />
@@ -158,10 +166,15 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
                 ))}
               </SelectContent>
             </Select>
+            {eventError && (
+              <p className="text-caption text-destructive">{eventError}</p>
+            )}
             {eventsQuery.error && (
-              <p className="text-caption text-destructive">
-                {serverErrorMessage(eventsQuery.error)}
-              </p>
+              <ErrorNotice
+                message={serverErrorMessage(eventsQuery.error)}
+                onRetry={() => void eventsQuery.refetch()}
+                compact
+              />
             )}
             {!eventsQuery.isLoading && !eventsQuery.error && eventOptions.length === 0 && (
               <p className="text-caption text-text-tertiary">No events available.</p>
@@ -179,9 +192,12 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
                 onChange={(event) => setFeedback(event.target.value)}
                 required
                 disabled={createFeedback.isPending}
-                aria-invalid={formError !== null && feedback.trim() === ''}
+                aria-invalid={feedbackError !== undefined}
                 className="min-h-28"
               />
+              {feedbackError && (
+                <p className="text-caption text-destructive">{feedbackError}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -197,16 +213,13 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
                 onChange={(event) => setRating(event.target.value)}
                 required
                 disabled={createFeedback.isPending}
-                aria-invalid={formError !== null && validateRating(rating) === null}
+                aria-invalid={ratingError !== undefined}
               />
+              {ratingError && (
+                <p className="text-caption text-destructive">{ratingError}</p>
+              )}
             </div>
           </div>
-        )}
-
-        {formError && (
-          <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {formError}
-          </p>
         )}
 
         <DialogStepperFooter
@@ -217,26 +230,10 @@ function FeedbackComposeForm({ target }: { target: FeedbackComposeTarget }) {
           submitLabel="Save Feedback"
           onCancel={closeCompose}
           onBack={() => {
-            setFormError(null)
             setStepIndex((current) => Math.max(current - 1, 0))
           }}
         />
       </form>
     </DialogContent>
-  )
-}
-
-export function FeedbackComposeNotice() {
-  const notice = useFeedbackUiStore((state) => state.composeNotice)
-
-  if (!notice) return null
-
-  return (
-    <p
-      role="status"
-      className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-    >
-      {notice}
-    </p>
   )
 }

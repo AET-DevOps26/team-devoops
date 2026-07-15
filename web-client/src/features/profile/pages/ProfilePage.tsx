@@ -1,22 +1,29 @@
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
 import { Save, Undo2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButton } from '@/components/ui/pending-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { getCurrentUser } from '@/features/auth/currentUser'
 import { useMember, useUpdateMember } from '@/features/members/api/queries'
 import {
   buildMemberEditorInitialState,
-  buildMemberUpdatePayload,
+  buildMemberProfileUpdatePayload,
   type MemberEditorFormState,
-  validateMemberEditorForm,
+  validateMemberEditorFieldErrors,
 } from '@/features/members/model/memberEditor'
-import { serverErrorFieldMessages, serverErrorMessage } from '@/lib/server-error'
+import keycloak from '@/lib/keycloak'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
+import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
+import { fieldError } from '@/lib/validation'
 import type { Member } from '@/types'
 
 export function ProfilePage() {
@@ -41,14 +48,18 @@ export function ProfilePage() {
     )
   }
 
-  if (memberQuery.error || !memberQuery.data) {
+  if (memberQuery.error) {
     return (
       <ProfilePageFrame>
-        <p className="border bg-card px-5 py-4 text-body-sm text-destructive">
-          {memberQuery.error
-            ? serverErrorMessage(memberQuery.error)
-            : 'Your profile could not be loaded.'}
-        </p>
+        <ErrorNotice message={serverErrorMessage(memberQuery.error)} onRetry={memberQuery.refetch} />
+      </ProfilePageFrame>
+    )
+  }
+
+  if (!memberQuery.data) {
+    return (
+      <ProfilePageFrame>
+        <ErrorNotice message="Your profile could not be loaded." onRetry={memberQuery.refetch} />
       </ProfilePageFrame>
     )
   }
@@ -78,64 +89,52 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
   const [form, setForm] = useState<MemberEditorFormState>(() =>
     buildMemberEditorInitialState(member),
   )
-  const [notice, setNotice] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
-  const payload = useMemo(() => buildMemberUpdatePayload(member, form), [form, member])
+  const payload = useMemo(() => buildMemberProfileUpdatePayload(member, form), [form, member])
   const hasChanges = Object.keys(payload).length > 0
   const isPending = updateMember.isPending
+  const firstNameError = fieldError(fieldErrors, 'firstName', 'first_name')
+  const lastNameError = fieldError(fieldErrors, 'lastName', 'last_name')
+  const birthdayError = fieldError(fieldErrors, 'birthday')
+  const phoneNumberError = fieldError(fieldErrors, 'phoneNumber', 'phone_number')
+  const addressError = fieldError(fieldErrors, 'address')
+  const informationError = fieldError(fieldErrors, 'information')
 
   const handleCancel = () => {
     setForm(buildMemberEditorInitialState(member))
-    setNotice(null)
-    setFormError(null)
     setFieldErrors(null)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
 
-    const validationError = validateMemberEditorForm(form)
-    if (validationError) {
-      setFormError(validationError)
-      setFieldErrors(null)
-      setNotice(null)
+    const validationErrors = validateMemberEditorFieldErrors(form)
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
       return
     }
 
     if (!hasChanges) {
-      setNotice('No profile changes to save.')
-      setFormError(null)
-      setFieldErrors(null)
+      toast.info('No profile changes to save.')
       return
     }
 
     try {
-      setNotice(null)
-      setFormError(null)
-      setFieldErrors(null)
-
       const updated = await updateMember.mutateAsync({ id: currentUserId, ...payload })
       setForm(buildMemberEditorInitialState(updated))
-      setNotice('Profile updated.')
+      // The token's name claim is a login-time snapshot; force a refresh so the sidebar
+      // and dashboard greeting (both sourced from getCurrentUser()) pick up the new name.
+      await keycloak.updateToken(-1).catch(() => undefined)
+      toast.success('Profile updated.')
     } catch (error) {
-      setFormError(serverErrorMessage(error))
-      setFieldErrors(serverErrorFieldMessages(error))
+      setFieldErrors(formMutationErrorFields(error, mutationFeedbackCopy.profile.update))
     }
   }
 
   return (
     <>
-      {notice && (
-        <p
-          role="status"
-          className="border border-primary/25 bg-primary/8 px-4 py-3 text-body-sm text-text-primary"
-        >
-          {notice}
-        </p>
-      )}
-
-      <form className="border bg-card" onSubmit={handleSubmit}>
+      <form className="border bg-card" onSubmit={handleSubmit} noValidate>
         <section className="border-b px-5 py-5">
           <div className="mb-4">
             <h2 className="text-h3 font-semibold text-text-primary">Identity</h2>
@@ -152,10 +151,10 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.firstName}
                 onChange={(event) => setForm({ ...form, firstName: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.first_name !== undefined}
+                aria-invalid={firstNameError !== undefined}
               />
-              {fieldErrors?.first_name && (
-                <p className="text-caption text-destructive">{fieldErrors.first_name}</p>
+              {firstNameError && (
+                <p className="text-caption text-destructive">{firstNameError}</p>
               )}
             </div>
 
@@ -166,10 +165,10 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.lastName}
                 onChange={(event) => setForm({ ...form, lastName: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.last_name !== undefined}
+                aria-invalid={lastNameError !== undefined}
               />
-              {fieldErrors?.last_name && (
-                <p className="text-caption text-destructive">{fieldErrors.last_name}</p>
+              {lastNameError && (
+                <p className="text-caption text-destructive">{lastNameError}</p>
               )}
             </div>
 
@@ -202,10 +201,11 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.birthday}
                 onChange={(value) => setForm({ ...form, birthday: value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.birthday !== undefined}
+                endMonth={new Date()}
+                aria-invalid={birthdayError !== undefined}
               />
-              {fieldErrors?.birthday && (
-                <p className="text-caption text-destructive">{fieldErrors.birthday}</p>
+              {birthdayError && (
+                <p className="text-caption text-destructive">{birthdayError}</p>
               )}
             </div>
 
@@ -216,10 +216,10 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.phoneNumber}
                 onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.phone_number !== undefined}
+                aria-invalid={phoneNumberError !== undefined}
               />
-              {fieldErrors?.phone_number && (
-                <p className="text-caption text-destructive">{fieldErrors.phone_number}</p>
+              {phoneNumberError && (
+                <p className="text-caption text-destructive">{phoneNumberError}</p>
               )}
             </div>
 
@@ -230,10 +230,10 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.address}
                 onChange={(event) => setForm({ ...form, address: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.address !== undefined}
+                aria-invalid={addressError !== undefined}
               />
-              {fieldErrors?.address && (
-                <p className="text-caption text-destructive">{fieldErrors.address}</p>
+              {addressError && (
+                <p className="text-caption text-destructive">{addressError}</p>
               )}
             </div>
 
@@ -244,21 +244,15 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
                 value={form.information}
                 onChange={(event) => setForm({ ...form, information: event.target.value })}
                 disabled={isPending}
-                aria-invalid={fieldErrors?.information !== undefined}
+                aria-invalid={informationError !== undefined}
                 className="min-h-28"
               />
-              {fieldErrors?.information && (
-                <p className="text-caption text-destructive">{fieldErrors.information}</p>
+              {informationError && (
+                <p className="text-caption text-destructive">{informationError}</p>
               )}
             </div>
           </div>
         </section>
-
-        {formError && (
-          <p className="mx-5 mb-5 border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-sm text-destructive">
-            {formError}
-          </p>
-        )}
 
         <div className="flex flex-col-reverse gap-2 border-t px-5 py-4 sm:flex-row sm:justify-end">
           <Button
@@ -270,10 +264,15 @@ function ProfileForm({ currentUserId, member }: { currentUserId: string; member:
             <Undo2 data-icon="inline-start" />
             Cancel
           </Button>
-          <Button type="submit" disabled={isPending || !hasChanges}>
+          <PendingButton
+            type="submit"
+            disabled={!hasChanges}
+            isPending={isPending}
+            pendingLabel="Saving…"
+          >
             <Save data-icon="inline-start" />
-            {isPending ? 'Saving' : 'Save profile'}
-          </Button>
+            Save profile
+          </PendingButton>
         </div>
       </form>
     </>

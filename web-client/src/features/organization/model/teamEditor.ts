@@ -1,5 +1,9 @@
+import { z } from 'zod'
+
 import { sameIds } from '@/lib/id-selection'
 import { memberSummaryName } from '@/lib/format'
+import { type FieldErrors, validateZodSchema } from '@/lib/validation'
+import { roleMeta, roleSort } from './rolePickerOptions'
 import {
   isTeamCoach,
   type AuthUser,
@@ -92,19 +96,36 @@ export function buildTeamCreatorInitialState(
   }
 }
 
+export function validateTeamEditorFieldErrors(
+  form: TeamEditorFormState,
+  fields: readonly TeamEditorField[],
+): FieldErrors | null {
+  const enabledFields = new Set(fields)
+  const schema = z.object({
+    name: z.string(),
+    description: z.string(),
+    address: z.string(),
+    sportId: z.string(),
+    trainerIds: z.array(z.string()),
+    traineeIds: z.array(z.string()),
+  }).superRefine((value, ctx) => {
+    if (enabledFields.has('name') && value.name.trim() === '') {
+      ctx.addIssue({ code: 'custom', path: ['name'], message: 'Name is required.' })
+    }
+
+    if (enabledFields.has('sport') && value.sportId === '') {
+      ctx.addIssue({ code: 'custom', path: ['sportId'], message: 'Select a sport.' })
+    }
+  })
+
+  return validateZodSchema(schema, form)
+}
+
 export function validateTeamEditorForm(
   form: TeamEditorFormState,
   fields: readonly TeamEditorField[],
 ): string | null {
-  if (fields.includes('name') && form.name.trim() === '') {
-    return 'Name is required.'
-  }
-
-  if (fields.includes('sport') && form.sportId === '') {
-    return 'Select a sport.'
-  }
-
-  return null
+  return Object.values(validateTeamEditorFieldErrors(form, fields) ?? {})[0] ?? null
 }
 
 export function buildTeamCreatePayload(form: TeamEditorFormState): TeamCreate {
@@ -189,17 +210,20 @@ export function buildMemberPickerOptions(
   return Array.from(options.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
-// Coaches are members who already hold the coach role — approximated client-side as "is a
-// trainer of at least one team", since role isn't a field on MemberSummary. Current trainers stay
-// selectable even if this is the only team they coach.
+// Assignments grant the derived Keycloak role, so every member remains selectable.
 export function buildCoachPickerOptions(
   members: MemberSummary[],
   teams: readonly Team[],
   currentTrainers: MemberRef[],
 ): MemberPickerOption[] {
   const coachIds = new Set(teams.flatMap((team) => team.trainers.map((trainer) => trainer.id)))
-  const eligibleMembers = members.filter((member) => coachIds.has(member.id))
-  return buildMemberPickerOptions(eligibleMembers, currentTrainers)
+  for (const trainer of currentTrainers) coachIds.add(trainer.id)
+
+  return buildMemberPickerOptions(members, currentTrainers)
+    .map((option) =>
+      coachIds.has(option.id) ? { ...option, meta: roleMeta('Coach', option.meta) } : option,
+    )
+    .toSorted((a, b) => roleSort(coachIds, a, b))
 }
 
 export function teamCreatorFieldsForUser(

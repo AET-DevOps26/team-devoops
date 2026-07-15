@@ -4,10 +4,13 @@ import { Link } from 'react-router-dom'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { BarList, DonutChart } from '@/components/ui/chart-primitives'
 import { Button } from '@/components/ui/button'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
+import { serverErrorMessage } from '@/lib/server-error'
 import {
+  type DashboardAdminCountsSection,
   type DashboardDirectorSportSection,
   type DashboardFeedbackItem,
   type DashboardAdminOrganizationSection,
@@ -37,12 +40,37 @@ const initials = (name: string) =>
     .toUpperCase()
 
 export function DashboardPage() {
-  const { view, states } = useDashboardViewModel()
-  const showBalanceCard = Boolean(view.myBalance || states.myBalance?.isLoading)
-  const showTeamCard = Boolean(view.myTeam || states.myTeam?.isLoading)
-  const showSportCards = Boolean(view.mySport || states.mySport?.isLoading)
-  const showEventsCards = Boolean(view.myEvents || states.myEvents?.isLoading)
-  const showFeedbackStat = Boolean(view.myFeedback || states.myFeedback?.isLoading)
+  const { view, states, rootError, rootRefetch } = useDashboardViewModel()
+
+  if (rootError) {
+    return (
+      <div className="mx-auto flex w-full max-w-content flex-col gap-6">
+        <PageHeader
+          eyebrow="Welcome back"
+          title={view.userName}
+          subtitle="Here's what's happening across your club."
+        />
+        <ErrorNotice message={serverErrorMessage(rootError)} onRetry={rootRefetch} />
+      </div>
+    )
+  }
+
+  const showAdminSections = Boolean(
+    view.adminCounts || states.adminCounts?.isLoading || states.adminCounts?.error,
+  )
+  const showBalanceCard = Boolean(
+    view.myBalance || states.myBalance?.isLoading || states.myBalance?.error,
+  )
+  const showTeamCard = Boolean(view.myTeam || states.myTeam?.isLoading || states.myTeam?.error)
+  const showSportCards = Boolean(
+    view.mySport || states.mySport?.isLoading || states.mySport?.error,
+  )
+  const showEventsCards = Boolean(
+    view.myEvents || states.myEvents?.isLoading || states.myEvents?.error,
+  )
+  const showFeedbackStat = Boolean(
+    view.myFeedback || states.myFeedback?.isLoading || states.myFeedback?.error,
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6">
@@ -52,13 +80,15 @@ export function DashboardPage() {
         subtitle="Here's what's happening across your club."
       />
 
-      {view.adminCounts && (
+      {showAdminSections && (
         <>
           <AdminCountsSection counts={view.adminCounts} state={states.adminCounts} />
-          <AdminOrganizationSummary
-            organization={view.adminOrganization}
-            state={states.adminOrganization}
-          />
+          {view.adminCounts && (
+            <AdminOrganizationSummary
+              organization={view.adminOrganization}
+              state={states.adminOrganization}
+            />
+          )}
         </>
       )}
 
@@ -88,7 +118,7 @@ function AdminCountsSection({
   counts,
   state,
 }: {
-  counts: NonNullable<ReturnType<typeof useDashboardViewModel>['view']['adminCounts']>
+  counts?: DashboardAdminCountsSection
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) {
@@ -100,6 +130,12 @@ function AdminCountsSection({
       </div>
     )
   }
+
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
+  }
+
+  if (!counts) return null
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -312,6 +348,9 @@ function DirectorSportCards({
       </div>
     )
   }
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
+  }
   if (!sport) return null
 
   return (
@@ -340,6 +379,9 @@ function TeamCard({
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) return <Skeleton className="h-32 border" />
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
+  }
   if (!team) return null
 
   return (
@@ -359,6 +401,9 @@ function BalanceCard({
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) return <Skeleton className="h-32 border" />
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
+  }
   if (!balance) return null
 
   return (
@@ -385,6 +430,9 @@ function EventsCards({
         <Skeleton className="h-32 border" />
       </>
     )
+  }
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
   }
   if (!events) return null
 
@@ -416,6 +464,9 @@ function FeedbackStat({
   state?: DashboardSectionState
 }) {
   if (state?.isLoading) return <Skeleton className="h-32 border" />
+  if (state?.error) {
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
+  }
   if (!feedback) return null
 
   return (
@@ -597,7 +648,7 @@ function sectionBody(
   }
 
   if (state?.error) {
-    return <p className="px-5 py-4 text-body-sm text-destructive">{state.error.message}</p>
+    return <ErrorNotice message={serverErrorMessage(state.error)} onRetry={state.refetch} compact />
   }
 
   if (isEmpty) {

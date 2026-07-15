@@ -99,7 +99,6 @@ describe('SportEventsPage', () => {
 
     expect(bodyRowCount()).toBe(eventSummaryFixtures.length)
     expect(buttonNamed('New event')).toBeDefined()
-    // Admin may manage every event (creator-or-admin rule).
     expect(
       container.querySelector(`button[aria-label="Delete ${eventSummaryFixtures[0].name}"]`),
     ).not.toBeNull()

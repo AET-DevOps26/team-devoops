@@ -2,9 +2,6 @@ import { test as base, expect, type Page } from '@playwright/test'
 import { stubKeycloak } from './auth'
 import { stubApi } from './api'
 
-// Every test gets a context whose Keycloak endpoints and /api/v1 calls are stubbed before
-// the app loads: keycloak.init() resolves as an authenticated admin session, and the app's
-// axios calls are answered by the in-memory server (see api.ts).
 export const test = base.extend({
   // Playwright fixture: the callback's second parameter provides the value to
   // the test (named `provide` so the react-hooks lint rule doesn't read `use`
@@ -18,9 +15,14 @@ export const test = base.extend({
 
 export { expect }
 
-// Navigates and waits until the app shell has rendered past the auth spinner. Each test
-// gets a pristine server copy (see stubApi), so its mutations never leak into the next.
 export async function gotoApp(page: Page, path = '/'): Promise<void> {
   await page.goto(path)
   await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 })
+}
+
+// Sonner renders its toasts inside a single labelled aria-live region (see ui/sonner.tsx).
+// Assert toast copy through this rather than a bare role, so we don't need a second live
+// region wrapped around it just to be queryable.
+export function toastRegion(page: Page) {
+  return page.getByRole('region', { name: /Notifications/ })
 }

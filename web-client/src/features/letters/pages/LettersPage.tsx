@@ -1,5 +1,6 @@
 import { type FormEvent, useMemo, useRef, useState } from 'react'
 import { Code2, Download, Eye, FileText, Mail, Send, Users } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,9 +10,11 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
+import { ErrorNotice } from '@/components/ui/ErrorNotice'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
+import { PendingButton } from '@/components/ui/pending-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -22,10 +25,14 @@ import {
 } from '@/components/ui/tooltip'
 import { useAuth } from '@/features/auth'
 import { useSportsList, useTeamsList } from '@/features/organization/api/queries'
+import { formMutationErrorFields } from '@/lib/mutation-feedback'
 import { serverErrorMessage } from '@/lib/server-error'
+import { mutationFeedbackCopy } from '@/lib/mutation-feedback-copy'
+import { fieldError } from '@/lib/validation'
 import { cn } from '@/lib/utils'
 import { isTeamCoach, type Sport, type Team } from '@/types'
 import { useGeneratePdf, useSendMail } from '../api'
+import { validateLetterComposerForm } from '../model/letterComposer'
 import {
   createSampleValues,
   createTemplatePreviewSrcDoc,
@@ -62,13 +69,13 @@ const MODE_COPY = {
   mail: {
     label: 'Mail',
     submit: 'Send Mail',
-    pending: 'Sending',
+    pending: 'Sending…',
     success: (target: string) => `Mail sent to ${target}.`,
   },
   pdf: {
     label: 'PDF',
     submit: 'Download PDF',
-    pending: 'Generating',
+    pending: 'Generating…',
     success: (target: string) => `PDF generated for ${target}.`,
   },
 } as const satisfies Record<
@@ -185,9 +192,7 @@ export function LettersPage() {
   if (scopeQuery?.error) {
     return (
       <LettersFrame>
-        <p className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-body-sm text-destructive">
-          {serverErrorMessage(scopeQuery.error)}
-        </p>
+        <ErrorNotice message={serverErrorMessage(scopeQuery.error)} onRetry={scopeQuery.refetch} />
       </LettersFrame>
     )
   }
@@ -248,10 +253,11 @@ function LettersComposer({ audience }: { audience: Audience }) {
   const [activePanel, setActivePanel] = useState<ComposerPanel>('edit')
   const [subject, setSubject] = useState('')
   const [template, setTemplate] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null)
   const isPending = sendMail.isPending || generatePdf.isPending
   const hasTemplate = template.trim().length > 0
+  const subjectError = fieldError(fieldErrors, 'subject')
+  const templateError = fieldError(fieldErrors, 'template') ?? null
   const sampleValues = useMemo(
     () => createSampleValues(audienceSampleScope(audience)),
     [audience],
@@ -263,8 +269,7 @@ function LettersComposer({ audience }: { audience: Audience }) {
 
   const setModeSafely = (nextMode: LetterMode) => {
     setMode(nextMode)
-    setFormError(null)
-    setNotice(null)
+    setFieldErrors(null)
   }
 
   const insertTemplateText = (text: string, fallbackSeparator = '') => {
@@ -293,21 +298,13 @@ function LettersComposer({ audience }: { audience: Audience }) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors(null)
 
-    if (mode === 'mail' && subject.trim() === '') {
-      setFormError('Subject is required.')
-      setNotice(null)
+    const validationErrors = validateLetterComposerForm({ mode, subject, template })
+    if (validationErrors) {
+      setFieldErrors(validationErrors)
       return
     }
-
-    if (template.trim() === '') {
-      setFormError('Template is required.')
-      setNotice(null)
-      return
-    }
-
-    setFormError(null)
-    setNotice(null)
 
     try {
       if (mode === 'mail') {
@@ -317,14 +314,19 @@ function LettersComposer({ audience }: { audience: Audience }) {
         downloadBlob(pdf, pdfFileName(audience))
       }
 
-      setNotice(MODE_COPY[mode].success(audienceTarget(audience)))
+      toast.success(MODE_COPY[mode].success(audienceTarget(audience)))
     } catch (error) {
-      setFormError(serverErrorMessage(error))
+      setFieldErrors(
+        formMutationErrorFields(
+          error,
+          mode === 'mail' ? mutationFeedbackCopy.letter.send : mutationFeedbackCopy.letter.generatePdf,
+        ),
+      )
     }
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form className="space-y-5" onSubmit={handleSubmit} noValidate>
       <Card className="gap-0 overflow-hidden p-0">
         <CardContent className="space-y-5 p-4 sm:p-5">
           <div className="grid gap-4 lg:grid-cols-[11rem_minmax(0,1fr)_auto] lg:items-end">
@@ -351,38 +353,30 @@ function LettersComposer({ audience }: { audience: Audience }) {
                   onChange={(event) => setSubject(event.target.value)}
                   required
                   disabled={isPending}
-                  aria-invalid={formError !== null && subject.trim() === ''}
+                  aria-invalid={subjectError !== undefined}
                 />
+                {subjectError && (
+                  <p className="text-caption text-destructive">{subjectError}</p>
+                )}
               </div>
             )}
 
             {mode === 'pdf' && <div className="hidden lg:block" aria-hidden="true" />}
 
-            <Button
+            <PendingButton
               type="submit"
-              disabled={isPending}
+              isPending={isPending}
+              pendingLabel={MODE_COPY[mode].pending}
               className="h-10 w-full lg:w-auto"
             >
               {mode === 'mail' ? <Send /> : <Download />}
-              {isPending ? MODE_COPY[mode].pending : MODE_COPY[mode].submit}
-            </Button>
+              {MODE_COPY[mode].submit}
+            </PendingButton>
           </div>
 
           <AudienceSummary audience={audience} />
         </CardContent>
       </Card>
-
-      {notice && (
-        <ComposerAlert role="status" tone="success">
-          {notice}
-        </ComposerAlert>
-      )}
-
-      {formError && (
-        <ComposerAlert role="alert" tone="error">
-          {formError}
-        </ComposerAlert>
-      )}
 
       <div
         className="grid grid-cols-2 border bg-card p-1 lg:hidden"
@@ -405,7 +399,7 @@ function LettersComposer({ audience }: { audience: Audience }) {
 
         <EditorPreviewPane
           activePanel={activePanel}
-          formError={formError}
+          fieldError={templateError}
           hasTemplate={hasTemplate}
           isPending={isPending}
           mode={mode}
@@ -439,30 +433,6 @@ function AudienceSummary({ audience }: { audience: Audience }) {
         </div>
       </div>
     </div>
-  )
-}
-
-function ComposerAlert({
-  role,
-  tone,
-  children,
-}: {
-  role: 'alert' | 'status'
-  tone: 'error' | 'success'
-  children: React.ReactNode
-}) {
-  return (
-    <p
-      role={role}
-      className={cn(
-        'border px-4 py-3 text-body-sm',
-        tone === 'error'
-          ? 'border-destructive/30 bg-destructive/10 text-destructive'
-          : 'border-primary/25 bg-primary/8 text-text-primary',
-      )}
-    >
-      {children}
-    </p>
   )
 }
 
@@ -512,7 +482,7 @@ function TokenPalette({
   onInsertToken: (token: TemplateToken) => void
 }) {
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={350} skipDelayDuration={0} disableHoverableContent>
       <Card className="gap-0 overflow-hidden p-0 xl:sticky xl:top-4">
         <CardHeader className="border-b p-4">
           <div className="min-w-0">
@@ -618,7 +588,7 @@ function TokenPalette({
 
 function EditorPreviewPane({
   activePanel,
-  formError,
+  fieldError,
   hasTemplate,
   isPending,
   mode,
@@ -628,7 +598,7 @@ function EditorPreviewPane({
   onTemplateChange,
 }: {
   activePanel: ComposerPanel
-  formError: string | null
+  fieldError: string | null
   hasTemplate: boolean
   isPending: boolean
   mode: LetterMode
@@ -672,12 +642,16 @@ function EditorPreviewPane({
                 disabled={isPending}
                 required
                 aria-describedby="letter-template-help"
-                aria-invalid={formError !== null && template.trim() === ''}
+                aria-invalid={fieldError !== null}
                 className="h-[22rem] resize-y font-mono text-sm leading-relaxed sm:h-[28rem] lg:h-[34rem]"
               />
-              <p id="letter-template-help" className="text-caption text-text-tertiary">
-                Use the insert library for structure and personalized data.
-              </p>
+              {fieldError ? (
+                <p className="text-caption text-destructive">{fieldError}</p>
+              ) : (
+                <p id="letter-template-help" className="text-caption text-text-tertiary">
+                  Use the insert library for structure and personalized data.
+                </p>
+              )}
             </div>
           </div>
         </section>

@@ -1,6 +1,6 @@
 import type { Feedback, FeedbackSummary } from '@/types'
 
-// Summary rows (no body text); full text lives on feedbackDetailsById. Every entry is rated (0–10, PR #99).
+// Summary rows omit body text; full text lives in feedbackDetailsById.
 export const feedbackSummaryFixtures: FeedbackSummary[] = [
   {
     "id": "ffffffff-0001-0000-9e37-000000009e37",

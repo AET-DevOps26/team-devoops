@@ -1,5 +1,9 @@
+import { z } from 'zod'
+
 import { sameIds } from '@/lib/id-selection'
 import { memberSummaryName } from '@/lib/format'
+import { type FieldErrors, validateZodSchema } from '@/lib/validation'
+import { roleMeta, roleSort } from './rolePickerOptions'
 import type {
   AuthUser,
   MemberRef,
@@ -56,15 +60,29 @@ export function buildSportCreatorInitialState(): SportEditorFormState {
   }
 }
 
+export function validateSportEditorFieldErrors(
+  form: SportEditorFormState,
+  fields: readonly SportEditorField[],
+): FieldErrors | null {
+  const enabledFields = new Set(fields)
+  const schema = z.object({
+    name: z.string(),
+    description: z.string(),
+    directorIds: z.array(z.string()),
+  }).superRefine((value, ctx) => {
+    if (enabledFields.has('name') && value.name.trim() === '') {
+      ctx.addIssue({ code: 'custom', path: ['name'], message: 'Name is required.' })
+    }
+  })
+
+  return validateZodSchema(schema, form)
+}
+
 export function validateSportEditorForm(
   form: SportEditorFormState,
   fields: readonly SportEditorField[],
 ): string | null {
-  if (fields.includes('name') && form.name.trim() === '') {
-    return 'Name is required.'
-  }
-
-  return null
+  return Object.values(validateSportEditorFieldErrors(form, fields) ?? {})[0] ?? null
 }
 
 export function buildSportCreatePayload(
@@ -125,9 +143,7 @@ export function sportEditorFieldsForUser(
   return []
 }
 
-// Directors are members who already hold the director role — approximated client-side as "is a
-// director of at least one sport", since role isn't a field on MemberSummary. Current directors of
-// the sport being edited stay selectable even if this is their only directorship.
+// Assignments grant the derived Keycloak role, so every member remains selectable.
 export function buildSportDirectorPickerOptions(
   members: MemberSummary[],
   sports: readonly Sport[],
@@ -136,14 +152,13 @@ export function buildSportDirectorPickerOptions(
   const directorIds = new Set(sports.flatMap((sport) => sport.directors.map((director) => director.id)))
   for (const director of currentDirectors) directorIds.add(director.id)
 
-  return members
-    .filter((member) => directorIds.has(member.id))
-    .map((member) => ({
-      id: member.id,
-      name: memberSummaryName(member),
-      meta: member.email,
-    }))
-    .toSorted((a, b) => a.name.localeCompare(b.name))
+  return buildDirectorMemberOptions(members, currentDirectors)
+    .map((option) =>
+      directorIds.has(option.id)
+        ? { ...option, meta: roleMeta('Director', option.meta) }
+        : option,
+    )
+    .toSorted((a, b) => roleSort(directorIds, a, b))
 }
 
 function isSportDirector(sport: Sport, userId: string): boolean {
@@ -153,4 +168,30 @@ function isSportDirector(sport: Sport, userId: string): boolean {
 function cleanOptionalText(value: string): string | undefined {
   const cleaned = value.trim()
   return cleaned.length > 0 ? cleaned : undefined
+}
+
+function buildDirectorMemberOptions(
+  members: MemberSummary[],
+  currentDirectors: readonly MemberRef[],
+): SportDirectorPickerOption[] {
+  const options = new Map<string, SportDirectorPickerOption>()
+
+  for (const member of members) {
+    options.set(member.id, {
+      id: member.id,
+      name: memberSummaryName(member),
+      meta: member.email,
+    })
+  }
+
+  for (const director of currentDirectors) {
+    if (!options.has(director.id)) {
+      options.set(director.id, {
+        id: director.id,
+        name: director.name,
+      })
+    }
+  }
+
+  return Array.from(options.values())
 }

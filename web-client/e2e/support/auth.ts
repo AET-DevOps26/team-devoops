@@ -1,4 +1,5 @@
 import type { BrowserContext, Route } from '@playwright/test'
+import { TEST_PERSONAS } from '../../src/testing/personas'
 
 // Must match VITE_KEYCLOAK_URL in playwright.config.ts.
 const KEYCLOAK_URL = 'http://localhost:8081/auth'
@@ -6,10 +7,12 @@ const REALM_URL = `${KEYCLOAK_URL}/realms/devops`
 
 // Token identity mirrors the `admin` entry in src/testing/personas.ts so the stubbed
 // Keycloak session and the in-memory server describe the same person.
+const ADMIN = TEST_PERSONAS.admin
+
 export const E2E_USER = {
-  sub: '99999999-0004-0000-78dd-0000000278dc',
-  name: 'Admin Devoops',
-  email: 'admin.devoops@club.de',
+  sub: ADMIN.id,
+  name: ADMIN.name,
+  email: ADMIN.email,
   memberRoles: ['Admin'],
 }
 

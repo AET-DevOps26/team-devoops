@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import {
+  organizationKeys,
+  sportCreateDependentKeys,
+  sportDependentKeys,
+  teamCreateDependentKeys,
+  teamDependentKeys,
+} from '@/lib/query-keys'
+import { settleMutation } from '@/lib/query-cache'
 import { organizationClient } from './client'
 import type {
   Sport,
@@ -10,13 +18,7 @@ import type {
   TeamPartialUpdate,
 } from '../types'
 
-export const organizationKeys = {
-  hello: ['organization', 'hello'] as const,
-  sports: ['organization', 'sports'] as const,
-  sport: (id: string) => ['organization', 'sports', id] as const,
-  teams: ['organization', 'teams'] as const,
-  team: (id: string) => ['organization', 'teams', id] as const,
-}
+export { organizationKeys }
 
 export function useOrganizationHello() {
   return useQuery<string>({
@@ -51,7 +53,12 @@ export function useCreateSport() {
 
   return useMutation<Sport, Error, SportCreate>({
     mutationFn: data => organizationClient.post<Sport>('/sports', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: organizationKeys.sports }),
+    onSuccess: (created) => {
+      qc.setQueryData(organizationKeys.sport(created.id), created)
+      return settleMutation(qc, {
+        invalidate: [organizationKeys.sports, ...sportCreateDependentKeys],
+      })
+    },
   })
 }
 
@@ -60,10 +67,13 @@ export function useUpdateSport() {
 
   return useMutation<Sport, Error, { id: string } & SportPartialUpdate>({
     mutationFn: ({ id, ...data }) => organizationClient.patch<Sport>(`/sports/${id}`, data).then(r => r.data),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: organizationKeys.sports })
-      qc.invalidateQueries({ queryKey: organizationKeys.sport(id) })
-      qc.invalidateQueries({ queryKey: organizationKeys.teams })
+    // A renamed sport is embedded in every team's `sport` ref and in the member rows' sport column,
+    // so those are refetched rather than patched.
+    onSuccess: (updated, { id }) => {
+      qc.setQueryData(organizationKeys.sport(id), updated)
+      return settleMutation(qc, {
+        invalidate: [organizationKeys.sports, organizationKeys.sport(id), ...sportDependentKeys],
+      })
     },
   })
 }
@@ -73,11 +83,13 @@ export function useDeleteSport() {
 
   return useMutation<void, Error, string>({
     mutationFn: id => organizationClient.delete(`/sports/${id}`).then(() => undefined),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: organizationKeys.sports })
-      qc.invalidateQueries({ queryKey: organizationKeys.teams })
-      qc.removeQueries({ queryKey: organizationKeys.sport(id) })
-    },
+    // Deleting a sport deletes its teams server-side, so the teams list is refetched, never patched.
+    onSuccess: (_, id) =>
+      settleMutation(qc, {
+        remove: [{ key: organizationKeys.sports, id }],
+        evict: [organizationKeys.sport(id)],
+        invalidate: [organizationKeys.sports, ...sportDependentKeys],
+      }),
   })
 }
 
@@ -107,7 +119,12 @@ export function useCreateTeam() {
 
   return useMutation<Team, Error, TeamCreate>({
     mutationFn: data => organizationClient.post<Team>('/teams', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: organizationKeys.teams }),
+    onSuccess: (created) => {
+      qc.setQueryData(organizationKeys.team(created.id), created)
+      return settleMutation(qc, {
+        invalidate: [organizationKeys.teams, organizationKeys.sports, ...teamCreateDependentKeys],
+      })
+    },
   })
 }
 
@@ -116,9 +133,17 @@ export function useUpdateTeam() {
 
   return useMutation<Team, Error, { id: string } & TeamPartialUpdate>({
     mutationFn: ({ id, ...data }) => organizationClient.patch<Team>(`/teams/${id}`, data).then(r => r.data),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: organizationKeys.teams })
-      qc.invalidateQueries({ queryKey: organizationKeys.team(id) })
+    // The roster edit changes which members show this team (and its sport) in the members table.
+    onSuccess: (updated, { id }) => {
+      qc.setQueryData(organizationKeys.team(id), updated)
+      return settleMutation(qc, {
+        invalidate: [
+          organizationKeys.teams,
+          organizationKeys.team(id),
+          organizationKeys.sports,
+          ...teamDependentKeys(id),
+        ],
+      })
     },
   })
 }
@@ -128,9 +153,11 @@ export function useDeleteTeam() {
 
   return useMutation<void, Error, string>({
     mutationFn: id => organizationClient.delete(`/teams/${id}`).then(() => undefined),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: organizationKeys.teams })
-      qc.removeQueries({ queryKey: organizationKeys.team(id) })
-    },
+    onSuccess: (_, id) =>
+      settleMutation(qc, {
+        remove: [{ key: organizationKeys.teams, id }],
+        evict: [organizationKeys.team(id)],
+        invalidate: [organizationKeys.teams, organizationKeys.sports, ...teamDependentKeys(id)],
+      }),
   })
 }

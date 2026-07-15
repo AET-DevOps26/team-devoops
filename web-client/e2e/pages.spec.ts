@@ -9,8 +9,6 @@ import {
 } from './support/data'
 import { expect, gotoApp, test } from './support/fixtures'
 
-// Every reachable page renders content derived from the fixtures + scope rules
-// for the running admin identity (admin scope = everything).
 
 test('dashboard greets the admin and shows the admin count envelope', async ({ page }) => {
   await gotoApp(page)
@@ -31,7 +29,6 @@ test('events page lists every fixture event for the admin', async ({ page }) => 
   await gotoApp(page, '/sport-events')
 
   await expect(page.getByRole('heading', { name: 'Events' })).toBeVisible()
-  // Admin scope = all rows; spot-check the first and last fixture events.
   const first = eventSummaryFixtures[0]
   const last = eventSummaryFixtures[eventSummaryFixtures.length - 1]
   await expect(page.getByRole('button', { name: `View ${first.name}` }).first()).toBeVisible()
@@ -60,8 +57,8 @@ test('payments page shows the managed lens with fixture balances', async ({ page
   await gotoApp(page, '/payments')
 
   await expect(page.getByText('Member balances and transaction history.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Balances' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Balances', selected: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Transactions' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New Transaction' })).toBeVisible()
 })
 

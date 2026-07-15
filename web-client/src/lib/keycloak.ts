@@ -12,6 +12,22 @@ const keycloak = new Keycloak({
 
 let inFlightRefresh: Promise<boolean> | null = null
 
+// keycloak-js exposes a single `onAuthRefreshSuccess` slot, not an event emitter. Claiming it
+// from each useAuth() caller means one consumer can overwrite or clear another's callback, so
+// the slot is claimed exactly once here and fanned out to a set.
+const tokenRefreshListeners = new Set<() => void>()
+
+keycloak.onAuthRefreshSuccess = () => {
+  for (const listener of tokenRefreshListeners) listener()
+}
+
+export function onTokenRefreshed(listener: () => void): () => void {
+  tokenRefreshListeners.add(listener)
+  return () => {
+    tokenRefreshListeners.delete(listener)
+  }
+}
+
 export function resetKeycloakRefreshStateForTests(): void {
   inFlightRefresh = null
 }
@@ -46,8 +62,15 @@ async function refreshTokenIfNeeded(minValidity: number): Promise<void> {
   await inFlightRefresh
 }
 
-export function createApiClient(baseURL: string): AxiosInstance {
-  const client = axios.create({ baseURL })
+// Guards against a request hanging forever. Callers with slower endpoints can supply a larger
+// per-client timeout.
+export const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
+
+export function createApiClient(
+  baseURL: string,
+  timeout: number = DEFAULT_REQUEST_TIMEOUT_MS,
+): AxiosInstance {
+  const client = axios.create({ baseURL, timeout })
 
   client.interceptors.request.use(async (config) => {
     try {

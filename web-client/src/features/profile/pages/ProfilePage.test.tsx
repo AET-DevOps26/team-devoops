@@ -159,7 +159,7 @@ describe('ProfilePage', () => {
     })
   })
 
-  it('lets the member edit their name but not their email', async () => {
+  it('lets the member edit name fields but keeps email read-only', async () => {
     await render()
 
     expect((field('profile-first-name') as HTMLInputElement).readOnly).toBe(false)

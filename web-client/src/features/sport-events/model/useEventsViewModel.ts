@@ -40,10 +40,10 @@ export interface EventDetailView {
   detail: SportEvent | undefined
   status: EventStatus | undefined
   missed: boolean
-  // sports_linked resolved to display names for the detail view.
   sportNames: string[]
   isLoading: boolean
   error: Error | null
+  refetch: () => void
 }
 
 export function eventAttendanceStatus(
@@ -208,6 +208,10 @@ export function useEventsViewModel(now = new Date()) {
     view,
     isLoading: eventsQuery.isLoading || teamsQuery.isLoading,
     error: eventsQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void eventsQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }
 
@@ -229,7 +233,6 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
       )
     : undefined
   const missed = status === 'missed'
-  // sports_linked are resolved refs { id, name }; fall back to the sports list if a name is missing.
   const sportNamesById = new Map((sportsQuery.data ?? []).map((sport) => [sport.id, sport.name]))
   const sportNames = (detail?.sports_linked ?? []).map(
     (sport) => sport.name || sportNamesById.get(sport.id) || sport.id,
@@ -242,5 +245,9 @@ export function useEventDetailView(id: string | null, now = new Date()): EventDe
     sportNames,
     isLoading: eventQuery.isLoading || teamsQuery.isLoading,
     error: eventQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void eventQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }

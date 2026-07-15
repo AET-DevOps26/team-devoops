@@ -47,12 +47,12 @@ vi.mock('@/features/helper/api/queries', async () => {
     }),
     useReport: () => ({ data: undefined, isLoading: false, error: null }),
     useGenerateMemberReport: () => ({
-      mutate: mutationMocks.generateMember,
+      mutateAsync: mutationMocks.generateMember,
       isPending: false,
       error: null,
     }),
     useGenerateTeamReport: () => ({
-      mutate: mutationMocks.generateTeam,
+      mutateAsync: mutationMocks.generateTeam,
       isPending: false,
       error: null,
     }),
@@ -108,7 +108,6 @@ describe('HelperPage', () => {
   it('scopes the member persona to their own development reports', async () => {
     await render()
 
-    // Member scope: the subject is the signed-in user, not a team.
     expect(container.textContent).toContain('Your progress reports from the coaching staff.')
   })
 

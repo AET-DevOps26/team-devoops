@@ -116,5 +116,9 @@ export function useTeamsViewModel() {
     currentUserRole: user.role,
     isLoading: sportsQuery.isLoading || teamsQuery.isLoading,
     error: sportsQuery.error ?? teamsQuery.error,
+    refetch: () => {
+      void sportsQuery.refetch()
+      void teamsQuery.refetch()
+    },
   }
 }

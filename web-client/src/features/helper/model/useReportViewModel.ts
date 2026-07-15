@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAuth } from '@/features/auth'
 import { useTeamsList } from '@/features/organization/api/queries'
@@ -26,8 +26,6 @@ export interface ReportRow {
 export function useReportViewModel() {
   const { user } = useAuth()
 
-  // Coaches report on the team they train; everyone else reports on a member (their own
-  // for trainees; admins/directors fall back to the member path per the task's scope).
   const isTrainer = user.role === 'trainer'
   const teamsQuery = useTeamsList(isTrainer)
   const team = useMemo<Reference | null>(() => {
@@ -38,6 +36,10 @@ export function useReportViewModel() {
 
   const scope: ReportScope = isTrainer ? 'team' : 'member'
 
+  // The 202 response has no status endpoint, so a new list entry is the completion signal.
+  const [awaitCount, setAwaitCount] = useState<number | null>(null)
+  const awaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const memberReports = useMemberReports(user.id, scope === 'member')
   const teamReports = useTeamReports(team?.id ?? '', scope === 'team')
 
@@ -47,9 +49,43 @@ export function useReportViewModel() {
       ? helperKeys.teamReports(team?.id ?? '')
       : helperKeys.memberReports(user.id)
 
+  const reportCount = query.data?.length ?? 0
+  const isAwaitingReport = awaitCount !== null && reportCount <= awaitCount
+
+  const refetch = query.refetch
+  useEffect(() => {
+    if (!isAwaitingReport) return
+    const id = setInterval(() => void refetch(), 4000)
+    return () => clearInterval(id)
+  }, [isAwaitingReport, refetch])
+
+  useEffect(() => () => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+  }, [])
+
   const generateMember = useGenerateMemberReport(user.id)
   const generateTeam = useGenerateTeamReport(team?.id ?? '')
-  const generate = scope === 'team' ? generateTeam : generateMember
+  const generateMutation = scope === 'team' ? generateTeam : generateMember
+
+  const stopAwaiting = () => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+    awaitTimer.current = null
+    setAwaitCount(null)
+  }
+
+  const generate = async (useLocal?: boolean) => {
+    if (awaitTimer.current) clearTimeout(awaitTimer.current)
+    setAwaitCount(reportCount)
+    awaitTimer.current = setTimeout(() => setAwaitCount(null), 120_000)
+    // The POST itself can fail (or time out). Without this the page would keep claiming
+    // "Generating…" for the full 2 minutes while also showing the error.
+    try {
+      await generateMutation.mutateAsync(useLocal)
+    } catch (error) {
+      stopAwaiting()
+      throw error
+    }
+  }
 
   const rows = useMemo<ReportRow[]>(() => {
     const data = query.data ?? []
@@ -76,9 +112,11 @@ export function useReportViewModel() {
     rows,
     isLoading: (isTrainer && teamsQuery.isLoading) || query.isLoading,
     isError: query.isError,
-    generate: (useLocal?: boolean) => generate.mutate(useLocal),
-    isGenerating: generate.isPending,
-    generateError: generate.error,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    generate,
+    isGenerating: generateMutation.isPending,
+    isAwaitingReport,
     listKey,
   }
 }
@@ -89,6 +127,8 @@ export interface ReportDetailView {
   dateLabel: string
   isLoading: boolean
   isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 export function useReportDetailView(reportId: string | null): ReportDetailView {
@@ -109,6 +149,8 @@ export function useReportDetailView(reportId: string | null): ReportDetailView {
     dateLabel: report ? formatDate(report.created_at) : '',
     isLoading: reportQuery.isLoading,
     isError: reportQuery.isError,
+    error: reportQuery.error,
+    refetch: () => void reportQuery.refetch(),
   }
 }
 

@@ -27,7 +27,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  // Listen for OS theme changes when in 'system' mode
   useEffect(() => {
     if (theme !== 'system') return
 

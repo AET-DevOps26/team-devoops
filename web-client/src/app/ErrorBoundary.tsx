@@ -1,5 +1,4 @@
 import { Component, Fragment, type ErrorInfo, type PropsWithChildren } from 'react'
-import { router } from '@/app/router/routes'
 import { ErrorCard } from '@/components/ui/ErrorCard'
 
 type GlobalErrorBoundaryState = {
@@ -31,7 +30,7 @@ export class GlobalErrorBoundary extends Component<PropsWithChildren, GlobalErro
         title="Something went wrong"
         description="An unexpected error occurred. Please try again."
         actions={[
-          { label: 'Go home', onClick: () => void router.navigate('/') },
+          { label: 'Go home', onClick: () => window.location.assign('/') },
           {
             label: 'Try again',
             onClick: () => this.setState((s) => ({ hasError: false, resetKey: s.resetKey + 1 })),

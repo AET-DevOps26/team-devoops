@@ -47,11 +47,8 @@ function DialogOverlay({
   )
 }
 
-// Radix Dialog locks background scroll via `react-remove-scroll`, only allowing wheel/touch
-// events that land inside its own content node. A Popover portals to `document.body` by
-// default, landing as a DOM *sibling* of the dialog content rather than a descendant, so its
-// scroll gets swallowed. Exposing the dialog content node here lets nested popovers (e.g.
-// MultiSelectCombobox) portal into it instead, keeping their scroll inside the allowed subtree.
+// Radix Dialog locks background scroll via `react-remove-scroll`. Exposing the dialog
+// content node lets nested primitives detect dialog context and switch to modal layering.
 const DialogContentContainerContext = React.createContext<HTMLElement | null>(null)
 
 export function useDialogContentContainer() {
@@ -62,9 +59,16 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  dismissOnInteractOutside = true,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /**
+   * Set false on dialogs holding a form, so a stray outside click can't discard in-progress
+   * input. Closing stays available via the X button, the Cancel action, or Escape.
+   */
+  dismissOnInteractOutside?: boolean
 }) {
   const [container, setContainer] = React.useState<HTMLElement | null>(null)
 
@@ -74,6 +78,10 @@ function DialogContent({
       <DialogPrimitive.Content
         ref={setContainer}
         data-slot="dialog-content"
+        onInteractOutside={(event) => {
+          onInteractOutside?.(event)
+          if (!dismissOnInteractOutside) event.preventDefault()
+        }}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 items-start gap-6 rounded-none bg-popover p-6 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
