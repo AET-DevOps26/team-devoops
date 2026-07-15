@@ -89,7 +89,9 @@ All five schema-owning Spring services share a single **PostgreSQL 15** instance
 | Feedback | `feedback` | `feedback_user` |
 | Finance | `finance` | `finance_user` |
 
-Schemas and users are created at DB init time by [`infra/postgres/init-db.sh`](infra/postgres/init-db.sh). Each service runs its own **Flyway** migrations on startup (`V1__create_tables.sql`, `V2__add_foreign_keys.sql` for cross-schema references, granted via `ALTER DEFAULT PRIVILEGES`). The letter service has no database; the GenAI service persists RAG documents in a Chroma vector store instead of PostgreSQL.
+Schemas and users are created at DB init time by [`infra/postgres/init-db.sh`](infra/postgres/init-db.sh). Each service runs its own **Flyway** migrations on startup (`V1__create_tables.sql`, `V2__add_foreign_keys.sql` for cross-schema references, granted via `ALTER DEFAULT PRIVILEGES`). The letter service has no database of its own.
+
+The GenAI service also uses this same Postgres instance: it owns a sixth schema, `reports` (`reports_user`), where generated member/team report text is persisted (created idempotently at startup — Python has no Flyway). Separately, it persists RAG documents in a Chroma vector store, not PostgreSQL.
 
 ## Authentication (Keycloak)
 

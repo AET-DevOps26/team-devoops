@@ -31,11 +31,12 @@ A Python 3.12 / Flask service using LangChain. Unlike the Spring services, it is
 
 - It calls **feedback-service** (`GET /feedback`, Bearer-forwarded) to pull the data it summarizes when generating a member/team report.
 - It calls **either OpenAI or a local Ollama instance** to run inference, selected per-request via the `uselocal` field on the report-generation endpoints (not a global config flag) — the web client exposes this as the "Use local LLM" toggle on the helper page.
-- RAG question-answering persists uploaded documents in a **Chroma** vector store (a PVC-backed directory in Kubernetes, a bind-mounted volume elsewhere) rather than PostgreSQL.
+- RAG question-answering persists uploaded documents in a **Chroma** vector store (a PVC-backed directory in Kubernetes, a bind-mounted volume elsewhere), not PostgreSQL.
+- Generated report text *is* persisted in PostgreSQL, though: the service owns a sixth schema, `reports` (`reports_user`), in the same instance as the Spring services, with its tables created idempotently at startup since Python has no Flyway.
 
 ### Database — PostgreSQL
 
-Single instance, schema-per-service, documented in the [README's Database section](../README.md#database). No service reads another service's schema directly; cross-schema foreign keys exist (e.g. `event.events.creator_id → member.members.id`) but are enforced by the database, not queried across services.
+Single instance, schema-per-service, documented in the [README's Database section](../README.md#database) — five schemas for the five Spring services that own one, plus the `reports` schema owned by the GenAI service (see above). Every service user is also granted a shared, read-only `reader` role (`infra/postgres/init-db.sh`) that can `SELECT` across all schemas but never write outside its own; this backs a handful of small, explicitly-documented read-only lookups — e.g. `event-service`'s `MemberEntity`, `letter-service`'s `TransactionEntity`, and the GenAI service's own member/team display-name lookups — used only to resolve a name or balance for display, never to write, and never as a substitute for calling the owning service's API. Cross-schema foreign keys (e.g. `event.events.creator_id → member.members.id`) are enforced by the database independently of this.
 
 ### Proxy & Auth — Traefik / nginx ingress + Keycloak
 
