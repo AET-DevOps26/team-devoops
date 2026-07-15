@@ -1,0 +1,87 @@
+classDiagram
+    class Member {
+        <<abstract>>
+        +UUID id
+        +String firstName
+        +String lastName
+        +String email
+        +Role role
+        +updateProfile()
+    }
+    class Trainee {
+        +requestAIReport()
+    }
+    class Coach {
+        +createEvent()
+        +submitFeedback()
+        +manageMembers()
+        +generateLetter()
+        +requestAIReport()
+    }
+    class Director {
+        +manageTeamRoster()
+        +manageBalances()
+        +manageMembers()
+        +generateLetter()
+        +createEvent()
+    }
+    class Admin {
+        +manageSportsAndTeams()
+        +manageRoles()
+    }
+
+    Member <|-- Trainee
+    Member <|-- Coach
+    Member <|-- Director
+    Member <|-- Admin
+
+    class Sport {
+        +UUID id
+        +String name
+    }
+    class Team {
+        +UUID id
+        +String name
+    }
+    class Event {
+        +UUID id
+        +String name
+        +Instant startTime
+        +Instant endTime
+        +createEvent()
+    }
+    class Feedback {
+        +UUID id
+        +Integer rating
+        +String feedback
+        +submitFeedback()
+    }
+    class Transaction {
+        +UUID id
+        +int amountCents
+        +String title
+        +recordTransaction()
+    }
+    class Letter {
+        +String title
+        +generatePdf()
+        +sendMail()
+    }
+    class Report {
+        +UUID id
+        +String kind
+        +Instant createdAt
+    }
+
+    Sport "1" --> "*" Team : offers
+    Director "*" --> "*" Sport : directs
+    Coach "*" --> "*" Team : coaches
+    Trainee "*" --> "*" Team : belongs to
+    Event "*" --> "*" Trainee : attendance
+    Event "1" --> "*" Feedback : about
+    Trainee "1" --> "*" Feedback : receives
+    Coach "1" --> "*" Feedback : writes
+    Trainee "1" --> "*" Transaction : owns
+    Trainee "1" --> "*" Letter : recipient of
+    Trainee "1" --> "*" Report : subject of
+    Team "1" --> "*" Report : subject of

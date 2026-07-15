@@ -1,0 +1,25 @@
+flowchart LR
+    Member(["Member"])
+    Coach(["Coach"])
+    Director(["Director"])
+    Admin(["Admin"])
+
+    subgraph System["Sports Club Management System"]
+        UC5(("Submit / view feedback"))
+        UC7(("Generate AI progress report"))
+        UC8(("Manage member profiles"))
+        UC9(("Generate & send letters"))
+        UC10(("Create & manage events"))
+        UC11(("Manage sports & teams"))
+        UC6(("View balance & transactions"))
+    end
+    UC7a(("Select cloud or local LLM"))
+
+    Member --> UC5 & UC7 & UC6
+    Coach --> UC5 & UC7 & UC8 & UC9 & UC10
+    Director --> UC8 & UC9 & UC10 & UC11 & UC6
+
+    Admin -.->|"«is-a»"| Coach
+    Admin -.->|"«is-a»"| Director
+
+    UC7 -.->|"«include»"| UC7a
