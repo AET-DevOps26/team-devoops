@@ -1,10 +1,16 @@
 classDiagram
+    direction LR
     class Member {
         <<abstract>>
         +UUID id
         +String firstName
         +String lastName
         +String email
+        +String phoneNumber
+        +String address
+        +Date birthday
+        +Date joiningDate
+        +String information
         +Role role
         +updateProfile()
     }
@@ -38,14 +44,18 @@ classDiagram
     class Sport {
         +UUID id
         +String name
+        +String description
     }
     class Team {
         +UUID id
         +String name
+        +String description
+        +String address
     }
     class Event {
         +UUID id
         +String name
+        +String description
         +Instant startTime
         +Instant endTime
         +createEvent()
@@ -54,34 +64,39 @@ classDiagram
         +UUID id
         +Integer rating
         +String feedback
+        +Instant createdAt
         +submitFeedback()
     }
     class Transaction {
         +UUID id
         +int amountCents
         +String title
+        +String description
+        +Instant createdAt
         +recordTransaction()
     }
     class Letter {
-        +String title
+        +String subject
+        +String content
         +generatePdf()
         +sendMail()
     }
     class Report {
         +UUID id
         +String kind
+        +String text
         +Instant createdAt
     }
 
-    Sport "1" --> "*" Team : offers
     Director "*" --> "*" Sport : directs
+    Sport "1" --> "*" Team : offers
     Coach "*" --> "*" Team : coaches
     Trainee "*" --> "*" Team : belongs to
-    Event "*" --> "*" Trainee : attendance
+    Team "1" --> "*" Report : subject of
+    Coach "1" --> "*" Feedback : writes
     Event "1" --> "*" Feedback : about
     Trainee "1" --> "*" Feedback : receives
-    Coach "1" --> "*" Feedback : writes
+    Event "*" --> "*" Trainee : attendance
     Trainee "1" --> "*" Transaction : owns
     Trainee "1" --> "*" Letter : recipient of
     Trainee "1" --> "*" Report : subject of
-    Team "1" --> "*" Report : subject of
