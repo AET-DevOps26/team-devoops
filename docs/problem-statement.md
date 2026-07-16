@@ -5,7 +5,7 @@ Our application provides a centralized and hierarchical club management system t
 The intended users, on the other hand, are the club organizers, who can use the app for organizational purposes as an all-in-one solution, reducing overhead by automating billing and maintaining a structured view of the organization.
 On the other hand, the members of the club have a more organized overview of training sessions and events, as well as personalized feedback for improvements.
 Additionally, the application allows trainers and mentors to document the progress of trainees easily and provide proper guidance.
-This system uses GenAI as a personal assistant. It analyzes data for the user, unstructured trainer notes, attendance records, and member profiles to tailor a progress report that can be used to track successes and facilitate further improvement.
+This system uses GenAI as a personal assistant. It analyzes trainer feedback, augmented with relevant club reference material, to tailor a progress report that can be used to track successes and facilitate further improvement.
 
 ## Scenarios
 

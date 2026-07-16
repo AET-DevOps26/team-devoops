@@ -1,6 +1,12 @@
 # Architecture
 
-This is the detailed companion to the [README's Architecture section](../README.md#architecture): per-service responsibilities, who calls whom, and how a request is authenticated end to end. There is deliberately no UML diagram here — see [`docs/outdated/`](outdated/) for why the previous ones were retired.
+This is the detailed companion to the [README's Architecture section](../README.md#architecture): per-service responsibilities, who calls whom, and how a request is authenticated end to end. The diagrams below reflect the current six-service system; the PNGs under [`docs/outdated/`](outdated/) model an earlier three-service topology and are kept only as historical record. Diagram sources live in [`docs/diagrams/`](diagrams/) as Mermaid files — see [`docs/diagrams/README.md`](diagrams/README.md) to regenerate them after an architecture change.
+
+## Subsystem Decomposition
+
+Depicts the Kubernetes (Rancher/RKE2) deployment specifically, since it's the one continuously-live, gradeable cluster target — see [Environment differences](#environment-differences) below for how Compose/VM differ. `oauth2-proxy` only gates the web-client's cookie session; every backend service, Keycloak, api-docs, and Grafana are reached directly through the ingress and each does its own auth (Bearer-JWT check, or in Grafana's case its own separate Keycloak OAuth client) — there is no single shared gatekeeper. Note also the two independent PostgreSQL instances: `app-db` (schema-per-service, described below) and a separate `keycloak-db` that only Keycloak uses.
+
+![Subsystem decomposition diagram](diagrams/subsystem-decomposition.png)
 
 ## Subsystems
 
@@ -31,17 +37,30 @@ A Python 3.12 / Flask service using LangChain. Unlike the Spring services, it is
 
 - It calls **feedback-service** (`GET /feedback`, Bearer-forwarded) to pull the data it summarizes when generating a member/team report.
 - It calls **either OpenAI or a local Ollama instance** to run inference, selected per-request via the `uselocal` field on the report-generation endpoints (not a global config flag) — the web client exposes this as the "Use local LLM" toggle on the helper page.
-- RAG question-answering persists uploaded documents in a **Chroma** vector store (a PVC-backed directory in Kubernetes, a bind-mounted volume elsewhere) rather than PostgreSQL.
+- RAG question-answering persists uploaded documents in a **Chroma** vector store (a PVC-backed directory in Kubernetes, a bind-mounted volume elsewhere), not PostgreSQL.
+- Generated report text *is* persisted in PostgreSQL, though: the service owns a sixth schema, `reports` (`reports_user`), in the same instance as the Spring services, with its tables created idempotently at startup since Python has no Flyway.
 
 ### Database — PostgreSQL
 
-Single instance, schema-per-service, documented in the [README's Database section](../README.md#database). No service reads another service's schema directly; cross-schema foreign keys exist (e.g. `event.events.creator_id → member.members.id`) but are enforced by the database, not queried across services.
+Single instance, schema-per-service, documented in the [README's Database section](../README.md#database) — five schemas for the five Spring services that own one, plus the `reports` schema owned by the GenAI service (see above). Every service user is also granted a shared, read-only `reader` role (`infra/postgres/init-db.sh`) that can `SELECT` across all schemas but never write outside its own; this backs a handful of small, explicitly-documented read-only lookups — e.g. `event-service`'s `MemberEntity`, `letter-service`'s `TransactionEntity`, and the GenAI service's own member/team display-name lookups — used only to resolve a name or balance for display, never to write, and never as a substitute for calling the owning service's API. Cross-schema foreign keys (e.g. `event.events.creator_id → member.members.id`) are enforced by the database independently of this.
 
 ### Proxy & Auth — Traefik / nginx ingress + Keycloak
 
 - **Docker Compose / Azure VM**: Traefik terminates TLS (Let's Encrypt on the VM), applies a `forward-auth` middleware backed by its own confidential Keycloak client (session-cookie based, separate from the app-level Bearer tokens below), and strips path prefixes before forwarding to each service.
 - **Kubernetes**: the cluster's own nginx ingress does the prefix-stripping and routing instead of Traefik; TLS is handled at the cluster edge.
 - **Keycloak** (realm `devops`) is the single OIDC provider in every environment. Four confidential/public clients exist: `devops-client` (public, PKCE — the React app), `traefik-forward-auth` (confidential — gates the browser session at the proxy), `grafana` (confidential — Grafana's own admin-only OAuth login), and `org-role-sync` (confidential, service account only, no browser flow — organization-service and member-service's Admin REST API client, see above). None of the three confidential clients' secrets is hardcoded: each is templated as a `__PLACEHOLDER__` in `infra/keycloak/realm-config.json`, substituted at container start (Compose/VM) or chart render (Helm) from the matching GitHub secret — see [docs/cicd.md](cicd.md).
+
+## Use Cases
+
+Route access is role-gated client-side (`web-client/src/app/navPolicy.ts`) and re-checked server-side by each service. Four roles exist: `member` (trainee), `trainer` (coach), `director`, `admin`. All four can additionally view the dashboard, browse events & sessions, view sports & teams, and manage their own profile — those baseline pages are omitted from the diagram below since every role shares them; only the role-differentiating capabilities are shown. Admin's capabilities are exactly the union of Coach's and Director's, with nothing unique of its own, so it's shown as generalizing both (`«is-a»`) rather than duplicating every edge.
+
+![Use case diagram](diagrams/use-case.png)
+
+## Analysis Object Model
+
+Modeled from the client's perspective — its `Role` type (`web-client/src/types.ts`) and each feature's role-gated actions — rather than the server's join-table implementation (`DirectorEntity`/`TrainerEntity`/`TraineeEntity`, each scoped to one sport or team). A person's role is a single flat attribute from the client's standpoint, not a per-scope assignment, so `Trainee`/`Coach`/`Director`/`Admin` are modeled as specializations of `Member` to group each role's distinct capabilities clearly. The two relationships that genuinely are per-scope — a coach coaches specific teams, a director directs specific sports — are kept as separate associations rather than folded into the role itself. Feedback, balances, letters, event attendance, and generated reports are all about a `Trainee` specifically (coaches and directors act on them, but are never themselves the subject), so those associations sit on `Trainee` rather than the abstract `Member` — matching the client's own `ReportKind`-discriminated `Report` type, member and team reports are modeled as one `Report` class rather than two near-identical ones.
+
+![Analysis object model diagram](diagrams/analysis-object-model.png)
 
 ## Request lifecycle (example: loading the members page)
 

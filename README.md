@@ -89,7 +89,9 @@ All five schema-owning Spring services share a single **PostgreSQL 15** instance
 | Feedback | `feedback` | `feedback_user` |
 | Finance | `finance` | `finance_user` |
 
-Schemas and users are created at DB init time by [`infra/postgres/init-db.sh`](infra/postgres/init-db.sh). Each service runs its own **Flyway** migrations on startup (`V1__create_tables.sql`, `V2__add_foreign_keys.sql` for cross-schema references, granted via `ALTER DEFAULT PRIVILEGES`). The letter service has no database; the GenAI service persists RAG documents in a Chroma vector store instead of PostgreSQL.
+Schemas and users are created at DB init time by [`infra/postgres/init-db.sh`](infra/postgres/init-db.sh). Each service runs its own **Flyway** migrations on startup (`V1__create_tables.sql`, `V2__add_foreign_keys.sql` for cross-schema references, granted via `ALTER DEFAULT PRIVILEGES`). The letter service has no database of its own.
+
+The GenAI service also uses this same Postgres instance: it owns a sixth schema, `reports` (`reports_user`), where generated member/team report text is persisted (created idempotently at startup — Python has no Flyway). Separately, it persists RAG documents in a Chroma vector store, not PostgreSQL.
 
 ## Authentication (Keycloak)
 
@@ -114,6 +116,18 @@ pre-commit install --hook-type pre-push
 
 Auto-fixing hooks modify files and abort the commit so you can re-stage. Bypass only in emergencies (`git commit --no-verify` / `git push --no-verify`) — CI still gates. Full hook config: [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
 
+The root [`Makefile`](Makefile) wraps the per-service tooling (Gradle, pnpm, pytest, docker compose) so you don't need to remember each one's exact invocation or working directory. Run `make help` for the full list:
+
+```bash
+make up          # start the local stack (see Running Locally below)
+make test        # run every test suite (Spring x6, GenAI, web-client)
+make lint        # run every linter (Checkstyle, ruff, ESLint + typecheck)
+make build       # build every service (Spring x6 + web-client)
+make verify      # lint + test + build for everything — mirrors what CI checks per PR
+```
+
+`test`, `lint`, and `build` always run against everything — there are no per-service targets, so a full check is always exactly one command.
+
 ## Running Locally
 
 ```bash
@@ -121,6 +135,8 @@ cd infra
 cp .env.example .env   # first time only — local-dev secrets, gitignored
 docker compose up -d --build
 ```
+
+Equivalent shortcut from the repo root: `make up` (also `make down`, `make down-v`, `make logs`, `make ps`) — see [Developer Setup](#developer-setup) above. Both do exactly the same thing: the Makefile just `cd`s into `infra/` first, same as the manual steps.
 
 This auto-merges [`infra/docker-compose.override.yml`](infra/docker-compose.override.yml), which strips TLS/Let's-Encrypt/Host-routing so everything is reachable on plain HTTP:
 

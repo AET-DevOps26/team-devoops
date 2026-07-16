@@ -1,0 +1,53 @@
+flowchart TB
+    ING["nginx Ingress · TLS via cert-manager<br/>ge83mom-devops26.stud.k8s.aet.cit.tum.de"]
+    OAP["oauth2-proxy<br/>cookie session gate"]
+    WC["web-client"]
+    DOCS["api-docs (swagger-ui)<br/>open, no auth"]
+
+    subgraph Backend["Backend services — own Bearer-JWT check, HPA 1-2 replicas"]
+        ORG["organization-service"]
+        MEM["member-service"]
+        EVT["event-service"]
+        FIN["finance-service"]
+        FBK["feedback-service"]
+        LET["letter-service"]
+        GAI["py-genai-helper<br/>single replica — RWO PVC"]
+    end
+
+    subgraph Auth["Auth"]
+        KC["Keycloak<br/>realm: devops"]
+        KCDB[("keycloak-db")]
+    end
+
+    APPDB[("app-db<br/>schema per service + reports")]
+
+    subgraph Inference["Inference"]
+        OLL["Ollama"]
+        OAI["OpenAI API"]
+        VEC[("Chroma PVC")]
+    end
+
+    subgraph Observability["Observability — same namespace"]
+        PROM["Prometheus"]
+        GRAF["Grafana<br/>own Keycloak OAuth"]
+        LOKI["Loki"]
+        ALLOY["Alloy"]
+    end
+
+    ING -->|"/"| OAP --> WC
+    ING -->|"/api/v1/…"| Backend
+    ING -->|"/auth"| KC
+    ING -->|"/docs"| DOCS
+    ING -->|"/dashboard"| GRAF
+
+    Backend --> APPDB
+    GAI --> OLL
+    GAI --> OAI
+    GAI --> VEC
+    KC --> KCDB
+
+    ALLOY --> LOKI
+    PROM -.->|scrapes| Backend
+    PROM -.->|scrapes| KC
+    GRAF --> PROM
+    GRAF --> LOKI

@@ -1,0 +1,30 @@
+%%{init: {'flowchart': {'nodeSpacing': 90, 'rankSpacing': 130}}}%%
+flowchart LR
+    Member(["Member"])
+    Coach(["Coach"])
+    Director(["Director"])
+    Admin(["Admin"])
+
+    subgraph System["Sports Club Management System"]
+        UC6(("View balance & transactions"))
+        UC5(("Submit / view feedback"))
+        UC7(("Generate AI progress report"))
+        UC8(("Manage member profiles"))
+        UC9(("Generate & send letters"))
+        UC10(("Create & manage events"))
+        UC11(("Manage sports & teams"))
+    end
+    UC7a(("Select cloud or local LLM"))
+
+    Member --> UC6 & UC5 & UC7
+    Coach --> UC5 & UC7 & UC8 & UC9 & UC10
+    Director --> UC8 & UC9 & UC10 & UC11 & UC6
+
+    Admin -.->|"«is-a»"| Coach
+    Admin -.->|"«is-a»"| Director
+
+    UC7 -.->|"«include»"| UC7a
+
+    linkStyle 0,1,2 stroke:#0072B2,stroke-width:2px
+    linkStyle 3,4,5,6,7 stroke:#009E73,stroke-width:2px
+    linkStyle 8,9,10,11,12 stroke:#E69F00,stroke-width:2px
