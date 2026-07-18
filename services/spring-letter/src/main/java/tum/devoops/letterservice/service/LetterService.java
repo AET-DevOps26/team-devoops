@@ -2,22 +2,16 @@ package tum.devoops.letterservice.service;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Entities;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import tum.devoops.letterservice.entity.MemberEntity;
 import tum.devoops.letterservice.entity.TeamEntity;
 import tum.devoops.letterservice.exception.ForbiddenException;
-import tum.devoops.letterservice.exception.MailDeliveryException;
 import tum.devoops.letterservice.exception.PdfGenerationException;
 import tum.devoops.letterservice.model.MailRequest;
 import tum.devoops.letterservice.model.PdfRequest;
@@ -47,8 +41,7 @@ public class LetterService {
     // Tokens are {{snake_case}} per the API description; anything else is left as literal text.
     private static final Pattern TAG_PATTERN = Pattern.compile("\\{\\{([a-z0-9_]+)\\}\\}");
 
-    private final JavaMailSender mailSender;
-    private final String from;
+    private final MailDispatcher mailDispatcher;
     private final MemberRepository memberRepository;
     private final SportRepository sportRepository;
     private final TeamRepository teamRepository;
@@ -58,8 +51,7 @@ public class LetterService {
     private final TransactionRepository transactionRepository;
     private final MeterRegistry meterRegistry;
 
-    public LetterService(JavaMailSender mailSender,
-                          @Value("${spring.mail.username}") String from,
+    public LetterService(MailDispatcher mailDispatcher,
                           MemberRepository memberRepository,
                           SportRepository sportRepository,
                           TeamRepository teamRepository,
@@ -68,8 +60,7 @@ public class LetterService {
                           TraineeRepository traineeRepository,
                           TransactionRepository transactionRepository,
                           MeterRegistry meterRegistry) {
-        this.mailSender = mailSender;
-        this.from = from;
+        this.mailDispatcher = mailDispatcher;
         this.memberRepository = memberRepository;
         this.sportRepository = sportRepository;
         this.teamRepository = teamRepository;
@@ -88,13 +79,7 @@ public class LetterService {
             Map<String, String> tokens = tokensFor(receiver);
             String personalizedSubject = replaceTags(subject, tokens);
             String html = replaceTags(template, tokens);
-            try {
-                sendHtml(receiver.getEmail(), personalizedSubject, html);
-                meterRegistry.counter("letters_sent_total", "status", "success").increment();
-            } catch (MessagingException e) {
-                meterRegistry.counter("letters_sent_total", "status", "failure").increment();
-                throw new MailDeliveryException("Failed to send mail to " + receiver.getEmail(), e);
-            }
+            mailDispatcher.sendAsync(receiver.getEmail(), personalizedSubject, html);
         }
     }
 
@@ -155,16 +140,6 @@ public class LetterService {
 
     private static String escapeHtml(String value) {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-    }
-
-    private void sendHtml(String to, String subject, String html) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(from);
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(html, true);
-        mailSender.send(message);
     }
 
     // Director/trainer/trainee aren't Spring Security roles here (see LetterController); membership

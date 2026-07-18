@@ -1,6 +1,7 @@
 package tum.devoops.letterservice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -35,7 +36,6 @@ import tum.devoops.letterservice.entity.SportEntity;
 import tum.devoops.letterservice.entity.TeamEntity;
 import tum.devoops.letterservice.entity.TransactionEntity;
 import tum.devoops.letterservice.exception.ForbiddenException;
-import tum.devoops.letterservice.exception.MailDeliveryException;
 import tum.devoops.letterservice.model.MailRequest;
 import tum.devoops.letterservice.model.PdfRequest;
 import tum.devoops.letterservice.repository.DirectorRepository;
@@ -74,7 +74,8 @@ class LetterServiceTest {
 
     @BeforeEach
     void setUp() {
-        letterService = new LetterService(mailSender, FROM, memberRepository, sportRepository,
+        MailDispatcher mailDispatcher = new MailDispatcher(mailSender, FROM, meterRegistry);
+        letterService = new LetterService(mailDispatcher, memberRepository, sportRepository,
                 teamRepository, directorRepository, trainerRepository, traineeRepository, transactionRepository,
                 meterRegistry);
     }
@@ -259,8 +260,9 @@ class LetterServiceTest {
     // --- sendMail: error handling ---
 
     @Test
-    void sendMailWrapsMessagingExceptionInMailDeliveryException() {
-        LetterService brokenFromService = new LetterService(mailSender, "not a valid from address",
+    void sendMailCountsFailureAndDoesNotPropagateWhenSendingThrows() {
+        MailDispatcher brokenDispatcher = new MailDispatcher(mailSender, "not a valid from address", meterRegistry);
+        LetterService brokenFromService = new LetterService(brokenDispatcher,
                 memberRepository, sportRepository, teamRepository, directorRepository,
                 trainerRepository, traineeRepository, transactionRepository, meterRegistry);
 
@@ -268,11 +270,9 @@ class LetterServiceTest {
         when(memberRepository.findAll()).thenReturn(List.of(frank));
         stubMimeMessages();
 
-        assertThatThrownBy(() -> brokenFromService.sendMail(new MailRequest("Subject", "Body"),
+        assertThatCode(() -> brokenFromService.sendMail(new MailRequest("Subject", "Body"),
                 UUID.randomUUID(), true))
-                .isInstanceOf(MailDeliveryException.class)
-                .hasMessageContaining("frank@example.com")
-                .hasCauseInstanceOf(jakarta.mail.MessagingException.class);
+                .doesNotThrowAnyException();
         assertThat(meterRegistry.counter("letters_sent_total", "status", "failure").count()).isEqualTo(1.0);
     }
 
